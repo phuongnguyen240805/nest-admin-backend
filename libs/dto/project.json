@@ -12,7 +12,8 @@
             "options": {
                 "outputPath": "dist/libs/dto",
                 "tsConfig": "libs/dto/tsconfig.lib.json",
-                "main": "libs/dto/src/index.ts"
+                "main": "libs/dto/src/index.ts",
+                "rootDir": "src"
             }
         },
         "lint": {

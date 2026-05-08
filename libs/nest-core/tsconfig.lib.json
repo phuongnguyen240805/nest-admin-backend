@@ -4,6 +4,7 @@
     "outDir": "../../dist/libs/nest-core",
     "declaration": true,
     "declarationMap": true,
+    "composite": true,
     "inlineSources": true,
     "types": [
       "node"

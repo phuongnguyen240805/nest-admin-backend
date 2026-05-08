@@ -1,3 +1,17 @@
+// {
+//   "extends": "../../tsconfig.base.json",
+//   "compilerOptions": {
+//     "outDir": "../../dist/libs/database",
+//     "declaration": true,
+//     "declarationMap": true,
+//     "inlineSources": true,
+//     "types": ["node"],
+//     "baseUrl": ".",
+//     "rootDir": "src",
+//   },
+//   "include": ["src/**/*.ts"],
+//   "exclude": ["**/*.spec.ts", "**/*.test.ts"]
+// }
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
@@ -6,13 +20,7 @@
     "declarationMap": true,
     "inlineSources": true,
     "types": ["node"],
-    "baseUrl": ".",
-    "rootDir": "src",
-    // "rootDir": "../..",
-    "paths": {
-      "@liora/nest-core": ["../nest-core/src/index.ts"],
-      "@liora/nest-core/*": ["../nest-core/src/*"]
-    }
+    "rootDir": "src"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["**/*.spec.ts", "**/*.test.ts"]
