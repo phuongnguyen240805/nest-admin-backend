@@ -1,0 +1,32 @@
+# ============================================
+# Dockerfile.base - Dành cho liora-monorepo (Nx + pnpm + NestJS)
+# Hỗ trợ cả Development (hot reload) và Production
+# ============================================
+
+FROM node:20-alpine AS base
+
+WORKDIR /app
+
+# Enable pnpm (corepack là cách khuyến nghị với Node 20+)
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# ============================================
+# STAGE: development (dùng cho docker-compose dev)
+# ============================================
+FROM base AS development
+
+# Copy package files trước để tận dụng Docker layer cache
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy toàn bộ source code (sẽ bị volume mount override khi chạy dev)
+COPY libs/ ./libs/
+COPY apps/ ./apps/
+
+# Cài dependencies (frozen-lockfile = đảm bảo giống production)
+RUN pnpm install --frozen-lockfile
+
+# Expose port mặc định của NestJS
+EXPOSE 3000
+
+# Default command (sẽ bị override bởi docker-compose command)
+CMD ["pnpm", "nx", "serve", "centrix-backend", "--skip-nx-cache"]

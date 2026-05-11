@@ -1,7 +1,7 @@
 import { forwardRef, Module, Provider } from '@nestjs/common'
 
-import { AuthModule } from '@liora/nest-core/auth/auth.module'
-import { SystemModule } from '@liora/nest-core/system/system.module'
+import { AuthModule } from '../modules/auth/auth.module'
+import { SystemModule } from '../modules/system/system.module'
 
 import { AdminEventsGateway } from './events/admin.gateway'
 import { WebEventsGateway } from './events/web.gateway'

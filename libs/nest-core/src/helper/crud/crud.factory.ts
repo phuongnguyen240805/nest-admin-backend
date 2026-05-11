@@ -14,9 +14,9 @@ import { ApiBody, IntersectionType, PartialType } from '@nestjs/swagger'
 import { upperFirst } from 'lodash'
 import pluralize from 'pluralize'
 
-import { ApiResult } from '../../common/decorators/api-result.decorator'
-import { IdParam } from '../../common/decorators/id-param.decorator'
-import { PagerDto } from '../../common/dto/pager.dto'
+import { ApiResult } from '~/common/decorators/api-result.decorator'
+import { IdParam } from '~/common/decorators/id-param.decorator'
+import { PagerDto } from '@liora/dto'
 
 import { BaseService } from './base.service'
 
@@ -29,13 +29,13 @@ export function BaseCrudFactory<
   dto = dto ?? class extends entity {}
 
   class Dto extends dto {
-    static readonly name = upperFirst(`${pluralizeName}Dto`)
+    static override readonly name = upperFirst(`${pluralizeName}Dto`)
   }
   class UpdateDto extends PartialType(Dto) {
-    static readonly name = upperFirst(`${pluralizeName}UpdateDto`)
+    static override readonly name = upperFirst(`${pluralizeName}UpdateDto`)
   }
   class QueryDto extends IntersectionType(PagerDto, PartialType(Dto)) {
-    static readonly name = upperFirst(`${pluralizeName}QueryDto`)
+    static override readonly name = upperFirst(`${pluralizeName}QueryDto`)
   }
 
   permissions = permissions ?? {

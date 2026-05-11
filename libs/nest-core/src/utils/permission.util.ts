@@ -1,8 +1,8 @@
 import { ForbiddenException } from '@nestjs/common'
 
-import { envBoolean } from '../global/env'
-import { MenuEntity } from '../system/menu/menu.entity'
-import { isExternal } from './is.util'
+import { envBoolean } from '~/global/env'
+import { MenuEntity } from '~/modules/system/menu/menu.entity'
+import { isExternal } from '~/utils/is.util'
 
 import { uniqueSlash } from './tool.util'
 
@@ -14,13 +14,13 @@ export interface RouteRecordRaw {
   redirect?: string
   meta: {
     title: string
-    icon?: string
+    icon: string
     isExt: boolean
     extOpenMode: number
     type: number
     orderNo: number
     show: number
-    activeMenu?: string
+    activeMenu: string
     status: number
     keepAlive: number
   }
@@ -29,24 +29,24 @@ export interface RouteRecordRaw {
 
 function createRoute(menu: MenuEntity, _isRoot: boolean): RouteRecordRaw {
   const commonMeta: RouteRecordRaw['meta'] = {
-    title: menu.name || '',
-    icon: menu.icon || '',
-    isExt: menu.isExt || false,
-    extOpenMode: menu.extOpenMode || 0,
-    type: menu.type || 0,
-    orderNo: menu.orderNo || 0,
-    show: menu.show || 0,
-    activeMenu: menu.activeMenu || '',
-    status: menu.status || 0,
-    keepAlive: menu.keepAlive || 0,
+    title: menu.name,
+    icon: menu.icon,
+    isExt: menu.isExt,
+    extOpenMode: menu.extOpenMode,
+    type: menu.type,
+    orderNo: menu.orderNo,
+    show: menu.show,
+    activeMenu: menu.activeMenu,
+    status: menu.status,
+    keepAlive: menu.keepAlive,
   }
 
-  if (isExternal(menu.path || '')) {
+  if (isExternal(menu.path)) {
     return {
       id: menu.id,
-      path: menu.path || '',
+      path: menu.path,
       // component: 'IFrame',
-      name: menu.name || '',
+      name: menu.name,
       meta: { ...commonMeta },
     }
   }
@@ -55,25 +55,25 @@ function createRoute(menu: MenuEntity, _isRoot: boolean): RouteRecordRaw {
   if (menu.type === 0) {
     return {
       id: menu.id,
-      path: menu.path || '',
-      component: menu.component || '',
-      name: menu.name || '',
+      path: menu.path,
+      component: menu.component,
+      name: menu.name,
       meta: { ...commonMeta },
     }
   }
 
   return {
     id: menu.id,
-    path: menu.path || '',
-    name: menu.name || '',
-    component: menu.component || '',
+    path: menu.path,
+    name: menu.name,
+    component: menu.component,
     meta: {
       ...commonMeta,
     },
   }
 }
 
-function filterAsyncRoutes(menus: MenuEntity[], parentRoute: MenuEntity | null): RouteRecordRaw[] {
+function filterAsyncRoutes(menus: MenuEntity[], parentRoute: MenuEntity): RouteRecordRaw[] {
   const res: RouteRecordRaw[] = []
 
   menus.forEach((menu) => {
@@ -82,9 +82,9 @@ function filterAsyncRoutes(menus: MenuEntity[], parentRoute: MenuEntity | null):
       return
     }
     // 根级别菜单渲染
-    let realRoute: RouteRecordRaw | any
+    let realRoute: RouteRecordRaw
 
-    const genFullPath = (path: string, parentPath: string) => {
+    const genFullPath = (path: string, parentPath) => {
       return uniqueSlash(path.startsWith('/') ? path : `/${parentPath}/${path}`)
     }
 
@@ -134,37 +134,37 @@ export function generatorRouters(menus: MenuEntity[]) {
 }
 
 // 获取所有菜单以及权限
-function filterMenuToTable(menus: MenuEntity[], parentMenu: MenuEntity | null) {
-  const res: (MenuEntity & { children?: any[], pid?: number })[] = []
+function filterMenuToTable(menus: MenuEntity[], parentMenu) {
+  const res = []
   menus.forEach((menu) => {
     // 根级别菜单渲染
-    let realMenu: MenuEntity & { children?: any[], pid?: number } | undefined
+    let realMenu
     if (!parentMenu && !menu.parentId && menu.type === 1) {
       // 根菜单，查找该跟菜单下子菜单，因为可能会包含权限
       const childMenu = filterMenuToTable(menus, menu)
-      realMenu = Object.assign(Object.create(Object.getPrototypeOf(menu)), menu) as MenuEntity & { children?: any[], pid?: number }
+      realMenu = { ...menu }
       realMenu.children = childMenu
     }
     else if (!parentMenu && !menu.parentId && menu.type === 0) {
       // 根目录
       const childMenu = filterMenuToTable(menus, menu)
-      realMenu = Object.assign(Object.create(Object.getPrototypeOf(menu)), menu) as MenuEntity & { children?: any[], pid?: number }
+      realMenu = { ...menu }
       realMenu.children = childMenu
     }
     else if (parentMenu && parentMenu.id === menu.parentId && menu.type === 1) {
       // 子菜单下继续找是否有子菜单
       const childMenu = filterMenuToTable(menus, menu)
-      realMenu = Object.assign(Object.create(Object.getPrototypeOf(menu)), menu) as MenuEntity & { children?: any[], pid?: number }
+      realMenu = { ...menu }
       realMenu.children = childMenu
     }
     else if (parentMenu && parentMenu.id === menu.parentId && menu.type === 0) {
       // 如果还是目录，继续递归
       const childMenu = filterMenuToTable(menus, menu)
-      realMenu = Object.assign(Object.create(Object.getPrototypeOf(menu)), menu) as MenuEntity & { children?: any[], pid?: number }
+      realMenu = { ...menu }
       realMenu.children = childMenu
     }
     else if (parentMenu && parentMenu.id === menu.parentId && menu.type === 2) {
-      realMenu = Object.assign(Object.create(Object.getPrototypeOf(menu)), menu) as MenuEntity & { children?: any[], pid?: number }
+      realMenu = { ...menu }
     }
     // add curent route
     if (realMenu) {

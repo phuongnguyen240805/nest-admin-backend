@@ -1,10 +1,7 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "types": [
-      "node"
-    ],
-    // "rootDir": ".",
+    "types": ["node"],
     "sourceMap": true,
     "declaration": false,
     "moduleResolution": "node",
@@ -13,12 +10,9 @@
     "importHelpers": true,
     "target": "ES2022",
     "module": "ES2022",
-    "lib": [
-      "ES2022"
-    ],
+    "lib": ["ES2022"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    // === GIẢM STRICT ===
     "strict": false,
     "noImplicitAny": false,
     "strictNullChecks": false,
@@ -27,52 +21,21 @@
     "noFallthroughCasesInSwitch": false,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    // ========================
     "baseUrl": ".",
     "paths": {
-      "@liora/nest-core": [
-        "libs/nest-core/src/index.ts"
-      ],
-      "@liora/nest-core/*": [
-        "libs/nest-core/src/*"
-      ],
-      "@liora/database": [
-        "libs/database/src/index.ts"
-      ],
-      "@liora/database/*": [
-        "libs/database/src/*"
-      ],
-      "@liora/shared": [
-        "libs/shared/src/index.ts"
-      ],
-      "@liora/shared/*": [
-        "libs/shared/src/*"
-      ],
-      "@liora/dto": [
-        "libs/dto/src/index.ts"
-      ],
-      "@liora/dto/*": [
-        "libs/dto/src/*"
-      ],
-      "~/*": [
-        "libs/nest-core/src/*"
-      ],
-      "~": [
-        "libs/nest-core/src/index.ts"
-      ]
+      "~/*": ["libs/nest-core/src/*"],
+      "~": ["libs/nest-core/src/index.ts"],
+      "@liora/*": ["libs/*/src"],
+      "@liora/dto": ["libs/dto/src/index.ts"],
+      "@liora/dto/*": ["libs/dto/src/*"],
+      "@liora/shared": ["libs/shared/src/index.ts"],
+      "@liora/shared/*": ["libs/shared/src/*"],
+      "@liora/nest-core": ["libs/nest-core/src/index.ts"],
+      "@liora/nest-core/*": ["libs/nest-core/src/*"],
+      "@liora/database": ["libs/database/src/index.ts"],
+      "@liora/database/*": ["libs/database/src/*"]
     }
   },
-  "include": [
-    "libs/nest-core/src/**/*.ts",
-    "libs/database/src/**/*.ts",
-    "libs/shared/src/**/*.ts",
-    "libs/dto/src/**/*.ts",
-    "src/types/**/*.d.ts",
-    "**/*.d.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "tmp",
-    "dist"
-  ]
+  "include": ["src/types/**/*.d.ts", "**/*.d.ts"],
+  "exclude": ["node_modules", "tmp", "dist"]
 }

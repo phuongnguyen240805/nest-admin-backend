@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger'
 import {
   RESPONSE_SUCCESS_CODE,
   RESPONSE_SUCCESS_MSG,
-} from '../../constants/response.constant'
+} from '~/constants/response.constant'
 
 export class ResOp<T = any> {
   @ApiProperty({ type: 'object',additionalProperties: true })
@@ -25,17 +25,17 @@ export class ResOp<T = any> {
     return new ResOp(RESPONSE_SUCCESS_CODE, data, message)
   }
 
-  static error(code: number, message: string) {
+  static error(code: number, message) {
     return new ResOp(code, {}, message)
   }
 }
 
 export class TreeResult<T> {
   @ApiProperty()
-  id?: number
+  id: number
 
   @ApiProperty()
-  parentId?: number
+  parentId: number
 
   @ApiProperty()
   children?: TreeResult<T>[]

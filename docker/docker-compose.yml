@@ -1,0 +1,85 @@
+# version: '3.9'
+
+# services:
+#   db:
+#     image: mysql:8.0
+#     container_name: liora-mysql-dev
+#     restart: always
+#     environment:
+#       MYSQL_ROOT_PASSWORD: root123
+#       MYSQL_DATABASE: liora_db
+#     ports:
+#       - "3306:3306"
+#     volumes:
+#       - ./__data/mysql:/var/lib/mysql
+#       - ./deploy/sql:/docker-entrypoint-initdb.d
+
+#   api:
+#     build:
+#       context: .
+#       dockerfile: docker/Dockerfile.base
+#       target: development                   # giữ nguyên nếu Dockerfile.base có stage này
+#     container_name: liora-api-dev
+#     restart: always
+#     ports:
+#       - "3000:3000"
+#     environment:
+#       - NODE_ENV=development
+#       - DATABASE_URL=mysql://root:root123@db:3306/liora_db
+#     volumes:
+#       - .:/app
+#       - /app/node_modules
+#     depends_on:
+#       - db
+#     command: pnpm nx serve centrix-backend --skip-nx-cache  
+
+#   # Nếu muốn thêm nginx cho dev (tùy chọn)
+#   nginx:
+#     image: nginx:alpine
+#     container_name: liora-nginx-dev
+#     ports:
+#       - "80:80"
+#     volumes:
+#       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+#     depends_on:
+#       - api
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: liora-mysql-dev
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: liora_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./__data/mysql:/var/lib/mysql
+      - ./deploy/sql:/docker-entrypoint-initdb.d
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.base
+    container_name: liora-api-dev
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=mysql://root:root123@db:3306/liora_db
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - db
+    command: pnpm nx serve centrix-backend --skip-nx-cache   # ← đổi thành goodshort-backend hoặc openclaw-backend nếu muốn
+
+  # Tạm comment nginx nếu chưa có config
+  # nginx:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf

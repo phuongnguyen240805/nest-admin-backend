@@ -13,7 +13,7 @@ export class PagerDto<T = any> {
   @IsInt()
   @Expose()
   @IsOptional({ always: true })
-  @Transform(({ value: val }: { value: any }) => (val ? Number.parseInt(val) : 1), {
+  @Transform(({ value: val }) => (val ? Number.parseInt(val) : 1), {
     toClassOnly: true,
   })
   page?: number

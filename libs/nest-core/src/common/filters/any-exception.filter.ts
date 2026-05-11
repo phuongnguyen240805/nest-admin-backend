@@ -9,11 +9,11 @@ import {
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { QueryFailedError } from 'typeorm'
 
-import { BusinessException } from '../../common/exceptions/biz.exception'
-import { ErrorEnum } from '../../constants/error-code.constant'
+import { BusinessException } from '~/common/exceptions/biz.exception'
+import { ErrorEnum } from '~/constants/error-code.constant'
 
-import { isDev } from '../../global/env'
-import { IBaseResponse } from '../../auth/interfaces/auth.interface'
+import { isDev } from '~/global/env'
+import { IBaseResponse } from '~/modules/auth/interfaces/auth.interface'
 
 interface myError {
   readonly status: number

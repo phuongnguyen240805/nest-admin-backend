@@ -4,5 +4,5 @@ export class BatchDeleteDto {
   @IsDefined()
   @IsNotEmpty()
   @IsNumber({}, { each: true })
-  ids?: number[]
+  ids: number[]
 }

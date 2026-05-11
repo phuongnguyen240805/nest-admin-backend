@@ -42,7 +42,7 @@ export function randomValue(
   return id
 }
 
-export const hashString = function (str = "", seed = 0) {
+export const hashString = function (str, seed = 0) {
   let h1 = 0xDEADBEEF ^ seed
   let h2 = 0x41C6CE57 ^ seed
   for (let i = 0, ch; i < str.length; i++) {

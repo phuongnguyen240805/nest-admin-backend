@@ -1,9 +1,9 @@
 import { ConfigType, registerAs } from '@nestjs/config'
 import * as qiniu from 'qiniu'
 
-import { env } from '../global/env'
+import { env } from '~/global/env'
 
-function parseZone(zone: string) {
+function parseZone(zone: string): qiniu.conf.Zone {
   switch (zone) {
     case 'Zone_as0':
       return qiniu.zone.Zone_as0
@@ -15,6 +15,8 @@ function parseZone(zone: string) {
       return qiniu.zone.Zone_z1
     case 'Zone_z2':
       return qiniu.zone.Zone_z2
+    default:
+      return undefined;
   }
 }
 

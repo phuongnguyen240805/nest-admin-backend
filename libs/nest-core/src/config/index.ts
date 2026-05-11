@@ -1,4 +1,4 @@
-import { RecordNamePaths } from '../types/until'
+import { LogLevel } from 'fastify'
 import { AppConfig, appRegToken, IAppConfig } from './app.config'
 import { DatabaseConfig, dbRegToken, IDatabaseConfig } from './database.config'
 import { IMailerConfig, MailerConfig, mailerRegToken } from './mailer.config'
@@ -23,7 +23,17 @@ export interface AllConfigType {
   [securityRegToken]: ISecurityConfig
   [swaggerRegToken]: ISwaggerConfig
   [ossRegToken]: IOssConfig
+  // app: IAppConfig;
+  // logger: { level: LogLevel; maxFiles: number };
+  // mailer: IMailerConfig;
+  // redis: IRedisConfig;
 }
+
+export type RecordNamePaths<T> = {
+  [K in keyof T]: T[K] extends Record<string, any>
+    ? `${Extract<K, string>}.${RecordNamePaths<T[K]>}`
+    : Extract<K, string>;
+}[keyof T];
 
 export type ConfigKeyPaths = RecordNamePaths<AllConfigType>
 

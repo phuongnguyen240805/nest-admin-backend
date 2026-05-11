@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import * as dotenv from 'dotenv'
 
 export class ConfigurationChecker {
-  cfg: dotenv.DotenvParseOutput = {}
+  cfg: dotenv.DotenvParseOutput
   issues: string[] = []
 
   readEnvFromFile() {
@@ -20,10 +20,7 @@ export class ConfigurationChecker {
   }
 
   readEnvFromProcess() {
-    // this.cfg = process.env
-    this.cfg = Object.fromEntries(
-      Object.entries(process.env).filter(([, value]) => value !== undefined)
-    ) as dotenv.DotenvParseOutput
+    this.cfg = process.env
   }
 
   check() {
@@ -66,12 +63,12 @@ export class ConfigurationChecker {
   }
 
   checkRedis() {
-    if (!this.cfg.REDIS_URL) {
+    if (!this.cfg['REDIS_URL']) {
       this.issues.push('REDIS_URL not set')
     }
 
     try {
-      const redisUrl = new URL(this.cfg.REDIS_URL)
+      const redisUrl = new URL(this.cfg['REDIS_URL'])
 
       if (redisUrl.protocol !== 'redis:') {
         this.issues.push('REDIS_URL must start with redis://')
@@ -87,7 +84,7 @@ export class ConfigurationChecker {
       return
     }
 
-    const urlString = this.get(key) as string
+    const urlString = this.get(key)
 
     try {
       // new URL(urlString)

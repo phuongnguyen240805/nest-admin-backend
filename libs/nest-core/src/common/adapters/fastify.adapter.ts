@@ -22,26 +22,49 @@ app.register(FastifyCookie, {
   secret: 'cookie-secret', // 这个 secret 不太重要，不存鉴权相关，无关紧要
 })
 
-app.getInstance().addHook('onRequest', (request, reply, done) => {
+app.getInstance().addHook('onRequest', async (request, reply): Promise<void> => {
   // set undefined origin
   const { origin } = request.headers
-  if (!origin)
-    request.headers.origin = request.headers.host
+  if (!origin) {
+    request.headers.origin = request.headers.host as string
+  }
 
   // forbidden php
-
   const { url } = request
-
   if (url.endsWith('.php')) {
-    reply.raw.statusMessage
-      = 'Eh. PHP is not support on this machine. Yep, I also think PHP is bestest programming language. But for me it is beyond my reach.'
+    reply.raw.statusMessage =
+      'Eh. PHP is not support on this machine. Yep, I also think PHP is bestest programming language. But for me it is beyond my reach.'
 
-    return reply.code(418).send()
+    return reply.code(418).send()   // early return OK
   }
 
   // skip favicon request
-  if (url.match(/favicon.ico$/) || url.match(/manifest.json$/))
-    return reply.code(204).send()
+  if (url.match(/favicon.ico$/) || url.match(/manifest.json$/)) {
+    return reply.code(204).send()   // early return OK
+  }
 
-  done()
 })
+
+// app.getInstance().addHook('onRequest', (request, reply, done) => {
+//   // set undefined origin
+//   const { origin } = request.headers
+//   if (!origin)
+//     request.headers.origin = request.headers.host
+
+//   // forbidden php
+
+//   const { url } = request
+
+//   if (url.endsWith('.php')) {
+//     reply.raw.statusMessage
+//       = 'Eh. PHP is not support on this machine. Yep, I also think PHP is bestest programming language. But for me it is beyond my reach.'
+
+//     return reply.code(418).send()
+//   }
+
+//   // skip favicon request
+//   if (url.match(/favicon.ico$/) || url.match(/manifest.json$/))
+//     return reply.code(204).send()
+
+//   done()
+// })

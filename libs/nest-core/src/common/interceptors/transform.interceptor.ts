@@ -11,7 +11,7 @@ import qs from 'qs'
 import { Observable } from 'rxjs'
 import { map } from 'rxjs/operators'
 
-import { ResOp } from '../../common/model/response.model'
+import { ResOp } from '~/common/model/response.model'
 
 import { BYPASS_KEY } from '../decorators/bypass.decorator'
 
@@ -20,7 +20,7 @@ import { BYPASS_KEY } from '../decorators/bypass.decorator'
  */
 @Injectable()
 export class TransformInterceptor implements NestInterceptor {
-  constructor(private readonly reflector: Reflector) { }
+  constructor(private readonly reflector: Reflector) {}
 
   intercept(
     context: ExecutionContext,
@@ -38,9 +38,7 @@ export class TransformInterceptor implements NestInterceptor {
     const request = http.getRequest<FastifyRequest>()
 
     // 处理 query 参数，将数组参数转换为数组,如：?a[]=1&a[]=2 => { a: [1, 2] }
-    // request.query = qs.parse(request.url.split('?').at(1))
-    const queryString = request.url.split('?')[1] || '';
-    request.query = qs.parse(queryString);
+    request.query = qs.parse(request.url.split('?').at(1))
 
     return next.handle().pipe(
       map((data) => {

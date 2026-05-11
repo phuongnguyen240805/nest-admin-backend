@@ -1,29 +1,14 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../dist/libs/nest-core",
+    "outDir": "../../dist/out-tsc",
     "declaration": true,
-    "declarationMap": true,
-    "composite": true,
-    "inlineSources": true,
     "types": [
       "node"
-    ],
-    "baseUrl": ".",
-    "paths": {
-      "@liora/nest-core/*": [
-        "./src/*"
-      ],
-      "~/*": [
-        "./src/*"
-      ]
-    }
+    ]
   },
   "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "**/*.spec.ts",
-    "**/*.test.ts"
+    "src/**/*.ts",
+    "src/types/**/*.d.ts"
   ]
 }

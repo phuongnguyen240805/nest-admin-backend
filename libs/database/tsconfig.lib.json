@@ -1,27 +1,13 @@
-// {
-//   "extends": "../../tsconfig.base.json",
-//   "compilerOptions": {
-//     "outDir": "../../dist/libs/database",
-//     "declaration": true,
-//     "declarationMap": true,
-//     "inlineSources": true,
-//     "types": ["node"],
-//     "baseUrl": ".",
-//     "rootDir": "src",
-//   },
-//   "include": ["src/**/*.ts"],
-//   "exclude": ["**/*.spec.ts", "**/*.test.ts"]
-// }
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../dist/libs/database",
+    "outDir": "../../dist/out-tsc",
     "declaration": true,
-    "declarationMap": true,
-    "inlineSources": true,
-    "types": ["node"],
-    "rootDir": "src"
+    "types": ["node"]
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["**/*.spec.ts", "**/*.test.ts"]
+    "include": [
+    "src/**/*.ts",
+    "src/types/**/*.d.ts"
+  ],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
 }

@@ -5,11 +5,11 @@ import dayjs from 'dayjs'
 
 import Redis from 'ioredis'
 
-import { InjectRedis } from '@liora/nest-core/common/decorators/inject-redis.decorator'
-import { BusinessException } from '@liora/nest-core/common/exceptions/biz.exception'
-import { AppConfig, IAppConfig } from '@liora/nest-core/config'
-import { ErrorEnum } from '@liora/nest-core/constants/error-code.constant'
-import { randomValue } from '@liora/nest-core/utils'
+import { InjectRedis } from '~/common/decorators/inject-redis.decorator'
+import { BusinessException } from '~/common/exceptions/biz.exception'
+import { AppConfig, IAppConfig } from '~/config'
+import { ErrorEnum } from '~/constants/error-code.constant'
+import { randomValue } from '~/utils'
 
 @Injectable()
 export class MailerService {
@@ -136,16 +136,16 @@ export class MailerService {
     }
   }
 
-  // async sendUserConfirmation(user: UserEntity, token: string) {
-  //   const url = `example.com/auth/confirm?token=${token}`
-  //   await this.mailerService.sendMail({
-  //     to: user.email,
-  //     subject: 'Confirm your Email',
-  //     template: './confirmation',
-  //     context: {
-  //       name: user.name,
-  //       url,
-  //     },
-  //   })
-  // }
+//   async sendUserConfirmation(user: UserEntity, token: string) {
+//     const url = `example.com/auth/confirm?token=${token}`
+//     await this.mailerService.sendMail({
+//       to: user.email,
+//       subject: 'Confirm your Email',
+//       template: './confirmation',
+//       context: {
+//         name: user.name,
+//         url,
+//       },
+//     })
+//   }
 }

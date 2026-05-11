@@ -4,10 +4,10 @@ import { Inject, Injectable } from '@nestjs/common'
 import { Emitter } from '@socket.io/redis-emitter'
 import { Cache } from 'cache-manager'
 
-import { RedisIoAdapterKey } from '@liora/nest-core/common/adapters/socket.adapter'
+import { RedisIoAdapterKey } from '~/common/adapters/socket.adapter'
 
-import { API_CACHE_PREFIX } from '@liora/nest-core/constants/cache.constant'
-import { getRedisKey } from '@liora/nest-core/utils/redis.util'
+import { API_CACHE_PREFIX } from '~/constants/cache.constant'
+import { getRedisKey } from '~/utils/redis.util'
 
 // 获取器
 export type TCacheKey = string

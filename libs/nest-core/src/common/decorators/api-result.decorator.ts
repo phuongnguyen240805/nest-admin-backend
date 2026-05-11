@@ -2,7 +2,7 @@ import { applyDecorators, HttpStatus, RequestMethod, Type } from '@nestjs/common
 import { METHOD_METADATA } from '@nestjs/common/constants'
 import { ApiExtraModels, ApiResponse, getSchemaPath } from '@nestjs/swagger'
 
-import { ResOp } from '../../common/model/response.model'
+import { ResOp } from '~/common/model/response.model'
 
 const baseTypeNames = ['String', 'Number', 'Boolean']
 
@@ -66,7 +66,7 @@ export function ApiResult<TModel extends Type<any>>({
   const model = Array.isArray(type) ? type[0] : type
 
   return applyDecorators(
-    ...(model ? [ApiExtraModels(model)] : []),
+    ApiExtraModels(model),
     (
       target: object,
       key: string | symbol,

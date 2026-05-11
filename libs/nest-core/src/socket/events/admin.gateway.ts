@@ -9,7 +9,7 @@ import {
 
 import { Server } from 'socket.io'
 
-import { AuthService } from '@liora/nest-core/auth/auth.service'
+import { AuthService } from '~/modules/auth/auth.service'
 import { CacheService } from '~/shared/redis/cache.service'
 
 import { createAuthGateway } from '../shared/auth.gateway'

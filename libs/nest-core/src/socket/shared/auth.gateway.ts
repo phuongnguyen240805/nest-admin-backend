@@ -9,10 +9,10 @@ import { JwtService } from '@nestjs/jwt'
 import { WebSocketServer } from '@nestjs/websockets'
 import { Namespace } from 'socket.io'
 
-import { EventBusEvents } from '@liora/nest-core/constants/event-bus.constant'
+import { EventBusEvents } from '~/constants/event-bus.constant'
 
-import { TokenService } from '@liora/nest-core/auth/services/token.service'
-import { CacheService } from '@liora/nest-core/shared/redis/cache.service'
+import { TokenService } from '~/modules/auth/services/token.service'
+import { CacheService } from '~/shared/redis/cache.service'
 
 import { BroadcastBaseGateway } from '../base.gateway'
 import { BusinessEvents } from '../business-event.constant'
@@ -23,7 +23,7 @@ export interface AuthGatewayOptions {
 
 // eslint-disable-next-line ts/ban-ts-comment
 // @ts-expect-error
-export interface IAuthGateway extends OnGatewayConnection, OnGatewayDisconnect, BroadcastBaseGateway {}
+export interface IAuthGateway extends OnGatewayConnection, OnGatewayDisconnect, BroadcastBaseGateway { }
 
 export function createAuthGateway(options: AuthGatewayOptions): new (...args: any[]) => IAuthGateway {
   const { namespace } = options
@@ -70,9 +70,9 @@ export function createAuthGateway(options: AuthGatewayOptions): new (...args: an
 
     async handleConnection(client: Socket) {
       const token
-        = client.handshake.query.token
+        = (client.handshake.query as any).token
+        || (client.handshake.headers as any).Authorization
         || client.handshake.headers.authorization
-        || client.handshake.headers.Authorization
       if (!token)
         return this.authFailed(client)
 
@@ -85,7 +85,7 @@ export function createAuthGateway(options: AuthGatewayOptions): new (...args: an
       this.tokenSocketIdMap.set(token.toString(), sid)
     }
 
-    handleDisconnect(client: Socket) {
+    override handleDisconnect(client: Socket) {
       super.handleDisconnect(client)
     }
 

@@ -4,14 +4,10 @@ import EVP_BytesToKey from 'evp_bytestokey'
 import { sign, verify } from 'jsonwebtoken'
 
 const algorithm = 'aes-256-cbc'
-// const { keyLength, ivLength } = crypto.getCipherInfo(algorithm)
+const { keyLength, ivLength } = crypto.getCipherInfo(algorithm)
 
 function deriveLegacyKeyIv(secret: string) {
-  const cipherInfo = crypto.getCipherInfo(algorithm)
-  if (!cipherInfo) {
-    throw new Error(`Unable to get cipher info for algorithm: ${algorithm}`)
-  }
-  const { keyLength, ivLength } = cipherInfo // 32, 16
+  const { keyLength, ivLength } = crypto.getCipherInfo(algorithm) // 32, 16
   const pass = Buffer.isBuffer(secret) ? secret : Buffer.from(secret ?? '', 'utf8')
 
   // evp_bytestokey: key length in **bits**, IV length in **bytes**
@@ -24,14 +20,14 @@ function deriveLegacyKeyIv(secret: string) {
 }
 
 export function decrypt_legacy_using_IV(hexCiphertext: string) {
-  const { key, iv } = deriveLegacyKeyIv(process.env.JWT_SECRET!)
+  const { key, iv } = deriveLegacyKeyIv(process.env.JWT_SECRET)
   const decipher = crypto.createDecipheriv(algorithm, key, iv)
   const out = Buffer.concat([decipher.update(hexCiphertext, 'hex'), decipher.final()])
   return out.toString('utf8')
 }
 
 export function encrypt_legacy_using_IV(utf8Plaintext: string) {
-  const { key, iv } = deriveLegacyKeyIv(process.env.JWT_SECRET!)
+  const { key, iv } = deriveLegacyKeyIv(process.env.JWT_SECRET)
   const cipher = crypto.createCipheriv(algorithm, key, iv)
   const out = Buffer.concat([cipher.update(utf8Plaintext, 'utf8'), cipher.final()])
   return out.toString('hex')

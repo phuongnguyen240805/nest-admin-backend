@@ -63,7 +63,7 @@ export function ToDate(): PropertyDecorator {
       const { value } = params
 
       if (!value)
-        return
+        return undefined;
 
       return new Date(value)
     },
@@ -114,7 +114,7 @@ export function ToLowerCase(): PropertyDecorator {
       const value = params.value as string[] | string
 
       if (!value)
-        return
+        return undefined;
 
       if (isArray(value))
         return value.map(v => v.toLowerCase())
@@ -134,7 +134,7 @@ export function ToUpperCase(): PropertyDecorator {
       const value = params.value as string[] | string
 
       if (!value)
-        return
+        return undefined;
 
       if (isArray(value))
         return value.map(v => v.toUpperCase())

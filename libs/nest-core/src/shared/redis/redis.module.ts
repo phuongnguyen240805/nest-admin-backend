@@ -6,9 +6,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { redisStore } from 'cache-manager-ioredis-yet'
 import { RedisOptions } from 'ioredis'
 
-import { REDIS_CLIENT } from '@liora/nest-core/common/decorators/inject-redis.decorator'
+import { REDIS_CLIENT } from '~/common/decorators/inject-redis.decorator'
 
-import { ConfigKeyPaths, IRedisConfig } from '@liora/nest-core/config'
+import { ConfigKeyPaths, IRedisConfig } from '~/config'
 import { CacheService } from './cache.service'
 import { REDIS_PUBSUB } from './redis.constant'
 import { RedisSubPub } from './redis-subpub'
@@ -19,7 +19,7 @@ const providers: Provider[] = [
   {
     provide: REDIS_PUBSUB,
     useFactory: (configService: ConfigService<ConfigKeyPaths>) => {
-      const redisOptions: RedisOptions = configService.get<IRedisConfig>('redis')
+      const redisOptions: RedisOptions = configService.get<IRedisConfig>('redis', { infer: true })
       return new RedisSubPub(redisOptions)
     },
     inject: [ConfigService],
@@ -41,7 +41,7 @@ const providers: Provider[] = [
     CacheModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService<ConfigKeyPaths>) => {
-        const redisOptions: RedisOptions = configService.get<IRedisConfig>('redis')
+        const redisOptions: RedisOptions = configService.get<IRedisConfig>('redis', { infer: true })
 
         return {
           isGlobal: true,
@@ -57,7 +57,7 @@ const providers: Provider[] = [
       imports: [ConfigModule],
       useFactory: (configService: ConfigService<ConfigKeyPaths>) => ({
         readyLog: true,
-        config: configService.get<IRedisConfig>('redis'),
+        config: configService.get<IRedisConfig>('redis', { infer: true }),
       }),
       inject: [ConfigService],
     }),

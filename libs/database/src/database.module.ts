@@ -5,21 +5,20 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 
 import { DataSource, LoggerOptions } from 'typeorm'
 
-import { ConfigKeyPaths } from '@liora/nest-core/config'
-import type { IDatabaseConfig } from '@liora/nest-core/config/database.config'
-import { env } from '@liora/nest-core/global/env'
+// import { ConfigKeyPaths, IDatabaseConfig } from '~/config'  
+import { env } from '../src/global'
 
 import { EntityExistConstraint } from './constraints/entity-exist.constraint'
 import { UniqueConstraint } from './constraints/unique.constraint'
 import { TypeORMLogger } from './typeorm-logger'
+import { IDatabaseConfig } from './config/database.config'
 
 const providers = [EntityExistConstraint, UniqueConstraint]
-
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService<ConfigKeyPaths>) => {
+      useFactory: (configService: ConfigService) => {
         let loggerOptions: LoggerOptions = env('DB_LOGGING') as 'all'
 
         try {
@@ -31,7 +30,7 @@ const providers = [EntityExistConstraint, UniqueConstraint]
         }
 
         return {
-          ...configService.get<IDatabaseConfig>('database'),
+          ...configService.get<IDatabaseConfig>('database', { infer: true }),
           autoLoadEntities: true,
           logging: loggerOptions,
           logger: new TypeORMLogger(loggerOptions),
@@ -39,7 +38,7 @@ const providers = [EntityExistConstraint, UniqueConstraint]
       },
       // dataSource receives the configured DataSourceOptions
       // and returns a Promise<DataSource>.
-      dataSourceFactory: async (options: any) => {
+      dataSourceFactory: async (options) => {
         const dataSource = await new DataSource(options).initialize()
         return dataSource
       },
