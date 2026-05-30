@@ -61,3 +61,6 @@ coverage/
 *.tgz
 *.tar.gz
 *.zip
+
+# ==================== Docker ====================
+docker/__data/

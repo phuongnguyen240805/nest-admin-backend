@@ -1,9 +1,25 @@
-import { Module } from '@nestjs/common'
-import { TypeOrmModule } from '@nestjs/typeorm'
-import { Organization } from '../billing/entities/organization.entity'
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { TenantContextService } from './tenant-context.service';
+import { TenantGuard } from './tenant.guard';
+import { TenantContextInterceptor } from './tenant-context.interceptor';
+import { TenantService } from './tenant.service';
+import { Tenant } from './entities/tenant.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Organization])],
-  exports: [TypeOrmModule],
+    imports: [TypeOrmModule.forFeature([Tenant])],
+    providers: [
+        TenantContextService,
+        TenantGuard,
+        TenantContextInterceptor,
+        TenantService,
+    ],
+    exports: [
+        TenantContextService,
+        TenantGuard,
+        TenantContextInterceptor,
+        TenantService,
+        TypeOrmModule,
+    ],
 })
-export class TenantModule {}
+export class TenantModule { }

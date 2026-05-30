@@ -1,0 +1,28 @@
+# === Monorepo ignores ===
+node_modules
+**/node_modules
+dist
+**/dist
+.git
+.github
+.vscode
+logs
+__data
+.nyc_output
+coverage
+*.log
+*.env.local
+.DS_Store
+tmp
+temp
+.cache
+.nx/cache
+docker/volumes
+
+# Chỉ cho phép những gì thật sự cần trong build context
+!apps/donut-sync-backend
+!libs/nest-core
+!libs/shared
+!pnpm-workspace.yaml
+!pnpm-lock.yaml
+!package.json
