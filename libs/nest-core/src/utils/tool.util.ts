@@ -60,3 +60,90 @@ export const hashString = function (str, seed = 0) {
 }
 
 export const uniqueSlash = (path: string) => path.replace(/(https?:\/)|(\/)+/g, '$1$2')
+
+// import { randomBytes } from 'node:crypto'
+// import { md5 } from './crypto.util'
+
+// export function getAvatar(mail: string | undefined) {
+//   if (!mail)
+//     return ''
+
+//   return `https://cravatar.cn/avatar/${md5(mail)}?d=retro`
+// }
+
+// /**
+//  * Tạo một UUID ngẫu nhiên an toàn tuyệt đối
+//  * Mặc định trả về chuỗi có độ dài tương đương nanoid chuẩn (định dạng URL-safe)
+//  */
+// export function generateUUID(size: number = 21): string {
+//   const alphabet = 'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict'
+//   return generateCustomRandom(alphabet, size)
+// }
+
+// export function generateShortUUID(): string {
+//   const alphabet = 'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict'
+//   return generateCustomRandom(alphabet, 10)
+// }
+
+// /**
+//  * Tạo một chuỗi ngẫu nhiên dựa trên bảng ký tự (Placeholder) truyền vào công thức bảo mật
+//  */
+// export function generateRandomValue(
+//   length: number,
+//   placeholder = '1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM',
+// ): string {
+//   return generateCustomRandom(placeholder, length)
+// }
+
+// /**
+//  * Hàm lõi dùng `node:crypto` để sinh ký tự ngẫu nhiên an toàn (Thay thế customAlphabet)
+//  */
+// function generateCustomRandom(alphabet: string, size: number): string {
+//   const mask = (2 << (31 - Math.clz32((alphabet.length - 1) | 1))) - 1
+//   const step = Math.ceil((1.6 * mask * size) / alphabet.length)
+//   let id = ''
+  
+//   while (true) {
+//     const bytes = randomBytes(step)
+//     for (let i = 0; i < step; i++) {
+//       const byte = bytes[i] & mask
+//       if (alphabet[byte]) {
+//         id += alphabet[byte]
+//         if (id.length === size) return id
+//       }
+//     }
+//   }
+// }
+
+// /**
+//  * Hàm sinh chuỗi nhanh bằng Math.random() - Giữ nguyên gốc của bạn
+//  */
+// export function randomValue(
+//   size = 16,
+//   dict = 'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict',
+// ): string {
+//   let id = ''
+//   let i = size
+//   const len = dict.length
+//   while (i--) id += dict[(Math.random() * len) | 0]
+//   return id
+// }
+
+// export const hashString = function (str, seed = 0) {
+//   let h1 = 0xDEADBEEF ^ seed
+//   let h2 = 0x41C6CE57 ^ seed
+//   for (let i = 0, ch; i < str.length; i++) {
+//     ch = str.charCodeAt(i)
+//     h1 = Math.imul(h1 ^ ch, 2654435761)
+//     h2 = Math.imul(h2 ^ ch, 1597334677)
+//   }
+//   h1
+//     = Math.imul(h1 ^ (h1 >>> 16), 2246822507)
+//     ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
+//   h2
+//     = Math.imul(h2 ^ (h2 >>> 16), 2246822507)
+//     ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
+//   return 4294967296 * (2097151 & h2) + (h1 >>> 0)
+// }
+
+// export const uniqueSlash = (path: string) => path.replace(/(https?:\/)|(\/)+/g, '$1$2')
