@@ -16,7 +16,8 @@
           "--node-env=production",
           "--externals-presets-node"
         ],
-        "cwd": "apps/nest-admin-backend"
+        "cwd": "apps/nest-admin-backend",
+        "externalDependencies": "none"
       },
       "configurations": {
         "development": {
