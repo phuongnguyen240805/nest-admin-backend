@@ -17,6 +17,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - liora-network
 
   # ================== REDIS ==================
   redis:
@@ -30,6 +32,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - liora-network
 
   # ================== LIORA NESTADMIN BACKEND ==================
   nest-admin:
@@ -121,6 +125,8 @@ services:
         condition: service_healthy
       nest-admin:
         condition: service_started
+    networks:
+      - liora-network
 
   # ================== MINIO S3 STORAGE ==================
   minio:
@@ -141,6 +147,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - liora-network
 
 networks:
   liora-network:
