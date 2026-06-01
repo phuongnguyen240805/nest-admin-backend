@@ -11,6 +11,9 @@ __data
 .nyc_output
 coverage
 *.log
+.env
+.env.*
+!.env.example
 *.env.local
 .DS_Store
 tmp

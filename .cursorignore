@@ -1,0 +1,20 @@
+# Bỏ qua folder cài đặt và cache hệ thống
+node_modules/
+.nx/
+.git/
+.github/
+
+# Bỏ qua folder chứa mã nguồn đã biên dịch (Output)
+dist/
+build/
+out/
+
+# Bỏ qua tài liệu và ảnh
+*.md
+*.png
+*.jpg
+*.svg
+
+# Bỏ qua folder tạm
+tmp/
+apps/tmp/

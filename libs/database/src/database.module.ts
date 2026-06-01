@@ -7,9 +7,6 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 
 import { DataSource, LoggerOptions } from 'typeorm'
 
-// import { ConfigKeyPaths, IDatabaseConfig } from '~/config'  
-import { env } from '../src/global'
-
 import { EntityExistConstraint } from './constraints/entity-exist.constraint'
 import { UniqueConstraint } from './constraints/unique.constraint'
 import { TypeORMLogger } from './typeorm-logger'
@@ -21,14 +18,14 @@ const providers = [EntityExistConstraint, UniqueConstraint]
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        let loggerOptions: LoggerOptions = env('DB_LOGGING') as 'all'
+        const rawLogging = configService.get<string>('DB_LOGGING') ?? process.env.DB_LOGGING ?? 'false'
+        let loggerOptions: LoggerOptions = rawLogging as LoggerOptions
 
         try {
-          // 解析成 js 数组 ['error']
-          loggerOptions = JSON.parse(loggerOptions)
+          loggerOptions = JSON.parse(rawLogging)
         }
         catch {
-          // ignore
+          // ignore — use string value as-is
         }
 
         return {

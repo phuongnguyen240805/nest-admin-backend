@@ -37,6 +37,7 @@ import {
     ConfigModule.forRoot({
       isGlobal: true,
       expandVariables: true,
+      ignoreEnvFile: process.env.NODE_ENV === "production",
       envFilePath: [".env.local", `.env.${process.env.NODE_ENV}`, ".env"],
       load: [...Object.values(config)],
     }),

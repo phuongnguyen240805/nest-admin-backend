@@ -10,6 +10,7 @@ import { SyncModule } from "./sync/sync.module.js";
     ConfigModule.forRoot({
       isGlobal: true,
       expandVariables: true,
+      ignoreEnvFile: process.env.NODE_ENV === "production",
       envFilePath: [".env.local", `.env.${process.env.NODE_ENV}`, ".env"],
     }),
     SyncModule,

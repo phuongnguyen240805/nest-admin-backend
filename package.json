@@ -16,7 +16,12 @@
     "dev:goodshort": "nx serve goodshort-backend",
     "dev:openclaw": "nx serve openclaw-backend",
     "dev:centrix": "nx serve centrix-backend",
-    "graph": "pnpm nx graph"
+    "graph": "pnpm nx graph",
+    "docker:config": "docker compose -f docker/docker-compose.yml --env-file .env config",
+    "docker:up": "docker compose -f docker/docker-compose.yml --env-file .env up -d --build",
+    "docker:down": "docker compose -f docker/docker-compose.yml --env-file .env down",
+    "docker:logs": "docker compose -f docker/docker-compose.yml --env-file .env logs -f",
+    "docker:ps": "docker compose -f docker/docker-compose.yml --env-file .env ps"
   },
   "devDependencies": {
     "@eslint/js": "^9.8.0",

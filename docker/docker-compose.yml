@@ -1,12 +1,24 @@
+# Liora local stack — chạy từ ROOT monorepo:
+#   pnpm docker:up
+#   pnpm docker:down
+#
+# Hoặc thủ công (bắt buộc --env-file để interpolate ${VAR} cho db/minio):
+#   docker compose -f docker/docker-compose.yml --env-file .env up -d
+#
+# App secrets (JWT, DB password, …) lấy từ env_file ../.env — KHÔNG khai báo lại
+# trong `environment:` để tránh ghi đè bằng chuỗi rỗng khi thiếu docker/.env.
+
 services:
   # ================== DATABASE ==================
   db:
     image: mysql:8.0
     container_name: liora-mysql-dev
     restart: always
+    env_file:
+      - ../.env
     environment:
-      MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: liora_db
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-liora_db}
     ports:
       - "3307:3306"
     volumes:
@@ -35,7 +47,7 @@ services:
     networks:
       - liora-network
 
-  # ================== LIORA NESTADMIN BACKEND ==================
+  # ================== NEST-ADMIN BACKEND ==================
   nest-admin:
     build:
       context: ..
@@ -45,33 +57,17 @@ services:
     restart: unless-stopped
     ports:
       - "7001:7001"
+    env_file:
+      - ../.env
     environment:
-      - NODE_ENV=development
-      - PORT=7001
-      # Database
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_USERNAME=root
-      - DB_PASSWORD=root123
-      - DB_DATABASE=liora_db
-      - DB_SYNCHRONIZE=true
-      # Redis
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      # JWT / Security
-      - JWT_SECRET=liora-dev-jwt-secret-change-in-prod
-      - JWT_EXPIRE=7
-      - REFRESH_TOKEN_SECRET=liora-dev-refresh-secret-change-in-prod
-      - REFRESH_TOKEN_EXPIRE=30
-      # Internal communication key
-      - INTERNAL_KEY=secret-sync-token
-      # S3 / MinIO config
-      - S3_ENDPOINT=http://minio:9000
-      - S3_ACCESS_KEY=minioadmin
-      - S3_SECRET_KEY=minioadmin
-      - S3_BUCKET=donut-sync-backend
-      - S3_REGION=us-east-1
-      - S3_FORCE_PATH_STYLE=true
+      # Chỉ override hostname/service trong mạng Docker (không lấy từ .env host)
+      PORT: "7001"
+      DB_HOST: db
+      DB_PORT: "3306"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: http://minio:9000
     volumes:
       - ../apps:/app/apps
       - ../libs:/app/libs
@@ -79,6 +75,7 @@ services:
       - ../tsconfig.base.json:/app/tsconfig.base.json
       - ../tsconfig.json:/app/tsconfig.json
       - /app/node_modules
+      - ../.env:/app/.env:ro
     depends_on:
       db:
         condition: service_healthy
@@ -99,27 +96,19 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - ../.env
     environment:
-      - NODE_ENV=development
-      - PORT=3000
-      # Sync token (for self-hosted mode or JWT cloud public key)
-      - SYNC_TOKEN=secret-sync-token
-      # Microservice REST communication config
-      - BACKEND_INTERNAL_URL=http://nest-admin:7001
-      - BACKEND_INTERNAL_KEY=secret-sync-token
-      # S3 / MinIO config
-      - S3_ENDPOINT=http://minio:9000
-      - S3_ACCESS_KEY=minioadmin
-      - S3_SECRET_KEY=minioadmin
-      - S3_BUCKET=donut-sync-backend
-      - S3_REGION=us-east-1
-      - S3_FORCE_PATH_STYLE=true
+      PORT: "3000"
+      BACKEND_INTERNAL_URL: http://nest-admin:7001
+      S3_ENDPOINT: http://minio:9000
     volumes:
       - ../apps:/app/apps
       - ../libs:/app/libs
       - ../nx.json:/app/nx.json
       - ../tsconfig.base.json:/app/tsconfig.base.json
       - ../tsconfig.json:/app/tsconfig.json
+      - ../.env:/app/.env:ro
     depends_on:
       minio:
         condition: service_healthy
@@ -128,16 +117,18 @@ services:
     networks:
       - liora-network
 
-  # ================== MINIO S3 STORAGE ==================
+  # ================== MINIO ==================
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     ports:
-      - "9002:9000"     # S3 API
-      - "9003:9001"     # Console UI
+      - "9002:9000"
+      - "9003:9001"
+    env_file:
+      - ../.env
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_BROWSER: "on"
     volumes:
       - minio_data:/data

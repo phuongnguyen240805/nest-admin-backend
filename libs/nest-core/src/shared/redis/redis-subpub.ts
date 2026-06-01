@@ -13,15 +13,7 @@ export class RedisSubPub {
   }
 
   public init() {
-    const redisOptions: RedisOptions = {
-      host: this.redisConfig.host,
-      port: this.redisConfig.port,
-    }
-
-    if (this.redisConfig.password)
-      redisOptions.password = this.redisConfig.password
-
-    const pubClient = new IORedis(redisOptions)
+    const pubClient = new IORedis(this.redisConfig)
     const subClient = pubClient.duplicate()
     this.pubClient = pubClient
     this.subClient = subClient
