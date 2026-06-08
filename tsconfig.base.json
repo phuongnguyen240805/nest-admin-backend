@@ -35,7 +35,9 @@
       "@liora/database": ["libs/database/src/index.ts"],
       "@liora/database/*": ["libs/database/src/*"],
       "@liora/librefang-client": ["libs/librefang-client/src/index.ts"],
-      "@liora/librefang-client/*": ["libs/librefang-client/src/*"]
+      "@liora/librefang-client/*": ["libs/librefang-client/src/*"],
+      "@liora/supabase": ["libs/supabase/src/index.ts"],
+      "@liora/supabase/*": ["libs/supabase/src/*"]
     }
   },
   "include": ["src/types/**/*.d.ts", "**/*.d.ts"],

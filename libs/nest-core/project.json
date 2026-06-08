@@ -17,5 +17,5 @@
       }
     }
   },
-  "implicitDependencies": ["database", "shared", "dto", "librefang-client"]
+  "implicitDependencies": ["database", "shared", "dto", "librefang-client", "supabase"]
 }

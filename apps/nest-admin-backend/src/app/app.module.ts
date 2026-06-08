@@ -9,6 +9,7 @@ import { AppService } from "./app.service";
 
 import { DatabaseModule } from "@liora/database";
 import { LibrefangConfig } from "@liora/librefang-client";
+import { SupabaseConfig } from "@liora/supabase";
 import config from "@liora/nest-core/config";
 import {
   SharedModule,
@@ -40,7 +41,7 @@ import {
       expandVariables: true,
       ignoreEnvFile: process.env.NODE_ENV === "production",
       envFilePath: [".env.local", `.env.${process.env.NODE_ENV}`, ".env"],
-      load: [...Object.values(config), LibrefangConfig],
+      load: [...Object.values(config), LibrefangConfig, SupabaseConfig],
     }),
     ClsModule.forRoot({
       global: true,

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger'
 
-import { IsString, Matches, MaxLength, MinLength } from 'class-validator'
+import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator'
 
 export class LoginDto {
   @ApiProperty({ description: '手机号/邮箱' })
@@ -29,6 +29,11 @@ export class RegisterDto {
   @ApiProperty({ description: '账号' })
   @IsString()
   username: string
+
+  @ApiProperty({ description: '邮箱', required: false })
+  @IsEmail()
+  @IsOptional()
+  email?: string
 
   @ApiProperty({ description: '密码' })
   @IsString()

@@ -3,7 +3,6 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { LibrefangService } from '@liora/librefang-client'
 import { GetOrgFromRequest } from '~/libraries/nestjs_libraries/src/user/org.from.request'
 import { AuthUser } from '../auth/decorators/auth-user.decorator'
-import { Perm, definePermission } from '../auth/decorators/permission.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RbacGuard } from '../auth/guards/rbac.guard'
 import { IAuthUser } from '../auth/interfaces/auth.interface'
@@ -12,10 +11,6 @@ import { AgentChatDto } from './dto/agent-chat.dto'
 import { CreateAgentDto } from './dto/create-agent.dto'
 import { AgentService } from './services/agent.service'
 import { mapRolesToCapabilities } from './utils/agent-capabilities.util'
-
-export const AgentPermissions = definePermission('agent', {
-  CHAT: 'chat',
-})
 
 @ApiTags('Agent')
 @ApiBearerAuth()
@@ -38,7 +33,6 @@ export class AgentController {
   }
 
   @Post(':id/chat')
-  @Perm(AgentPermissions.CHAT)
   @ApiOperation({ summary: 'Forward chat to LibreFang agent runtime' })
   async chatWithAgent(
     @Param('id') agentId: string,

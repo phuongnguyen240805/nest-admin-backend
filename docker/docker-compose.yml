@@ -70,6 +70,11 @@ services:
       S3_ENDPOINT: http://minio:9000
       LIBREFANG_API_URL: http://librefang:4545
       LIBREFANG_API_KEY: ${LIBREFANG_API_KEY:-}
+      USE_SUPABASE_AUTH: ${USE_SUPABASE_AUTH:-false}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_KEY: ${SUPABASE_KEY:-}
+      SUPABASE_ALLOWED_DOMAINS: ${SUPABASE_ALLOWED_DOMAINS:-gmail.com}
+      SUPABASE_BLOCKED_DOMAINS: ${SUPABASE_BLOCKED_DOMAINS:-}
     volumes:
       - ../apps:/app/apps
       - ../libs:/app/libs

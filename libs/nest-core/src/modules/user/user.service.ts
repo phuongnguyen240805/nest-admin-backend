@@ -352,7 +352,9 @@ export class UserService {
   }
 
   /**
-   * 注册
+   * 注册用户并保存到本地数据库
+   * 
+   * @param registerDto 注册数据传输对象
    */
   async register({ username, ...data }: RegisterDto): Promise<void> {
     const exists = await this.userRepository.findOneBy({
@@ -360,6 +362,14 @@ export class UserService {
     })
     if (!isEmpty(exists))
       throw new BusinessException(ErrorEnum.SYSTEM_USER_EXISTS)
+
+    if (data.email) {
+      const emailExists = await this.userRepository.findOneBy({
+        email: data.email,
+      })
+      if (!isEmpty(emailExists))
+        throw new BusinessException('1020:该邮箱已被注册')
+    }
 
     await this.entityManager.transaction(async (manager) => {
       const salt = randomValue(32)
@@ -369,6 +379,7 @@ export class UserService {
       const u = manager.create(UserEntity, {
         username,
         password,
+        email: data.email || null,
         status: 1,
         psalt: salt,
       })

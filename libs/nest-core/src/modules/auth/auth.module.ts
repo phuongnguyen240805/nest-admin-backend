@@ -5,6 +5,8 @@ import { JwtModule } from '@nestjs/jwt'
 import { PassportModule } from '@nestjs/passport'
 import { TypeOrmModule } from '@nestjs/typeorm'
 
+import { SupabaseModule } from '@liora/supabase'
+
 import { TenantInterceptor } from '~/common/interceptors/tenant.interceptor'
 import { ConfigKeyPaths, ISecurityConfig } from '~/config'
 
@@ -59,6 +61,7 @@ const strategies = [LocalStrategy, JwtStrategy]
     RoleModule,
     MenuModule,
     LogModule,
+    SupabaseModule,
   ],
   controllers: [...controllers],
   providers: [...providers, ...strategies],
