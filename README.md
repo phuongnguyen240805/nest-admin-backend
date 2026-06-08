@@ -1,0 +1,1 @@
+print folder structure: tree -L 5 -I "node_modules|dist|.git"

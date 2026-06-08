@@ -33,7 +33,9 @@
       "@liora/nest-core": ["libs/nest-core/src/index.ts"],
       "@liora/nest-core/*": ["libs/nest-core/src/*"],
       "@liora/database": ["libs/database/src/index.ts"],
-      "@liora/database/*": ["libs/database/src/*"]
+      "@liora/database/*": ["libs/database/src/*"],
+      "@liora/librefang-client": ["libs/librefang-client/src/index.ts"],
+      "@liora/librefang-client/*": ["libs/librefang-client/src/*"]
     }
   },
   "include": ["src/types/**/*.d.ts", "**/*.d.ts"],

@@ -1,0 +1,261 @@
+.
+├── __data
+│   └── mysql
+├── apps
+│   ├── donut-sync-backend
+│   │   ├── Dockerfile
+│   │   ├── README.md
+│   │   ├── docker-compose.yml
+│   │   ├── eslint.config.mjs
+│   │   ├── jest.config.cts
+│   │   ├── nest-cli.json
+│   │   ├── package.json
+│   │   ├── project.json
+│   │   ├── src
+│   │   │   ├── app.controller.spec.ts
+│   │   │   ├── app.controller.ts
+│   │   │   ├── app.module.ts
+│   │   │   ├── app.service.ts
+│   │   │   ├── assets
+│   │   │   ├── auth
+│   │   │   │   ├── auth.guard.ts
+│   │   │   │   └── user-context.interface.ts
+│   │   │   ├── main.ts
+│   │   │   └── sync
+│   │   │       ├── dto
+│   │   │       ├── internal.controller.ts
+│   │   │       ├── sync.controller.ts
+│   │   │       ├── sync.module.ts
+│   │   │       └── sync.service.ts
+│   │   ├── structure.md
+│   │   ├── tsconfig.app.json
+│   │   ├── tsconfig.json
+│   │   ├── tsconfig.spec.json
+│   │   └── webpack.config.js
+│   └── nest-admin-backend
+│       ├── Dockerfile
+│       ├── eslint.config.mjs
+│       ├── project.json
+│       ├── src
+│       │   ├── app
+│       │   │   ├── app.controller.ts
+│       │   │   ├── app.module.ts
+│       │   │   └── app.service.ts
+│       │   ├── assets
+│       │   └── main.ts
+│       ├── tsconfig.app.json
+│       ├── tsconfig.json
+│       └── webpack.config.js
+├── docker
+│   ├── Dockerfile.base
+│   ├── README.md
+│   ├── __data
+│   │   └── mysql
+│   ├── deploy
+│   │   └── sql
+│   ├── docker-compose.prod.yml
+│   ├── docker-compose.yml
+│   └── nginx
+│       └── default.conf
+├── donut-structure.md
+├── eslint.config.mjs
+├── jest.config.ts
+├── jest.preset.js
+├── libs
+│   ├── database
+│   │   ├── README.md
+│   │   ├── eslint.config.mjs
+│   │   ├── package.json
+│   │   ├── project.json
+│   │   ├── src
+│   │   │   ├── base.entity.d.ts
+│   │   │   ├── base.entity.ts
+│   │   │   ├── config
+│   │   │   │   └── database.config.ts
+│   │   │   ├── constraints
+│   │   │   │   ├── entity-exist.constraint.ts
+│   │   │   │   ├── unique.constraint.d.ts
+│   │   │   │   └── unique.constraint.ts
+│   │   │   ├── database.module.ts
+│   │   │   ├── env.d.ts
+│   │   │   ├── global
+│   │   │   │   ├── env.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── index.ts
+│   │   │   ├── migrations
+│   │   │   │   ├── 1707996695540-initData.ts
+│   │   │   │   ├── 1717007831711-update-table_2_0_0.ts
+│   │   │   │   ├── 1774402200195-initData.ts
+│   │   │   │   ├── 1774429512399-initData.ts
+│   │   │   │   ├── 1774432366798-initData.ts
+│   │   │   │   ├── 1774437852323-initData.ts
+│   │   │   │   └── 1774438902254-initData.ts
+│   │   │   ├── typeorm-logger.ts
+│   │   │   └── utils
+│   │   │       └── connection-url.util.ts
+│   │   ├── tsconfig.json
+│   │   └── tsconfig.lib.json
+│   ├── dto
+│   │   ├── README.md
+│   │   ├── eslint.config.mjs
+│   │   ├── package.json
+│   │   ├── project.json
+│   │   ├── src
+│   │   │   ├── cursor.dto.ts
+│   │   │   ├── delete.dto.ts
+│   │   │   ├── id.dto.ts
+│   │   │   ├── index.ts
+│   │   │   ├── operator.dto.d.ts
+│   │   │   ├── operator.dto.ts
+│   │   │   ├── pager.dto.d.ts
+│   │   │   └── pager.dto.ts
+│   │   ├── tsconfig.json
+│   │   └── tsconfig.lib.json
+│   ├── librefang-client
+│   │   ├── eslint.config.mjs
+│   │   ├── package.json
+│   │   ├── project.json
+│   │   ├── src
+│   │   │   ├── index.ts
+│   │   │   ├── librefang-client.module.ts
+│   │   │   ├── librefang.config.ts
+│   │   │   └── librefang.service.ts
+│   │   ├── tsconfig.json
+│   │   └── tsconfig.lib.json
+│   ├── nest-core
+│   │   ├── README.md
+│   │   ├── eslint.config.mjs
+│   │   ├── package.json
+│   │   ├── project.json
+│   │   ├── src
+│   │   │   ├── assets
+│   │   │   │   └── templates
+│   │   │   ├── common
+│   │   │   │   ├── adapters
+│   │   │   │   ├── decorators
+│   │   │   │   ├── entity
+│   │   │   │   ├── exceptions
+│   │   │   │   ├── filters
+│   │   │   │   ├── guards
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── interceptors
+│   │   │   │   ├── model
+│   │   │   │   └── pipes
+│   │   │   ├── config
+│   │   │   │   ├── app.config.ts
+│   │   │   │   ├── database.config.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── mailer.config.ts
+│   │   │   │   ├── oss.config.ts
+│   │   │   │   ├── redis.config.ts
+│   │   │   │   ├── security.config.ts
+│   │   │   │   └── swagger.config.ts
+│   │   │   ├── constants
+│   │   │   │   ├── cache.constant.ts
+│   │   │   │   ├── error-code.constant.ts
+│   │   │   │   ├── event-bus.constant.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── oss.constant.ts
+│   │   │   │   ├── response.constant.ts
+│   │   │   │   └── system.constant.ts
+│   │   │   ├── global
+│   │   │   │   ├── env.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── helper
+│   │   │   │   ├── catchError.ts
+│   │   │   │   ├── cron.service.ts
+│   │   │   │   ├── crud
+│   │   │   │   ├── genRedisKey.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   └── paginate
+│   │   │   ├── index.ts
+│   │   │   ├── libraries
+│   │   │   │   ├── helpers
+│   │   │   │   └── nestjs_libraries
+│   │   │   ├── migrations
+│   │   │   │   ├── 1707996695540-initData.ts
+│   │   │   │   ├── 1717007831711-update-table_2_0_0.ts
+│   │   │   │   ├── 1774402200195-initData.ts
+│   │   │   │   ├── 1774429512399-initData.ts
+│   │   │   │   ├── 1774432366798-initData.ts
+│   │   │   │   ├── 1774437852323-initData.ts
+│   │   │   │   └── 1774438902254-initData.ts
+│   │   │   ├── modules
+│   │   │   │   ├── agent
+│   │   │   │   ├── auth
+│   │   │   │   ├── billing
+│   │   │   │   ├── health
+│   │   │   │   ├── netdisk
+│   │   │   │   ├── public-api
+│   │   │   │   ├── sse
+│   │   │   │   ├── system
+│   │   │   │   ├── tasks
+│   │   │   │   ├── tenant
+│   │   │   │   ├── todo
+│   │   │   │   ├── tools
+│   │   │   │   └── user
+│   │   │   ├── shared
+│   │   │   │   ├── crypto
+│   │   │   │   ├── database
+│   │   │   │   ├── helper
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── logger
+│   │   │   │   ├── mailer
+│   │   │   │   ├── redis
+│   │   │   │   ├── services
+│   │   │   │   └── shared.module.ts
+│   │   │   ├── socket
+│   │   │   │   ├── base.gateway.ts
+│   │   │   │   ├── business-event.constant.ts
+│   │   │   │   ├── events
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── shared
+│   │   │   │   └── socket.module.ts
+│   │   │   ├── types
+│   │   │   │   ├── env.d.ts
+│   │   │   │   └── fastify.d.ts
+│   │   │   └── utils
+│   │   │       ├── captcha.util.ts
+│   │   │       ├── crypto.util.ts
+│   │   │       ├── date.util.ts
+│   │   │       ├── file.util.ts
+│   │   │       ├── index.ts
+│   │   │       ├── ip.util.ts
+│   │   │       ├── is.util.ts
+│   │   │       ├── list2tree.util.ts
+│   │   │       ├── permission.util.ts
+│   │   │       ├── redis.util.ts
+│   │   │       ├── schedule.util.ts
+│   │   │       └── tool.util.ts
+│   │   ├── tsconfig.json
+│   │   └── tsconfig.lib.json
+│   └── shared
+│       ├── README.md
+│       ├── eslint.config.mjs
+│       ├── package.json
+│       ├── project.json
+│       ├── src
+│       │   ├── index.ts
+│       │   └── shared.module.ts
+│       ├── tsconfig.json
+│       └── tsconfig.lib.json
+├── nx.json
+├── package.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── structure.md
+├── tmp
+│   └── libs
+│       ├── database
+│       │   └── build
+│       ├── dto
+│       │   └── build
+│       ├── nest-core
+│       │   └── build
+│       └── shared
+│           └── build
+├── tsconfig.base.json
+├── tsconfig.json
+└── turbo.json
+
+95 directories, 164 files

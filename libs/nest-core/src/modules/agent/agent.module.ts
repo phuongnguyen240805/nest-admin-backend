@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
+import { LibrefangClientModule } from '@liora/librefang-client'
 import { AuthModule } from '../auth/auth.module'
 import { AgentController } from './agent.controller'
 import { Agent } from './entities/agent.entity'
@@ -8,7 +9,7 @@ import { AgentGraphService } from './services/agent.graph.service'
 import { AgentService } from './services/agent.service'
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Agent]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Agent]), AuthModule, LibrefangClientModule],
   controllers: [AgentController],
   providers: [
     AgentService,
