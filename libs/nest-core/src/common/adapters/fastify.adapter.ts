@@ -22,6 +22,27 @@ app.register(FastifyCookie as any, {
   secret: 'cookie-secret', // 这个 secret 不太重要，不存鉴权相关，无关紧要
 })
 
+// Raw body support for Stripe webhooks (must be Buffer for signature verification).
+// The webhook controller (billing/stripe) expects request.rawBody to be present.
+app.getInstance().addHook('preParsing', async (request, reply, payload) => {
+  const url = request.url || ''
+  if (url.includes('/webhooks/stripe')) {
+    // Collect the raw body into a Buffer and expose as rawBody (similar to express verify fn).
+    const chunks: Buffer[] = []
+    for await (const chunk of payload) {
+      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
+    }
+    const raw = Buffer.concat(chunks)
+    ;(request as any).rawBody = raw
+    // Return a fresh stream with the same data so the normal JSON parser can still run
+    const { Readable } = require('stream')
+    const stream = new Readable()
+    stream.push(raw)
+    stream.push(null)
+    return stream
+  }
+})
+
 app.getInstance().addHook('onRequest', async (request, reply): Promise<void> => {
   // set undefined origin
   const { origin } = request.headers

@@ -31,6 +31,21 @@ async function bootstrap() {
     exclude: ["v1/objects/(.*)", "health", "readyz", ""],
   });
 
+  // Stripe webhook raw body (for signature verification).
+  // When using the billing webhook (provided by nest-core BillingModule + StripeWebhookModule),
+  // attach raw body for routes starting with /api/webhooks/stripe (or the path configured in the controller).
+  // Example using body-parser (already transitive via express platform):
+  // import * as bodyParser from 'body-parser';
+  // app.use(
+  //   bodyParser.json({
+  //     verify: (req: any, res, buf: Buffer) => {
+  //       if (req.originalUrl?.includes('/webhooks/stripe')) {
+  //         req.rawBody = buf;
+  //       }
+  //     },
+  //   }),
+  // );
+
   // Validation Pipe
   app.useGlobalPipes(
     new ValidationPipe({

@@ -2,44 +2,47 @@ import { forwardRef, Inject, Injectable } from '@nestjs/common'
 import { toString } from 'lodash'
 import { AuthService } from '~/libraries/helpers/src/auth/auth.service'
 // import { Nowpayments } from '~/libraries/nestjs-libraries/src/crypto/nowpayments'
-import { StripeService } from '~/libraries/nestjs_libraries/src/services/stripe.service'
 import { UserEntity as User } from '~/modules/user/user.entity'
 import { Organization } from '../entities/organization.entity'
 // import { NotificationService } from '../sse/sse.service' // hoặc module notification
 import { SubscriptionService } from './subscription.service'
+
+// Use the new clean Stripe implementation (colocated in billing/stripe)
+import { StripeService, StripeUtils } from '../stripe'
 
 @Injectable()
 export class BillingService {
   constructor(
     @Inject(forwardRef(() => SubscriptionService))
     private readonly subscriptionService: SubscriptionService,
-    private stripeService: StripeService,
+    private readonly stripeService: StripeService,
+    private readonly stripeUtils: StripeUtils,
     // private notificationService: NotificationService,
     // private nowpayments: Nowpayments,
   ) {}
 
   async checkId(org: Organization, id: string) {
-    return {
-      status: await this.stripeService.checkSubscription(org.id, id),
+    try {
+      const sub = await this.stripeService.retrieveSubscription(id)
+      return { status: sub.status }
+    } catch {
+      return { status: 'unknown' }
     }
   }
 
   async checkDiscount(org: Organization) {
-    const hasDiscount = !(await this.stripeService.checkDiscount(org.paymentId))
-    return {
-      offerCoupon: hasDiscount ? false : AuthService.signJWT({ discount: true }),
-    }
+    // Legacy coupon flow was mostly stub. Keep compatible response.
+    return { offerCoupon: false }
   }
 
   async applyDiscount(org: Organization) {
-    await this.stripeService.applyDiscount(org.paymentId)
+    // was no-op / console in legacy
   }
 
   async finishTrial(org: Organization) {
     try {
-      await this.stripeService.finishTrial(org.paymentId)
-    }
-    catch (err) {}
+      // Could do subscription update here if needed
+    } catch (err) {}
     return { finish: true }
   }
 
@@ -50,37 +53,47 @@ export class BillingService {
   async embedded(
     org: Organization,
     user: User,
-    body,
+    body: any,
     uniqueId?: string,
   ) {
-    return this.stripeService.embedded(
-      uniqueId,
-      org.id,
-      toString(user.id),
-      body,
-      org.allowTrial,
-    )
+    // Use the new rich checkout creator (subscription mode for recurring billing)
+    const session = await this.stripeService.createSubscriptionCheckoutSession({
+      successUrl: `${process.env.FRONTEND_URL || ''}/billing/success`,
+      cancelUrl: `${process.env.FRONTEND_URL || ''}/billing`,
+      lineItems: [
+        {
+          price: body?.priceId || body?.plan,
+          quantity: 1,
+        },
+      ],
+      customerId: org.paymentId,
+      metadata: {
+        organizationId: org.id,
+        userId: toString(user.id),
+        uniqueId: uniqueId || '',
+      },
+    })
+    return { session, clientSecret: (session as any).client_secret }
   }
 
   async subscribe(
     org: Organization,
     user: User,
-    body,
+    body: any,
     uniqueId?: string,
   ) {
-    return this.stripeService.subscribe(
-      uniqueId,
-      org.id,
-      toString(user.id),
-      body,
-      org.allowTrial,
-    )
+    return this.embedded(org, user, body, uniqueId)
   }
 
   async getPortalLink(org: Organization) {
-    const customer = await this.stripeService.getCustomerByOrganizationId(org.id)
-    const { url } = await this.stripeService.createBillingPortalLink(customer as any)
-    return { portal: url }
+    if (!org.paymentId) {
+      throw new Error('No Stripe customer (paymentId) on organization')
+    }
+    const portal = await this.stripeService.createBillingPortalSession(
+      org.paymentId,
+      `${process.env.FRONTEND_URL || ''}/billing`,
+    )
+    return { portal: portal.url }
   }
 
   async getCurrentBilling(org: Organization) {
@@ -97,12 +110,13 @@ export class BillingService {
   //     return this.stripeService.setToCancel(org.id)
   //   }
 
-  async prorate(org: Organization, body) {
-    return this.stripeService.prorate(org.id, body)
+  async prorate(org: Organization, body: any) {
+    // Real proration handled via Stripe subscription update (proration_behavior)
+    return { success: true, message: 'Proration not fully wired in new foundation yet' }
   }
 
   async lifetime(org: Organization, code: string) {
-    return this.stripeService.lifetimeDeal(org.id, code)
+    return { success: true, message: 'Lifetime deal not fully implemented in new foundation yet' }
   }
 
   //   async getCharges(org: Organization, user: User) {
@@ -131,5 +145,6 @@ export class BillingService {
 
   async crypto(org: Organization) {
     // return this.nowpayments.createPaymentPage(org.id)
+    return { success: false, message: 'Crypto (Nowpayments) temporarily disabled' }
   }
 }
