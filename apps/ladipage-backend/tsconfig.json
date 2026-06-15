@@ -1,0 +1,30 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    }
+  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["../../libs/nest-core/src/*"],
+      "~": ["../../libs/nest-core/src/index.ts"],
+      "@liora/database": ["../../libs/database/src/index.ts"],
+      "@liora/database/*": ["../../libs/database/src/*"],
+      "@liora/dto": ["../../libs/dto/src/index.ts"],
+      "@liora/dto/*": ["../../libs/dto/src/*"],
+      "@liora/shared": ["../../libs/shared/src/index.ts"],
+      "@liora/shared/*": ["../../libs/shared/src/*"],
+      "@liora/nest-core": ["../../libs/nest-core/src/index.ts"],
+      "@liora/nest-core/*": ["../../libs/nest-core/src/*"],
+      "@liora/librefang-client": ["../../libs/librefang-client/src/index.ts"],
+      "@liora/librefang-client/*": ["../../libs/librefang-client/src/*"],
+      "@liora/supabase": ["../../libs/supabase/src/index.ts"],
+      "@liora/supabase/*": ["../../libs/supabase/src/*"]
+    },
+    "esModuleInterop": true
+  }
+}

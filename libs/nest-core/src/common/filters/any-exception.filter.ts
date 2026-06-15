@@ -13,7 +13,7 @@ import { BusinessException } from '~/common/exceptions/biz.exception'
 import { ErrorEnum } from '~/constants/error-code.constant'
 
 import { isDev } from '~/global/env'
-import { IBaseResponse } from '~/modules/auth/interfaces/auth.interface'
+import { ErrorResponseDto } from '../dto/response.dto'
 
 interface myError {
   readonly status: number
@@ -22,6 +22,19 @@ interface myError {
   readonly message?: string
 }
 
+/**
+ * AllExceptionsFilter - Global exception handler (Giai đoạn 1 Foundation)
+ *
+ * Catches ALL exceptions and returns a consistent error shape:
+ * {
+ *   code: number,
+ *   message: string,
+ *   data: null,
+ *   error?: any   // only in development
+ * }
+ *
+ * This guarantees that every API (Funnel, Publish, Credit...) returns predictable errors.
+ */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name)
@@ -40,33 +53,38 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const status = this.getStatus(exception)
     let message = this.getErrorMessage(exception)
 
-    // 系统内部错误时
+    // System internal error
     if (
       status === HttpStatus.INTERNAL_SERVER_ERROR
       && !(exception instanceof BusinessException)
     ) {
       Logger.error(exception, undefined, 'Catch')
 
-      // 生产环境下隐藏错误信息
-      if (!isDev)
-        message = ErrorEnum.SERVER_ERROR?.split(':')[1]
-    }
-    else {
+      if (!isDev) {
+        message = ErrorEnum.SERVER_ERROR?.split(':')[1] || 'Internal Server Error'
+      }
+    } else {
       this.logger.warn(
-        `错误信息：(${status}) ${message} Path: ${decodeURI(url)}`,
+        `Error: (${status}) ${message} | Path: ${decodeURI(url)}`,
       )
     }
 
-    const apiErrorCode = exception instanceof BusinessException ? exception.getErrorCode() : status
+    const apiErrorCode = exception instanceof BusinessException 
+      ? exception.getErrorCode() 
+      : status
 
-    // 返回基础响应结果
-    const resBody: IBaseResponse = {
-      code: apiErrorCode,
-      message,
-      data: null,
+    const errorResponse = new ErrorResponseDto();
+    errorResponse.code = apiErrorCode;
+    errorResponse.message = message;
+
+    if (isDev && exception instanceof Error) {
+      (errorResponse as any).error = {
+        stack: exception.stack,
+        name: exception.name,
+      };
     }
 
-    response.status(status).send(resBody)
+    response.status(status).send(errorResponse);
   }
 
   getStatus(exception: unknown): number {

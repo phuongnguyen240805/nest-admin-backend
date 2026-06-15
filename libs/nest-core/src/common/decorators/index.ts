@@ -9,3 +9,9 @@ export * from './idempotence.decorator';
 export * from './inject-redis.decorator';
 export * from './swagger.decorator';
 export * from './transform.decorator';
+
+// New foundation decorators for Giai đoạn 1
+export * from './current-user.decorator';
+export * from './workspace.decorator';
+export * from './get-org-from-request.decorator'; // legacy org/workspace support
+

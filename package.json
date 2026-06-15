@@ -16,6 +16,8 @@
     "dev:goodshort": "nx serve goodshort-backend",
     "dev:openclaw": "nx serve openclaw-backend",
     "dev:centrix": "nx serve centrix-backend",
+    "dev:ladipage": "nx serve ladipage-backend",
+    "build:ladipage": "nx run ladipage-backend:build",
     "graph": "pnpm nx graph",
     "docker:config": "docker compose -f docker/docker-compose.yml --env-file .env config",
     "docker:up": "docker compose -f docker/docker-compose.yml --env-file .env up -d --build",
