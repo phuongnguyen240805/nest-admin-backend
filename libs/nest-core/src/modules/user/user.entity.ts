@@ -57,13 +57,17 @@ export class UserEntity extends CommonEntity {
   @Column({ nullable: true })
   email: string
 
+  /** Linked Supabase Auth user (auth.users.id) */
+  @Column({ name: 'supabase_user_id', type: 'uuid', nullable: true, unique: true })
+  supabaseUserId: string | null
+
   @Column({ nullable: true })
   phone: string
 
   @Column({ nullable: true })
   remark: string
 
-  @Column({ type: 'tinyint', nullable: true, default: 1 })
+  @Column({ type: 'smallint', nullable: true, default: 1 })
   status: number
 
   @ManyToMany(() => RoleEntity, role => role.users)

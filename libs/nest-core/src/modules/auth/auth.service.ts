@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import Redis from 'ioredis'
 
 import { isEmpty } from 'lodash'
+import { SupabaseAuthService, VerifiedSupabaseUser } from '@liora/supabase'
 import { InjectRedis } from '~/common/decorators/inject-redis.decorator'
 
 import { BusinessException } from '~/common/exceptions/biz.exception'
@@ -10,6 +11,7 @@ import { AppConfig, IAppConfig, ISecurityConfig, SecurityConfig } from '~/config
 import { ErrorEnum } from '~/constants/error-code.constant'
 import { genAuthPermKey, genAuthPVKey, genAuthTokenKey, genTokenBlacklistKey } from '~/helper/genRedisKey'
 
+import { UserEntity } from '~/modules/user/user.entity'
 import { UserService } from '~/modules/user/user.service'
 
 import { md5 } from '~/utils'
@@ -30,6 +32,7 @@ export class AuthService {
     private userService: UserService,
     private loginLogService: LoginLogService,
     private tokenService: TokenService,
+    private supabaseAuthService: SupabaseAuthService,
     @Inject(SecurityConfig.KEY) private securityConfig: ISecurityConfig,
     @Inject(AppConfig.KEY) private appConfig: IAppConfig,
   ) {}
@@ -70,22 +73,61 @@ export class AuthService {
     if (user.password !== comparePassword)
       throw new BusinessException(ErrorEnum.INVALID_USERNAME_PASSWORD)
 
+    return this.issueLoginToken(user, ip, ua)
+  }
+
+  /**
+   * Exchange a Supabase access token for an internal Nest JWT.
+   * Client signs in via Supabase SDK first, then calls POST /auth/exchange.
+   */
+  async loginWithSupabaseAccessToken(
+    supabaseAccessToken: string,
+    ip: string,
+    ua: string,
+  ): Promise<string> {
+    const supabaseUser = await this.supabaseAuthService.verifyAccessToken(supabaseAccessToken)
+    return this.exchangeSupabaseSession(supabaseUser, ip, ua)
+  }
+
+  /**
+   * Issue internal JWT after Supabase token has been verified.
+   */
+  async exchangeSupabaseSession(
+    supabaseUser: VerifiedSupabaseUser,
+    ip: string,
+    ua: string,
+  ): Promise<string> {
+    if (!supabaseUser.emailConfirmed) {
+      throw new BusinessException('1211:Vui lòng xác nhận email trước khi đăng nhập.')
+    }
+
+    let user = await this.userService.findUserBySupabaseId(supabaseUser.id)
+
+    if (isEmpty(user) && supabaseUser.email) {
+      user = await this.userService.findUserByEmail(supabaseUser.email)
+      if (user && !user.supabaseUserId) {
+        await this.userService.linkSupabaseUser(user.id, supabaseUser.id)
+        user = await this.userService.findUserById(user.id)
+      }
+    }
+
+    if (isEmpty(user)) {
+      throw new BusinessException(ErrorEnum.USER_NOT_FOUND)
+    }
+
+    return this.issueLoginToken(user, ip, ua)
+  }
+
+  private async issueLoginToken(user: UserEntity, ip: string, ua: string): Promise<string> {
     const roleIds = await this.roleService.getRoleIdsByUser(user.id)
-
     const roles = await this.roleService.getRoleValues(roleIds)
-
-    // 包含access_token和refresh_token
     const token = await this.tokenService.generateAccessToken(user.id, roles)
 
     await this.redis.set(genAuthTokenKey(user.id), token.accessToken, 'EX', this.securityConfig.jwtExprire)
-
-    // 设置密码版本号 当密码修改时，版本号+1
     await this.redis.set(genAuthPVKey(user.id), 1)
 
-    // 设置菜单权限
     const permissions = await this.menuService.getPermissions(user.id)
     await this.setPermissionsCache(user.id, permissions)
-
     await this.loginLogService.create(user.id, ip, ua)
 
     return token.accessToken

@@ -92,14 +92,20 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle("LadiPage Backend API")
     .setDescription(`
-      🔷 **Base URL**: \`/api\` <br>
+      🔷 **Base URL**: \`/api\` · **Swagger**: \`/docs\` · **Port**: 7002 (Docker) <br>
       📌 LadiPage / Liora Landing Page Builder Backend.<br><br>
-      Tái sử dụng mạnh mẽ từ <b>@liora/nest-core</b> (Auth, Tenant, Billing/Credit/Plan/Stripe, File Manager, SSE/Socket, Agent/AI...).
+      **LadiPage domain**: publish, website, funnelx, domain, ecom-store, builder-bridge, flowise, sdk…<br>
+      **Tái sử dụng @liora/nest-core**: Auth (JWT + Supabase exchange), Tenant, Billing/Stripe, Credit, Plan, File/Netdisk, SSE/Socket, Agent/AI, System RBAC…
     `)
     .setVersion("1.0")
     .addServer(`/api`, "Base URL")
+    .addTag("publish", "LadiPage — Publish landing / embed")
+    .addTag("LadiPage", "LadiPage app & health")
+    .addTag("Auth - 认证模块", "Đăng ký / exchange Supabase → Nest JWT")
+    .addTag("Billing", "Subscription, credit wallet, Stripe")
+    .addTag("System - 菜单权限模块", "RBAC menus & permissions")
     .addSecurity(API_SECURITY_AUTH, {
-      description: "Enter Bearer JWT Token",
+      description: "Bearer JWT từ POST /api/auth/exchange (sau Supabase signIn)",
       type: "http",
       scheme: "bearer",
       bearerFormat: "JWT",
@@ -118,7 +124,7 @@ async function bootstrap() {
     jsonDocumentUrl: "/docs/json",
   });
 
-  const port = process.env.PORT ?? 7101;
+  const port = process.env.LADIPAGE_PORT ?? process.env.PORT ?? 7002;
 
   // ============================================================
   // Professional Logger Integration (winston via nest-core)

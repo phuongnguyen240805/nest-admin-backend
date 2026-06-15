@@ -20,7 +20,9 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 
 # Expose port
-EXPOSE 7101
+EXPOSE 7002
+
+ENV PORT=7002
 
 # Command cho dev mode (Nx serve)
 CMD ["pnpm", "nx", "serve", "ladipage-backend", "--host=0.0.0.0", "--skip-nx-cache"]
@@ -41,5 +43,6 @@ COPY --from=builder /app/dist/apps/ladipage-backend ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/ladipage-backend/package.json ./
 
-EXPOSE 7101
+EXPOSE 7002
+ENV PORT=7002
 CMD ["node", "dist/main.js"]

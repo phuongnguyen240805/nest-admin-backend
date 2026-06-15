@@ -39,6 +39,7 @@ export * from './shared/shared.module';
 export * from './socket/socket.module';
 
 export * from './modules/auth/auth.module';
+export { Public } from './modules/auth/decorators/public.decorator';
 export * from './modules/auth/guards/jwt-auth.guard';
 export * from './modules/auth/guards/rbac.guard';
 export * from './modules/system/system.module';

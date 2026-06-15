@@ -1,6 +1,31 @@
 services:
-  # ================== DATABASE ==================
+  # ================== DATABASE (PostgreSQL — default) ==================
   db:
+    image: postgres:16-alpine
+    container_name: liora-postgres-dev
+    restart: always
+    env_file:
+      - ../.env
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_DATABASE:-liora_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-liora_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - liora-network
+
+  # ================== DATABASE (MySQL — legacy rollback) ==================
+  # Bật profile: docker compose --profile mysql up
+  mysql:
+    profiles: ["mysql"]
     image: mysql:8.0
     container_name: liora-mysql-dev
     restart: always
@@ -38,8 +63,11 @@ services:
       - liora-network
 
   # ================== LIBREFANG AGENT RUNTIME ==================
+  # Profile tùy chọn — bỏ qua nếu port 4545 đã có instance khác (deploy-librefang)
+  # docker compose --profile librefang up -d librefang
   librefang:
-    image: librefang/librefang:latest
+    profiles: ["librefang"]
+    image: ghcr.io/librefang/librefang:latest
     container_name: liora-librefang-dev
     restart: unless-stopped
     ports:
@@ -63,16 +91,19 @@ services:
       # Chỉ override hostname/service trong mạng Docker (không lấy từ .env host)
       PORT: "7001"
       DB_HOST: db
-      DB_PORT: "3306"
+      DB_PORT: "5432"
+      DB_TYPE: postgres
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
       S3_ENDPOINT: http://minio:9000
-      LIBREFANG_API_URL: http://librefang:4545
+      LIBREFANG_API_URL: ${LIBREFANG_API_URL:-http://host.docker.internal:4545}
       LIBREFANG_API_KEY: ${LIBREFANG_API_KEY:-}
       USE_SUPABASE_AUTH: ${USE_SUPABASE_AUTH:-false}
       SUPABASE_URL: ${SUPABASE_URL:-}
-      SUPABASE_KEY: ${SUPABASE_KEY:-}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
       SUPABASE_ALLOWED_DOMAINS: ${SUPABASE_ALLOWED_DOMAINS:-gmail.com}
       SUPABASE_BLOCKED_DOMAINS: ${SUPABASE_BLOCKED_DOMAINS:-}
     volumes:
@@ -90,12 +121,70 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-      librefang:
-        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:7001/docs/json').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 180s
     networks:
       liora-network:
         aliases:
           - nest-admin
+
+  # ================== LADIPAGE BACKEND ==================
+  liora-ladipage:
+    build:
+      context: ..
+      dockerfile: apps/ladipage-backend/Dockerfile
+      target: development
+    container_name: liora-ladipage-dev
+    restart: unless-stopped
+    ports:
+      - "7002:7002"
+    env_file:
+      - ../.env
+    environment:
+      PORT: "7002"
+      LADIPAGE_PORT: "7002"
+      DB_TYPE: postgres
+      DB_SSL: ${DB_SSL:-true}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+      LIBREFANG_API_URL: ${LIBREFANG_API_URL:-http://host.docker.internal:4545}
+      LIBREFANG_API_KEY: ${LIBREFANG_API_KEY:-}
+      USE_SUPABASE_AUTH: ${USE_SUPABASE_AUTH:-false}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+      SUPABASE_ALLOWED_DOMAINS: ${SUPABASE_ALLOWED_DOMAINS:-gmail.com}
+      SUPABASE_BLOCKED_DOMAINS: ${SUPABASE_BLOCKED_DOMAINS:-}
+    volumes:
+      - ../apps:/app/apps
+      - ../libs:/app/libs
+      - ../nx.json:/app/nx.json
+      - ../tsconfig.base.json:/app/tsconfig.base.json
+      - ../tsconfig.json:/app/tsconfig.json
+      - /app/node_modules
+      - ../.env:/app/.env:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:7002/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 120s
+    networks:
+      liora-network:
+        aliases:
+          - ladipage
 
   # ================== DONUT-SYNC BACKEND ==================
   donut-sync:
@@ -157,5 +246,6 @@ networks:
     driver: bridge
 
 volumes:
+  postgres_data:
   mysql_data:
   minio_data:

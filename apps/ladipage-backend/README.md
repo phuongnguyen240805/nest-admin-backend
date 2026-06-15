@@ -42,8 +42,9 @@ pnpm nx serve ladipage-backend
 ```
 
 Truy cập:
-- API: http://localhost:7101/api
-- Swagger: http://localhost:7101/docs
+- API: http://localhost:7002/api
+- Swagger: http://localhost:7002/docs
+- Docker: `pnpm docker:up` (service `liora-ladipage`)
 
 ## Production build
 

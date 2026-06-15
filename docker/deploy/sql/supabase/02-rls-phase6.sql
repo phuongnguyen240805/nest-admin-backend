@@ -1,0 +1,17 @@
+-- Phase 6 RLS policy: OFF for app tables (Nest uses direct/service connection).
+-- Run manually in Supabase SQL Editor if RLS was enabled by default.
+-- Ladipage tenant tables: enable RLS in a later phase.
+
+ALTER TABLE IF EXISTS public.sys_user DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.sys_role DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.sys_menu DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.sys_dept DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.sys_config DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.sys_dict_type DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.sys_dict_item DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.sys_organizations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.sys_subscription DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.sys_credit_wallet DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.sys_agent DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.tenants DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.tenant_users DISABLE ROW LEVEL SECURITY;

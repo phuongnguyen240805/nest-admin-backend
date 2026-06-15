@@ -3,6 +3,8 @@ import type { DataSourceOptions } from 'typeorm'
 
 import { env, envBoolean, envNumber } from '../global/env'
 
+export type DatabaseDriver = 'mysql' | 'postgres'
+
 export interface ParsedDatabaseConnection {
   host: string
   port: number
@@ -11,17 +13,32 @@ export interface ParsedDatabaseConnection {
   database: string
 }
 
-export function parseDatabaseUrl(databaseUrl: string): ParsedDatabaseConnection {
+function resolveDatabaseDriver(): DatabaseDriver {
+  const dbType = (process.env['DB_TYPE'] ?? 'mysql').toLowerCase()
+  if (dbType === 'postgres' || dbType === 'postgresql')
+    return 'postgres'
+  return 'mysql'
+}
+
+function inferDriverFromDatabaseUrl(databaseUrl: string): DatabaseDriver | null {
+  const protocol = new URL(databaseUrl).protocol
+  if (['postgresql:', 'postgres:'].includes(protocol))
+    return 'postgres'
+  if (['mysql:', 'mysql2:'].includes(protocol))
+    return 'mysql'
+  return null
+}
+
+export function parseMysqlDatabaseUrl(databaseUrl: string): ParsedDatabaseConnection {
   const url = new URL(databaseUrl)
 
   if (!['mysql:', 'mysql2:'].includes(url.protocol)) {
-    throw new Error(`DATABASE_URL must use mysql:// or mysql2:// (got ${url.protocol})`)
+    throw new Error(`MySQL DATABASE_URL must use mysql:// or mysql2:// (got ${url.protocol})`)
   }
 
   const database = url.pathname.replace(/^\//, '')
-  if (!database) {
+  if (!database)
     throw new Error('DATABASE_URL must include a database name')
-  }
 
   return {
     host: url.hostname,
@@ -30,6 +47,31 @@ export function parseDatabaseUrl(databaseUrl: string): ParsedDatabaseConnection 
     password: decodeURIComponent(url.password),
     database,
   }
+}
+
+export function parsePostgresDatabaseUrl(databaseUrl: string): ParsedDatabaseConnection {
+  const url = new URL(databaseUrl)
+
+  if (!['postgresql:', 'postgres:'].includes(url.protocol)) {
+    throw new Error(`PostgreSQL DATABASE_URL must use postgresql:// or postgres:// (got ${url.protocol})`)
+  }
+
+  const database = url.pathname.replace(/^\//, '')
+  if (!database)
+    throw new Error('DATABASE_URL must include a database name')
+
+  return {
+    host: url.hostname,
+    port: url.port ? Number(url.port) : 5432,
+    username: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
+    database,
+  }
+}
+
+/** @deprecated Use parseMysqlDatabaseUrl */
+export function parseDatabaseUrl(databaseUrl: string): ParsedDatabaseConnection {
+  return parseMysqlDatabaseUrl(databaseUrl)
 }
 
 export function parseRedisUrl(redisUrl: string): RedisOptions {
@@ -84,6 +126,58 @@ function resolveRedisHost(): string {
   return '127.0.0.1'
 }
 
+function sharedOrmPaths(): Pick<DataSourceOptions, 'entities' | 'migrations' | 'subscribers'> {
+  return {
+    entities: ['dist/modules/**/*.entity{.ts,.js}'],
+    migrations: ['dist/migrations/*{.ts,.js}'],
+    subscribers: ['dist/modules/**/*.subscriber{.ts,.js}'],
+  }
+}
+
+function resolvePostgresSsl(): boolean | { rejectUnauthorized: boolean } | undefined {
+  const sslEnabled = envBoolean('DB_SSL', false)
+  if (!sslEnabled)
+    return undefined
+
+  return {
+    rejectUnauthorized: envBoolean('DB_SSL_REJECT_UNAUTHORIZED', false),
+  }
+}
+
+export function buildPostgresDataSourceOptions(): DataSourceOptions {
+  const databaseUrl = process.env.DATABASE_URL
+  const base: DataSourceOptions = {
+    type: 'postgres',
+    synchronize: envBoolean('DB_SYNCHRONIZE', false),
+    ...sharedOrmPaths(),
+    ssl: resolvePostgresSsl(),
+    extra: {
+      max: envNumber('DB_POOL_MAX', 10),
+    },
+  }
+
+  if (databaseUrl) {
+    const parsed = parsePostgresDatabaseUrl(databaseUrl)
+    return {
+      ...base,
+      host: parsed.host,
+      port: parsed.port,
+      username: parsed.username,
+      password: parsed.password,
+      database: parsed.database,
+    }
+  }
+
+  return {
+    ...base,
+    host: resolveDbHost(),
+    port: envNumber('DB_PORT', 5432),
+    username: env('DB_USERNAME'),
+    password: env('DB_PASSWORD'),
+    database: env('DB_DATABASE'),
+  }
+}
+
 export function buildMysqlDataSourceOptions(): DataSourceOptions {
   const currentScript = process.env.npm_lifecycle_event
   const databaseUrl = process.env.DATABASE_URL
@@ -92,13 +186,11 @@ export function buildMysqlDataSourceOptions(): DataSourceOptions {
     type: 'mysql',
     synchronize: envBoolean('DB_SYNCHRONIZE', false),
     multipleStatements: currentScript === 'typeorm',
-    entities: ['dist/modules/**/*.entity{.ts,.js}'],
-    migrations: ['dist/migrations/*{.ts,.js}'],
-    subscribers: ['dist/modules/**/*.subscriber{.ts,.js}'],
+    ...sharedOrmPaths(),
   }
 
   if (databaseUrl) {
-    const parsed = parseDatabaseUrl(databaseUrl)
+    const parsed = parseMysqlDatabaseUrl(databaseUrl)
     return {
       ...base,
       host: parsed.host,
@@ -117,6 +209,21 @@ export function buildMysqlDataSourceOptions(): DataSourceOptions {
     password: env('DB_PASSWORD'),
     database: env('DB_DATABASE'),
   }
+}
+
+/**
+ * Build TypeORM options from DB_TYPE / DATABASE_URL.
+ * Defaults to mysql for backward compatibility.
+ */
+export function buildDataSourceOptions(): DataSourceOptions {
+  const databaseUrl = process.env.DATABASE_URL
+  const driver = databaseUrl
+    ? (inferDriverFromDatabaseUrl(databaseUrl) ?? resolveDatabaseDriver())
+    : resolveDatabaseDriver()
+
+  return driver === 'postgres'
+    ? buildPostgresDataSourceOptions()
+    : buildMysqlDataSourceOptions()
 }
 
 export function buildRedisOptions(): RedisOptions {

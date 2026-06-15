@@ -1,0 +1,26 @@
+;; Phase 7.2 — pgloader MySQL → PostgreSQL (Supabase)
+;; Copy to pgloader.load and fill credentials. NEVER commit secrets.
+;;
+;;   pgloader scripts/migration/pgloader.load
+;;
+;; Dry-run: use a staging Supabase project first.
+
+LOAD DATABASE
+  FROM mysql://USER:PASS@MYSQL_HOST:3306/liora_db
+  INTO postgresql://postgres.PROJECT:PASS@db.PROJECT.supabase.co:5432/postgres
+
+WITH include drop, create tables, create indexes, reset sequences,
+     workers = 4, concurrency = 2
+
+CAST type datetime to timestamptz drop default drop not null using zero-dates-to-null,
+     type tinyint to smallint drop typemod,
+     type json to jsonb drop typemod
+
+SET PostgreSQL PARAMETERS maintenance_work_mem to '256MB',
+                    work_mem to '64MB'
+
+ALTER TABLE NAMES MATCHING ~/sys_/,
+                        ~/tool_/,
+                        ~/todo/,
+                        ~/user_/
+;

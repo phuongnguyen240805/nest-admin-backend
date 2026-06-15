@@ -12,7 +12,7 @@ import { UserService } from '../user/user.service'
 
 import { AuthService } from './auth.service'
 import { Public } from './decorators/public.decorator'
-import { LoginDto, RegisterDto } from './dto/auth.dto'
+import { LoginDto, RegisterDto, SupabaseExchangeDto } from './dto/auth.dto'
 import { AntiSpamRegisterGuard } from './guards/anti-spam-register.guard'
 import { LocalGuard } from './guards/local.guard'
 import { LoginToken } from './models/auth.model'
@@ -32,13 +32,39 @@ export class AuthController {
   ) {}
 
   @Post('login')
-  @ApiOperation({ summary: '登录' })
+  @ApiOperation({ summary: '登录 (legacy — disabled when USE_SUPABASE_AUTH=true)' })
   @ApiResult({ type: LoginToken })
   async login(@Body() dto: LoginDto, @Ip()ip: string, @Headers('user-agent')ua: string): Promise<LoginToken> {
+    const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
+    if (useSupabase) {
+      throw new BusinessException('1212:Đăng nhập qua Supabase client, sau đó gọi POST /auth/exchange.')
+    }
+
     await this.captchaService.checkImgCaptcha(dto.captchaId, dto.verifyCode)
     const token = await this.authService.login(
       dto.username,
       dto.password,
+      ip,
+      ua,
+    )
+    return { token }
+  }
+
+  @Post('exchange')
+  @ApiOperation({ summary: 'Đổi Supabase access token lấy Nest JWT nội bộ' })
+  @ApiResult({ type: LoginToken })
+  async exchange(
+    @Body() dto: SupabaseExchangeDto,
+    @Ip() ip: string,
+    @Headers('user-agent') ua: string,
+  ): Promise<LoginToken> {
+    const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
+    if (!useSupabase) {
+      throw new BusinessException('1213:Supabase Auth chưa được bật (USE_SUPABASE_AUTH=false).')
+    }
+
+    const token = await this.authService.loginWithSupabaseAccessToken(
+      dto.supabaseAccessToken,
       ip,
       ua,
     )
@@ -52,16 +78,22 @@ export class AuthController {
     const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
 
     if (useSupabase) {
+      if (!dto.email) {
+        throw new BusinessException('1204:Email là thông tin bắt buộc khi đăng ký.')
+      }
+
       try {
-        const result = await this.supabaseAuthService.signUp(dto.email!, dto.password)
-        await this.userService.register(dto)
+        const result = await this.supabaseAuthService.signUp(dto.email, dto.password)
+        await this.userService.register(dto, result.supabaseUserId)
         if (result.message) {
           return { message: result.message }
         }
-      } catch (error) {
+      }
+      catch (error) {
         throw new BusinessException(`1209:Supabase 注册失败: ${error.message}`)
       }
-    } else {
+    }
+    else {
       await this.userService.register(dto)
     }
   }

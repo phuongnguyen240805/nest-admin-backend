@@ -64,6 +64,24 @@ export class UserService {
       .getOne()
   }
 
+  async findUserBySupabaseId(supabaseUserId: string): Promise<UserEntity | undefined> {
+    return this.userRepository.findOneBy({
+      supabaseUserId,
+      status: UserStatus.Enabled,
+    })
+  }
+
+  async findUserByEmail(email: string): Promise<UserEntity | undefined> {
+    return this.userRepository.findOneBy({
+      email,
+      status: UserStatus.Enabled,
+    })
+  }
+
+  async linkSupabaseUser(userId: number, supabaseUserId: string): Promise<void> {
+    await this.userRepository.update({ id: userId }, { supabaseUserId })
+  }
+
   /**
    * 获取用户信息
    * @param uid user id
@@ -356,7 +374,10 @@ export class UserService {
    * 
    * @param registerDto 注册数据传输对象
    */
-  async register({ username, ...data }: RegisterDto): Promise<void> {
+  async register(
+    { username, ...data }: RegisterDto,
+    supabaseUserId?: string,
+  ): Promise<void> {
     const exists = await this.userRepository.findOneBy({
       username,
     })
@@ -380,6 +401,7 @@ export class UserService {
         username,
         password,
         email: data.email || null,
+        supabaseUserId: supabaseUserId || null,
         status: 1,
         psalt: salt,
       })

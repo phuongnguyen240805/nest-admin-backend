@@ -25,6 +25,13 @@ export class LoginDto {
   verifyCode: string
 }
 
+export class SupabaseExchangeDto {
+  @ApiProperty({ description: 'Supabase access token from client signInWithPassword / signUp session' })
+  @IsString()
+  @MinLength(10)
+  supabaseAccessToken: string
+}
+
 export class RegisterDto {
   @ApiProperty({ description: '账号' })
   @IsString()

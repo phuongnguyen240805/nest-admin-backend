@@ -42,7 +42,7 @@ export class Organization {
   @Column({ type: 'varchar', length: 255, nullable: true })
   paymentId: string
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   streakSince: Date
 
   @CreateDateColumn()

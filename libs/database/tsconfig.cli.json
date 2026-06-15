@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "baseUrl": "../..",
+    "paths": {
+      "~/*": ["libs/nest-core/src/*"],
+      "@liora/database": ["libs/database/src/index.ts"],
+      "@liora/database/*": ["libs/database/src/*"],
+      "@liora/supabase": ["libs/supabase/src/index.ts"],
+      "@liora/supabase/*": ["libs/supabase/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.spec.ts"]
+}

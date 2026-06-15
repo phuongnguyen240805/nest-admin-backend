@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["jest", "node"],
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "noPropertyAccessFromIndexSignature": false
+  },
+  "include": [
+    "libs/**/*.spec.ts",
+    "libs/**/*.ts",
+    "jest.migration.config.ts"
+  ]
+}
