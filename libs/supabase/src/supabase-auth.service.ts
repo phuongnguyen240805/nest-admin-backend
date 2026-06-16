@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger } from '@nestjs/common'
+
+import { ISupabaseConfig, SupabaseConfig } from './supabase.config'
 import { SupabaseService } from './supabase.service'
 
 export interface SupabaseSignUpResult {
@@ -31,12 +33,53 @@ export interface VerifiedSupabaseUser {
 export class SupabaseAuthService {
   private readonly logger = new Logger(SupabaseAuthService.name)
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    @Inject(SupabaseConfig.KEY)
+    private readonly config: ISupabaseConfig,
+  ) {}
 
   /**
    * Register a new user with email and password via Supabase Auth.
    */
   async signUp(email: string, password: string): Promise<SupabaseSignUpResult> {
+    if (this.config.useAdminSignupInDev && this.supabaseService.hasAdminClient()) {
+      return this.signUpWithAdmin(email, password)
+    }
+
+    return this.signUpWithPublicClient(email, password)
+  }
+
+  private async signUpWithAdmin(email: string, password: string): Promise<SupabaseSignUpResult> {
+    const admin = this.supabaseService.getAdminClient()
+
+    this.logger.log(`[dev] Supabase admin signup (no confirmation email) for: ${email}`)
+
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    })
+
+    if (error) {
+      this.logger.error(`Supabase admin signup failed: ${error.message}`)
+      throw new Error(error.message)
+    }
+
+    if (!data.user) {
+      throw new Error('Supabase did not return user details.')
+    }
+
+    this.logger.log(`Supabase admin signup successful. User: ${data.user.id} (auto-confirmed)`)
+
+    return {
+      success: true,
+      supabaseUserId: data.user.id,
+      message: 'Đăng ký thành công (dev — email đã được xác nhận tự động).',
+    }
+  }
+
+  private async signUpWithPublicClient(email: string, password: string): Promise<SupabaseSignUpResult> {
     const client = this.supabaseService.getClient()
 
     this.logger.log(`Attempting Supabase signup for email: ${email}`)

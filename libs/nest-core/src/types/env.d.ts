@@ -21,5 +21,9 @@ declare namespace NodeJS {
     STRIPE_SECRET_KEY?: string;
     FRONTEND_URL?: string;
     STRIPE_DISCOUNT_ID?: string;
+    STRIPE_PRICE_PRO_MONTHLY?: string;
+    STRIPE_PRICE_PRO_YEARLY?: string;
+    STRIPE_PRICE_ENTERPRISE_MONTHLY?: string;
+    STRIPE_PRICE_ENTERPRISE_YEARLY?: string;
   }
 }

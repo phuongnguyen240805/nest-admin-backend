@@ -7,8 +7,8 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 
 import { SupabaseModule } from '@liora/supabase'
 
-import { TenantInterceptor } from '~/common/interceptors/tenant.interceptor'
 import { ConfigKeyPaths, ISecurityConfig } from '~/config'
+import { TenantModule } from '~/modules/tenant/tenant.module'
 
 import { isDev } from '~/global/env'
 import { LogModule } from '../system/log/log.module'
@@ -34,7 +34,7 @@ const controllers = [
   CaptchaController,
   EmailController,
 ]
-const providers = [AuthService, TokenService, CaptchaService, TenantInterceptor]
+const providers = [AuthService, TokenService, CaptchaService]
 const strategies = [LocalStrategy, JwtStrategy]
 
 @Module({
@@ -62,6 +62,7 @@ const strategies = [LocalStrategy, JwtStrategy]
     MenuModule,
     LogModule,
     SupabaseModule,
+    TenantModule,
   ],
   controllers: [...controllers],
   providers: [...providers, ...strategies],

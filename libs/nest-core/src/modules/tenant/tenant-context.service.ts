@@ -1,26 +1,56 @@
-import { Injectable, Scope } from '@nestjs/common';
-import { ClsService, ClsStore } from 'nestjs-cls';
+import { Injectable, Scope } from '@nestjs/common'
+import { ClsService, ClsStore } from 'nestjs-cls'
 
-export const TENANT_CONTEXT_KEY = 'tenantId' as const;
+import { Organization } from '~/modules/billing/entities/organization.entity'
+
+export const TENANT_CONTEXT_KEY = 'tenantId' as const
+export const ORGANIZATION_ID_CONTEXT_KEY = 'organizationId' as const
+
+export interface TenantRequestContext {
+  tenantId: number
+  organizationId: string
+  organization?: Organization
+}
 
 @Injectable({ scope: Scope.REQUEST })
 export class TenantContextService {
-    constructor(private readonly cls: ClsService<ClsStore>) { }
+  constructor(private readonly cls: ClsService<ClsStore>) {}
 
-    setTenantId(tenantId: string): void {
-        this.cls.set(TENANT_CONTEXT_KEY, tenantId);
-    }
+  setContext(ctx: TenantRequestContext): void {
+    this.cls.set(TENANT_CONTEXT_KEY, ctx.tenantId)
+    this.cls.set(ORGANIZATION_ID_CONTEXT_KEY, ctx.organizationId)
+  }
 
-    getTenantId(): string | undefined {
-        return this.cls.get(TENANT_CONTEXT_KEY);
-    }
+  setTenantId(tenantId: number): void {
+    this.cls.set(TENANT_CONTEXT_KEY, tenantId)
+  }
 
-    getCurrentTenant(): { id: string } | null {
-        const tenantId = this.getTenantId();
-        return tenantId ? { id: tenantId } : null;
-    }
+  setOrganizationId(organizationId: string): void {
+    this.cls.set(ORGANIZATION_ID_CONTEXT_KEY, organizationId)
+  }
 
-    clear(): void {
-        this.cls.set(TENANT_CONTEXT_KEY, undefined);
-    }
+  getTenantId(): number | undefined {
+    return this.cls.get(TENANT_CONTEXT_KEY)
+  }
+
+  getOrganizationId(): string | undefined {
+    return this.cls.get(ORGANIZATION_ID_CONTEXT_KEY)
+  }
+
+  /**
+   * True when both tenantId and organizationId are available in CLS.
+   */
+  isReady(): boolean {
+    return this.getTenantId() != null && !!this.getOrganizationId()
+  }
+
+  getCurrentTenant(): { id: number } | null {
+    const tenantId = this.getTenantId()
+    return tenantId != null ? { id: tenantId } : null
+  }
+
+  clear(): void {
+    this.cls.set(TENANT_CONTEXT_KEY, undefined)
+    this.cls.set(ORGANIZATION_ID_CONTEXT_KEY, undefined)
+  }
 }

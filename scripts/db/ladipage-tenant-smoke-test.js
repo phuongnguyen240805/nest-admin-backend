@@ -1,0 +1,212 @@
+#!/usr/bin/env node
+/**
+ * Ladipage-backend tenant + business API smoke test (port 7002).
+ * Usage: node scripts/db/ladipage-tenant-smoke-test.js
+ */
+require('dotenv').config()
+
+const PORT = process.env.LADIPAGE_PORT || 7002
+const BASE = `http://127.0.0.1:${PORT}`
+const API = `${BASE}/api`
+
+const results = []
+
+function record(name, pass, detail = '') {
+  results.push({ name, pass, detail })
+  console.log(`${pass ? 'PASS' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`)
+}
+
+function decodeJwtPayload(token) {
+  try {
+    const part = token.split('.')[1]
+    return JSON.parse(Buffer.from(part, 'base64url').toString('utf8'))
+  } catch {
+    return null
+  }
+}
+
+async function request(method, url, options = {}) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+    signal: AbortSignal.timeout(options.timeout ?? 20000),
+  })
+  let json = null
+  const text = await res.text()
+  try { json = JSON.parse(text) } catch { json = { raw: text } }
+  return { status: res.status, ok: res.ok, json, text }
+}
+
+async function obtainNestToken() {
+  const useSupabase = process.env.USE_SUPABASE_AUTH === 'true'
+  const supabaseUrl = process.env.SUPABASE_URL
+  const anonKey = process.env.SUPABASE_PUBLISHABLE_KEY
+    || process.env.SUPABASE_ANON_KEY
+    || process.env.SUPABASE_KEY
+  const serviceKey = process.env.SUPABASE_SECRET_KEY
+    || process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (useSupabase && supabaseUrl && anonKey && serviceKey) {
+    const { createClient } = require('@supabase/supabase-js')
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const client = createClient(supabaseUrl, anonKey)
+
+    const testEmail = process.env.SMOKE_TEST_EMAIL || '1743369777@qq.com'
+    const testPassword = process.env.SMOKE_TEST_PASSWORD || 'SmokeTest123!'
+
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email: testEmail,
+      password: testPassword,
+      email_confirm: true,
+    })
+
+    if (createErr && !String(createErr.message || '').includes('already') && createErr.status !== 422) {
+      record('Supabase user setup', false, createErr.message)
+      return null
+    }
+
+    const { data: signIn, error: signInErr } = await client.auth.signInWithPassword({
+      email: testEmail,
+      password: testPassword,
+    })
+
+    if (signInErr) {
+      record('Supabase signIn', false, signInErr.message)
+      return null
+    }
+
+    record('Supabase signIn', true, testEmail)
+
+    const exchange = await request('POST', `${API}/auth/exchange`, {
+      body: { supabaseAccessToken: signIn.session.access_token },
+    })
+
+    const token = exchange.json?.data?.token ?? exchange.json?.token
+    if (exchange.ok && token) {
+      record('POST /auth/exchange', true, 'Nest JWT issued')
+      return token
+    }
+
+    record('POST /auth/exchange', false, `HTTP ${exchange.status} ${JSON.stringify(exchange.json)?.slice(0, 300)}`)
+    return null
+  }
+
+  // Legacy login fallback
+  const login = await request('POST', `${API}/auth/login`, {
+    body: {
+      email: process.env.SMOKE_TEST_EMAIL || 'admin@liora.dev',
+      password: process.env.SMOKE_TEST_PASSWORD || 'a123456',
+      captchaId: 'smoke',
+      verifyCode: '0000',
+    },
+  })
+  const token = login.json?.data?.token ?? login.json?.token
+  if (login.ok && token) {
+    record('POST /auth/login (legacy)', true, 'Nest JWT issued')
+    return token
+  }
+
+  record('Auth token', false, `Supabase disabled or login failed HTTP ${login.status}`)
+  return null
+}
+
+async function testProtected(name, method, path, token, options = {}) {
+  const res = await request(method, `${API}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    ...options,
+  })
+  const code = res.json?.code
+  const pass = res.ok && (code === undefined || code === 200)
+  record(name, pass, `HTTP ${res.status}${code != null ? `, code=${code}` : ''}`)
+  return res
+}
+
+async function main() {
+  console.log(`=== Ladipage Tenant Smoke Test (port ${PORT}) ===\n`)
+
+  const docs = await fetch(`${BASE}/docs/json`, { signal: AbortSignal.timeout(5000) }).catch(() => null)
+  record('Server reachable', !!docs?.ok, BASE)
+
+  if (!docs?.ok) {
+    process.exit(1)
+  }
+
+  const token = await obtainNestToken()
+  if (!token) {
+    console.log('\n=== Summary ===')
+    console.log(`0 passed, ${results.filter(r => !r.pass).length} failed`)
+    process.exit(1)
+  }
+
+  const payload = decodeJwtPayload(token)
+  const hasOrg = !!payload?.organizationId
+  const hasTenant = payload?.tenantId != null || payload?.activeTenantId != null
+  record('JWT has organizationId', hasOrg, payload?.organizationId || 'missing')
+  record('JWT has tenantId', hasTenant, String(payload?.tenantId ?? payload?.activeTenantId ?? 'missing'))
+
+  const auth = { headers: { Authorization: `Bearer ${token}` } }
+
+  // Billing & Plans
+  await testProtected('GET /plans', 'GET', '/plans', token)
+  await testProtected('GET /billing/', 'GET', '/billing/', token)
+  await testProtected('GET /billing/usage', 'GET', '/billing/usage', token)
+
+  // Settings
+  await testProtected('GET /settings/workspace', 'GET', '/settings/workspace', token)
+  await testProtected('GET /settings/integrations', 'GET', '/settings/integrations', token)
+
+  // Dashboard
+  await testProtected('GET /dashboard/summary', 'GET', '/dashboard/summary', token)
+  await testProtected('GET /dashboard/onboarding', 'GET', '/dashboard/onboarding', token)
+
+  // Analytics
+  await testProtected('GET /analytics/reports/sales', 'GET', '/analytics/reports/sales', token)
+  await testProtected('GET /analytics/reports/customers', 'GET', '/analytics/reports/customers', token)
+
+  // Ecom
+  await testProtected('GET /ecom/orders', 'GET', '/ecom/orders?page=1&pageSize=5', token)
+  await testProtected('GET /ecom/products', 'GET', '/ecom/products?page=1&pageSize=5', token)
+
+  const orderRes = await request('POST', `${API}/ecom/orders`, {
+    ...auth,
+    body: {
+      customerName: 'Smoke Test',
+      customerPhone: '0900000001',
+      customerEmail: 'smoke@test.local',
+      items: [{ productName: 'Smoke Product', quantity: 1, unitPrice: 100000 }],
+    },
+  })
+  const orderPass = orderRes.ok && (orderRes.json?.code === 200 || orderRes.json?.code === undefined)
+  record('POST /ecom/orders', orderPass, `HTTP ${orderRes.status}`)
+
+  // CRM
+  await testProtected('GET /crm/customers', 'GET', '/crm/customers?page=1&pageSize=5', token)
+  const crmSearch = await request('GET', `${API}/crm/customers?search=0900000001`, auth)
+  const crmPass = crmSearch.ok && (crmSearch.json?.code === 200 || crmSearch.json?.code === undefined)
+  record('GET /crm/customers (auto-link)', crmPass, `HTTP ${crmSearch.status}`)
+
+  // Tenant guard rejection without token
+  const noAuth = await request('GET', `${API}/ecom/orders`)
+  record('GET /ecom/orders (no auth → 401)', noAuth.status === 401, `HTTP ${noAuth.status}`)
+
+  console.log('\n=== Summary ===')
+  const passed = results.filter(r => r.pass).length
+  const failed = results.filter(r => !r.pass).length
+  console.log(`${passed} passed, ${failed} failed, ${results.length} total`)
+
+  if (failed > 0) {
+    console.log('\nFailed:')
+    for (const r of results.filter(x => !x.pass)) {
+      console.log(`  - ${r.name}: ${r.detail}`)
+    }
+    process.exit(1)
+  }
+}
+
+main().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})

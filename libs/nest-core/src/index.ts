@@ -56,7 +56,15 @@ export * from './modules/tasks/tasks.module';
 export * from './modules/sse/sse.module';
 export * from './modules/agent/agent.module';
 export * from './modules/billing/billing.module';
+export { PlanConfigService } from './modules/billing/config/plan.config';
 export * from './modules/tenant/tenant.module';
+export { Tenant } from './modules/tenant/entities/tenant.entity';
+export { TenantContextService } from './modules/tenant/tenant-context.service';
+export { TenantGuard } from './modules/tenant/tenant.guard';
+/** @deprecated Use TenantGuard — alias kept for existing ladipage imports */
+export { TenantGuard as TenantContextGuard } from './modules/tenant/tenant.guard';
+export { OrganizationProvisioningService } from './modules/tenant/organization-provisioning.service';
+export { GetOrgFromRequest } from './common/decorators/get-org-from-request.decorator';
 export * from './modules/public-api/public-api.module';
 export * from './modules/health/health.module';
 

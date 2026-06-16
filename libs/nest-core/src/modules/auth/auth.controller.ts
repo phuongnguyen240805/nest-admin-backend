@@ -32,17 +32,27 @@ export class AuthController {
   ) {}
 
   @Post('login')
-  @ApiOperation({ summary: '登录 (legacy — disabled when USE_SUPABASE_AUTH=true)' })
+  @ApiOperation({
+    summary: '登录 — legacy (captcha + local) hoặc Supabase password khi USE_SUPABASE_AUTH=true',
+  })
   @ApiResult({ type: LoginToken })
   async login(@Body() dto: LoginDto, @Ip()ip: string, @Headers('user-agent')ua: string): Promise<LoginToken> {
+    await this.captchaService.checkImgCaptcha(dto.captchaId, dto.verifyCode)
+
     const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
+
     if (useSupabase) {
-      throw new BusinessException('1212:Đăng nhập qua Supabase client, sau đó gọi POST /auth/exchange.')
+      const token = await this.authService.loginWithSupabasePassword(
+        dto.email,
+        dto.password,
+        ip,
+        ua,
+      )
+      return { token }
     }
 
-    await this.captchaService.checkImgCaptcha(dto.captchaId, dto.verifyCode)
     const token = await this.authService.login(
-      dto.username,
+      dto.email,
       dto.password,
       ip,
       ua,
@@ -78,11 +88,8 @@ export class AuthController {
     const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
 
     if (useSupabase) {
-      if (!dto.email) {
-        throw new BusinessException('1204:Email là thông tin bắt buộc khi đăng ký.')
-      }
-
       try {
+        await this.userService.ensureEmailNotRegistered(dto.email)
         const result = await this.supabaseAuthService.signUp(dto.email, dto.password)
         await this.userService.register(dto, result.supabaseUserId)
         if (result.message) {
@@ -90,7 +97,11 @@ export class AuthController {
         }
       }
       catch (error) {
-        throw new BusinessException(`1209:Supabase 注册失败: ${error.message}`)
+        if (error instanceof BusinessException) {
+          throw error
+        }
+        const detail = error instanceof Error ? error.message : String(error)
+        throw new BusinessException(`1209:Đăng ký Supabase thất bại — ${detail}`)
       }
     }
     else {

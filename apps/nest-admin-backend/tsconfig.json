@@ -23,7 +23,9 @@
       "@liora/librefang-client": ["../../libs/librefang-client/src/index.ts"],
       "@liora/librefang-client/*": ["../../libs/librefang-client/src/*"],
       "@liora/supabase": ["../../libs/supabase/src/index.ts"],
-      "@liora/supabase/*": ["../../libs/supabase/src/*"]
+      "@liora/supabase/*": ["../../libs/supabase/src/*"],
+      "@liora/api-types": ["../../libs/ladipage-types/src/index.ts"],
+      "@liora/api-types/*": ["../../libs/ladipage-types/src/*"]
     },
     "esModuleInterop": true
   }

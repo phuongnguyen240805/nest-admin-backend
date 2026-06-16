@@ -1,3 +1,4 @@
+import type { ISupabaseConfig } from './supabase.config'
 import { SupabaseAuthService } from './supabase-auth.service'
 import { SupabaseService } from './supabase.service'
 
@@ -5,18 +6,28 @@ describe('SupabaseAuthService', () => {
   const getUser = jest.fn()
   const signUp = jest.fn()
   const signInWithPassword = jest.fn()
+  const createUser = jest.fn()
 
   const supabaseService = {
     getClient: () => ({
       auth: { getUser, signUp, signInWithPassword },
     }),
+    hasAdminClient: jest.fn().mockReturnValue(false),
+    getAdminClient: () => ({
+      auth: { admin: { createUser } },
+    }),
   } as unknown as SupabaseService
+
+  const baseConfig = {
+    useAdminSignupInDev: false,
+  } as ISupabaseConfig
 
   let service: SupabaseAuthService
 
   beforeEach(() => {
     jest.clearAllMocks()
-    service = new SupabaseAuthService(supabaseService)
+    ;(supabaseService.hasAdminClient as jest.Mock).mockReturnValue(false)
+    service = new SupabaseAuthService(supabaseService, baseConfig)
   })
 
   describe('verifyAccessToken', () => {
@@ -52,6 +63,31 @@ describe('SupabaseAuthService', () => {
   })
 
   describe('signUp', () => {
+    it('uses admin createUser in dev when configured', async () => {
+      ;(supabaseService.hasAdminClient as jest.Mock).mockReturnValue(true)
+      const devService = new SupabaseAuthService(supabaseService, {
+        ...baseConfig,
+        useAdminSignupInDev: true,
+      })
+
+      createUser.mockResolvedValue({
+        data: { user: { id: 'admin-uuid' } },
+        error: null,
+      })
+
+      const result = await devService.signUp('user@test.com', 'Password1')
+      expect(createUser).toHaveBeenCalledWith({
+        email: 'user@test.com',
+        password: 'Password1',
+        email_confirm: true,
+      })
+      expect(result).toMatchObject({
+        success: true,
+        supabaseUserId: 'admin-uuid',
+      })
+      expect(signUp).not.toHaveBeenCalled()
+    })
+
     it('returns supabaseUserId and confirmation message when email unconfirmed', async () => {
       signUp.mockResolvedValue({
         data: {

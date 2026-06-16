@@ -13,7 +13,6 @@ import {
   LoggingInterceptor,
   RedisIoAdapter,
   ResOp,
-  TenantInterceptor,
   TreeResult,
   Pagination,
 } from "@liora/nest-core";
@@ -53,7 +52,6 @@ async function bootstrap() {
   if (isDev) {
     app.useGlobalInterceptors(new LoggingInterceptor());
   }
-  app.useGlobalInterceptors(new TenantInterceptor());
 
   // Validation Pipe
   app.useGlobalPipes(

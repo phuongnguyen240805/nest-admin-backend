@@ -8,14 +8,21 @@ export class TenantContextInterceptor implements NestInterceptor {
 
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
         const request = context.switchToHttp().getRequest();
-        const tenantId =
+        const rawTenantId =
             request.headers['x-tenant-id'] ||
             request.user?.activeTenantId ||
+            request.user?.tenantId ||
             request.query?.tenantId;
 
-        if (tenantId) {
-            this.tenantContext.setTenantId(tenantId);
-            request.tenantContext = this.tenantContext; 
+        if (rawTenantId != null) {
+            const tenantId = typeof rawTenantId === 'string'
+                ? Number.parseInt(rawTenantId, 10)
+                : Number(rawTenantId);
+
+            if (!Number.isNaN(tenantId)) {
+                this.tenantContext.setTenantId(tenantId);
+                request.tenantContext = this.tenantContext;
+            }
         }
 
         return next.handle();

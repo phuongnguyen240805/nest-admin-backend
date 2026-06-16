@@ -1,6 +1,21 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClientOptions, SupabaseClient } from '@supabase/supabase-js'
+import ws from 'ws'
+
 import { ISupabaseConfig, SupabaseConfig } from './supabase.config'
+
+function buildSupabaseClientOptions(): SupabaseClientOptions<'public'> {
+  const major = Number.parseInt(process.versions.node.split('.')[0] ?? '0', 10)
+
+  return {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+    // Node.js < 22 has no native WebSocket — required for @supabase/realtime-js
+    ...(major < 22 ? { realtime: { transport: ws as never } } : {}),
+  }
+}
 
 /**
  * Service managing Supabase clients (public auth + optional secret admin).
@@ -39,12 +54,11 @@ export class SupabaseService {
     }
 
     try {
-      this.authClient = createClient(this.config.url, this.config.publishableKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      })
+      this.authClient = createClient(
+        this.config.url,
+        this.config.publishableKey,
+        buildSupabaseClientOptions(),
+      )
       this.logger.log(
         `Supabase auth client initialized (${this.config.publishableKeyKind} key from ${this.config.publishableKeySource}).`,
       )
@@ -55,12 +69,11 @@ export class SupabaseService {
 
     if (this.config.secretKey) {
       try {
-        this.adminClient = createClient(this.config.url, this.config.secretKey, {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-          },
-        })
+        this.adminClient = createClient(
+          this.config.url,
+          this.config.secretKey,
+          buildSupabaseClientOptions(),
+        )
         this.logger.log('Supabase admin client initialized (secret key).')
       }
       catch (error) {

@@ -1,12 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger'
 
-import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator'
+import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator'
 
 export class LoginDto {
-  @ApiProperty({ description: '手机号/邮箱' })
-  @IsString()
-  @MinLength(4)
-  username: string
+  @ApiProperty({ description: '邮箱' })
+  @IsEmail()
+  email: string
 
   @ApiProperty({ description: '密码', example: 'a123456' })
   @IsString()
@@ -33,14 +32,15 @@ export class SupabaseExchangeDto {
 }
 
 export class RegisterDto {
-  @ApiProperty({ description: '账号' })
+  @ApiProperty({ description: 'Tên đăng nhập / hiển thị' })
   @IsString()
+  @MinLength(2)
+  @MaxLength(64)
   username: string
 
-  @ApiProperty({ description: '邮箱', required: false })
+  @ApiProperty({ description: '邮箱' })
   @IsEmail()
-  @IsOptional()
-  email?: string
+  email: string
 
   @ApiProperty({ description: '密码' })
   @IsString()

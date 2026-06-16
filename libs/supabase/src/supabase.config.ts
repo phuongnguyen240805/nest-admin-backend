@@ -66,11 +66,26 @@ export const SupabaseConfig = registerAs(supabaseRegToken, () => {
     // Anti-Spam domain blocklist
     blockedDomains: env('SUPABASE_BLOCKED_DOMAINS', DEFAULT_TEMP_MAIL_DOMAINS),
 
-    // Anti-Spam Rate limits
+    // Anti-Spam Rate limits (Redis — skipped when disableRegistrationRateLimit)
     limitIpCount: envNumber('REGISTRATION_LIMIT_IP_COUNT', 3),
     limitIpWindow: envNumber('REGISTRATION_LIMIT_IP_WINDOW', 600),
-    limitEmailCount: envNumber('REGISTRATION_LIMIT_EMAIL_COUNT', 2),
-    limitEmailWindow: envNumber('REGISTRATION_LIMIT_EMAIL_WINDOW', 86400),
+    limitEmailCount: envNumber('REGISTRATION_LIMIT_EMAIL_COUNT', 10),
+    limitEmailWindow: envNumber('REGISTRATION_LIMIT_EMAIL_WINDOW', 600),
+
+    /** Dev default: skip Redis IP/email rate limits on POST /auth/register */
+    disableRegistrationRateLimit: envBoolean(
+      'REGISTRATION_DISABLE_RATE_LIMIT',
+      process.env.NODE_ENV === 'development',
+    ),
+
+    /**
+     * Dev default: create users via service_role (no confirmation email → avoids Supabase 429).
+     * Requires SUPABASE_SECRET_KEY. Set SUPABASE_DEV_ADMIN_SIGNUP=false to use public signUp in dev.
+     */
+    useAdminSignupInDev: envBoolean(
+      'SUPABASE_DEV_ADMIN_SIGNUP',
+      process.env.NODE_ENV === 'development',
+    ),
   }
 })
 

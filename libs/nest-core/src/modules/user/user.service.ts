@@ -27,6 +27,8 @@ import { RoleEntity } from '../system/role/role.entity'
 import { UserStatus } from './constant'
 import { PasswordUpdateDto } from './dto/password.dto'
 import { UserDto, UserQueryDto, UserUpdateDto } from './dto/user.dto'
+import { OrganizationProvisioningService } from '../tenant/organization-provisioning.service'
+
 import { UserEntity } from './user.entity'
 import { AccountInfo } from './user.model'
 
@@ -42,6 +44,7 @@ export class UserService {
     @InjectEntityManager() private entityManager: EntityManager,
     private readonly paramConfigService: ParamConfigService,
     private readonly qqService: QQService,
+    private readonly organizationProvisioningService: OrganizationProvisioningService,
   ) {}
 
   async findUserById(id: number): Promise<UserEntity | undefined> {
@@ -370,45 +373,56 @@ export class UserService {
   }
 
   /**
+   * Kiểm tra email chưa được đăng ký trong sys_user.
+   */
+  async ensureEmailNotRegistered(email: string): Promise<string> {
+    const normalizedEmail = email.trim().toLowerCase()
+    const emailExists = await this.userRepository.findOneBy({
+      email: normalizedEmail,
+    })
+    if (!isEmpty(emailExists))
+      throw new BusinessException('1020:该邮箱已被注册')
+    return normalizedEmail
+  }
+
+  /**
    * 注册用户并保存到本地数据库
    * 
    * @param registerDto 注册数据传输对象
    */
   async register(
-    { username, ...data }: RegisterDto,
+    { email, username, ...data }: RegisterDto,
     supabaseUserId?: string,
   ): Promise<void> {
-    const exists = await this.userRepository.findOneBy({
-      username,
+    const normalizedEmail = await this.ensureEmailNotRegistered(email)
+    const normalizedUsername = username.trim()
+
+    const usernameExists = await this.userRepository.findOneBy({
+      username: normalizedUsername,
     })
-    if (!isEmpty(exists))
+    if (!isEmpty(usernameExists))
       throw new BusinessException(ErrorEnum.SYSTEM_USER_EXISTS)
 
-    if (data.email) {
-      const emailExists = await this.userRepository.findOneBy({
-        email: data.email,
-      })
-      if (!isEmpty(emailExists))
-        throw new BusinessException('1020:该邮箱已被注册')
-    }
-
-    await this.entityManager.transaction(async (manager) => {
+    const savedUser = await this.entityManager.transaction(async (manager) => {
       const salt = randomValue(32)
 
       const password = md5(`${data.password ?? 'a123456'}${salt}`)
 
       const u = manager.create(UserEntity, {
-        username,
+        username: normalizedUsername,
         password,
-        email: data.email || null,
+        email: normalizedEmail,
         supabaseUserId: supabaseUserId || null,
         status: 1,
         psalt: salt,
       })
 
-      const user = await manager.save(u)
-
-      return user
+      return manager.save(u)
     })
+
+    await this.organizationProvisioningService.ensureWorkspaceForUser(
+      savedUser.id,
+      normalizedUsername,
+    )
   }
 }

@@ -1,12 +1,5 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common'
-
-@Injectable()
-export class TenantGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest()
-    if (!request.organization) {
-      throw new ForbiddenException('Organization (tenant) not found in request')
-    }
-    return true
-  }
-}
+/**
+ * @deprecated Import TenantGuard from `~/modules/tenant/tenant.guard` or `@liora/nest-core`.
+ * Re-export kept for backward compatibility — single implementation only.
+ */
+export { TenantGuard } from '~/modules/tenant/tenant.guard'

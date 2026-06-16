@@ -2,6 +2,11 @@ const { NxAppWebpackPlugin } = require('@nx/webpack/app-plugin');
 const { join } = require('path');
 
 module.exports = {
+  resolve: {
+    alias: {
+      '@liora/api-types': join(__dirname, '../../libs/ladipage-types/src/index.ts'),
+    },
+  },
   output: {
     path: join(__dirname, '../../dist/apps/nest-admin-backend'),
     clean: true,

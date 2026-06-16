@@ -34,6 +34,7 @@ import {
   IdempotenceInterceptor,
   JwtAuthGuard,
   RbacGuard,
+  TenantInterceptor,
 } from "@liora/nest-core";
 
 // =====================================================
@@ -41,6 +42,7 @@ import {
 // =====================================================
 import { FunnelxModule } from '../modules/funnelx/funnelx.module';
 import { WebsiteModule } from '../modules/website/website.module';
+import { CrmModule } from '../modules/crm/crm.module';
 import { EcomStoreModule } from '../modules/ecom-store/ecom-store.module';
 import { DomainModule } from '../modules/domain/domain.module';
 import { PublishModule } from '../modules/publish/publish.module';
@@ -51,6 +53,9 @@ import { FileManagerModule } from '../modules/file-manager/file-manager.module';
 import { BuilderBridgeModule } from '../modules/builder-bridge/builder-bridge.module';
 import { FlowiseModule } from '../modules/flowise/flowise.module';
 import { SdkModule } from '../modules/sdk/sdk.module';
+import { SettingsModule } from '../modules/settings/settings.module';
+import { AnalyticsModule } from '../modules/analytics/analytics.module';
+import { DashboardModule } from '../modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -63,6 +68,9 @@ import { SdkModule } from '../modules/sdk/sdk.module';
     }),
     ClsModule.forRoot({
       global: true,
+      middleware: {
+        mount: true,
+      },
       interceptor: {
         mount: true,
         setup: (cls, context) => {
@@ -92,6 +100,7 @@ import { SdkModule } from '../modules/sdk/sdk.module';
     // === LADIPAGE DOMAIN MODULES (đã import sẵn skeleton) ===
     FunnelxModule,
     WebsiteModule,
+    CrmModule,
     EcomStoreModule,
     DomainModule,
     PublishModule,
@@ -102,6 +111,9 @@ import { SdkModule } from '../modules/sdk/sdk.module';
     BuilderBridgeModule,
     FlowiseModule,
     SdkModule,
+    SettingsModule,
+    AnalyticsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [
@@ -109,6 +121,7 @@ import { SdkModule } from '../modules/sdk/sdk.module';
     // Global Exception Filter - Giai đoạn 1 Foundation requirement
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: ClassSerializerInterceptor },
+    { provide: APP_INTERCEPTOR, useExisting: TenantInterceptor },
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
     { provide: APP_INTERCEPTOR, useFactory: () => new TimeoutInterceptor(15 * 1000) },
     { provide: APP_INTERCEPTOR, useClass: IdempotenceInterceptor },

@@ -1,17 +1,43 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
-import { TenantContextService } from './tenant-context.service';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common'
+import type { FastifyRequest } from 'fastify'
 
+import { TenantContextService } from './tenant-context.service'
+import { TenantRequestBootstrapService } from './tenant-request-bootstrap.service'
+
+/**
+ * Single tenant guard for all business APIs (Billing, Ecom, CRM, Settings, …).
+ */
 @Injectable()
 export class TenantGuard implements CanActivate {
-  constructor(private readonly tenantContext: TenantContextService) { }
+  constructor(
+    private readonly tenantContext: TenantContextService,
+    private readonly tenantBootstrap: TenantRequestBootstrapService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    const tenantId = this.tenantContext.getTenantId();
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<FastifyRequest>()
 
-    if (!tenantId) {
-      throw new ForbiddenException('Tenant ID is required. Please provide X-Tenant-ID header or valid JWT.');
+    if (!this.tenantContext.isReady()) {
+      await this.tenantBootstrap.ensureRequestTenantContext(request)
     }
 
-    return true;
+    if (!this.tenantContext.isReady()) {
+      throw new ForbiddenException(
+        'Workspace context is required. Re-login after registration or contact support.',
+      )
+    }
+
+    if (!request.org) {
+      throw new ForbiddenException(
+        'Organization context is missing. Ensure TenantInterceptor is registered globally.',
+      )
+    }
+
+    return true
   }
 }

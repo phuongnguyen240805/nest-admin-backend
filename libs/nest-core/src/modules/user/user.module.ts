@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 
 import { MenuModule } from '../system/menu/menu.module'
 import { ParamConfigModule } from '../system/param-config/param-config.module'
+import { TenantModule } from '../tenant/tenant.module'
 
 import { RoleModule } from '../system/role/role.module'
 
@@ -18,6 +19,7 @@ const providers = [UserService]
     RoleModule,
     MenuModule,
     ParamConfigModule,
+    TenantModule,
   ],
   controllers: [UserController],
   providers: [...providers],

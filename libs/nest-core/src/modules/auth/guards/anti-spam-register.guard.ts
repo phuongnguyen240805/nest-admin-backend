@@ -60,7 +60,7 @@ export class AntiSpamRegisterGuard implements CanActivate {
     const allowedDomains = allowedDomainsStr.split(',').map(d => d.trim().toLowerCase())
 
     if (allowedDomains.length > 0 && !allowedDomains.includes(domain)) {
-      throw new BusinessException(`1206:Tên miền email này không được phép sử dụng.: ${allowedDomains.join(', ')}`)
+      throw new BusinessException(`1206:Tên miền email này không được phép. Chỉ chấp nhận: ${allowedDomains.join(', ')}`)
     }
 
     // 3. Email Domain Blocklist Check (Temporary Mail check)
@@ -69,6 +69,11 @@ export class AntiSpamRegisterGuard implements CanActivate {
 
     if (blockedDomains.includes(domain)) {
       throw new BusinessException('1207:Việc đăng ký bằng địa chỉ email tạm thời bị nghiêm cấm.')
+    }
+
+    const disableRateLimit = this.configService.get<boolean>('supabase.disableRegistrationRateLimit') ?? false
+    if (disableRateLimit) {
+      return true
     }
 
     // 4. Rate Limiting per IP & Email

@@ -30,6 +30,7 @@ import {
   TransformInterceptor,
   TimeoutInterceptor,
   IdempotenceInterceptor,
+  TenantInterceptor,
   JwtAuthGuard,
   RbacGuard,
 } from "@liora/nest-core";
@@ -76,6 +77,7 @@ import {
     AppService,
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: ClassSerializerInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: TenantInterceptor },
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
     { provide: APP_INTERCEPTOR, useFactory: () => new TimeoutInterceptor(15 * 1000) },
     { provide: APP_INTERCEPTOR, useClass: IdempotenceInterceptor },

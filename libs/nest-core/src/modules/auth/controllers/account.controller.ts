@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Post, Put, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Headers, Post, Put, Req, UseGuards } from '@nestjs/common'
 import { ApiExtraModels, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { FastifyRequest } from 'fastify'
 
 import { ApiResult } from '~/common/decorators/api-result.decorator'
+import { Ip } from '~/common/decorators/http.decorator'
 
 import { ApiSecurityAuth } from '~/common/decorators/swagger.decorator'
 import { AllowAnon } from '~/modules/auth/decorators/allow-anon.decorator'
@@ -16,6 +17,7 @@ import { AuthService } from '../auth.service'
 import { AccountMenus, AccountUpdateDto } from '../dto/account.dto'
 import { JwtAuthGuard } from '../guards/jwt-auth.guard'
 import { IAuthUser } from '../interfaces/auth.interface'
+import { LoginToken } from '../models/auth.model'
 
 @ApiTags('Account - 账户模块')
 @ApiSecurityAuth()
@@ -27,6 +29,19 @@ export class AccountController {
     private userService: UserService,
     private authService: AuthService,
   ) {}
+
+  @Post('reissue-token')
+  @ApiOperation({ summary: 'Re-issue JWT with workspace tenant claims' })
+  @ApiResult({ type: LoginToken })
+  @AllowAnon()
+  async reissueToken(
+    @AuthUser() user: IAuthUser,
+    @Ip() ip: string,
+    @Headers('user-agent') ua: string,
+  ): Promise<LoginToken> {
+    const token = await this.authService.reissueAccessToken(user.uid, ip, ua)
+    return { token }
+  }
 
   @Get('profile')
   @ApiOperation({ summary: '获取账户资料' })

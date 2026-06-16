@@ -40,13 +40,24 @@ describe('AuthService — Supabase hybrid', () => {
     }),
   } as unknown as TokenService
 
+  const organizationProvisioningService = {
+    ensureWorkspaceForUser: jest.fn().mockResolvedValue({
+      organizationId: 'org-uuid',
+      tenantId: 1,
+      organization: { id: 'org-uuid', name: 'Test Org' },
+      tenant: { id: 1 },
+    }),
+  }
+
   const supabaseAuthService = {
     verifyAccessToken: jest.fn(),
+    signInWithPassword: jest.fn(),
   } as unknown as SupabaseAuthService
 
   const userService = {
     findUserBySupabaseId: jest.fn(),
     findUserByEmail: jest.fn(),
+    findUserByUserName: jest.fn(),
     linkSupabaseUser: jest.fn(),
     findUserById: jest.fn(),
   } as unknown as UserService
@@ -71,6 +82,7 @@ describe('AuthService — Supabase hybrid', () => {
       userService,
       loginLogService,
       tokenService,
+      organizationProvisioningService as any,
       supabaseAuthService,
       securityConfig as any,
       appConfig as any,
@@ -141,6 +153,53 @@ describe('AuthService — Supabase hybrid', () => {
         expect(error).toBeInstanceOf(BusinessException)
         expect((error as BusinessException).getErrorCode()).toBe(1017)
       }
+    })
+  })
+
+  describe('loginWithSupabasePassword', () => {
+    it('signs in via Supabase then issues Nest JWT when identifier is email', async () => {
+      ;(supabaseAuthService.signInWithPassword as jest.Mock).mockResolvedValue({
+        accessToken: 'supabase-access',
+        supabaseUserId: 'supabase-uuid',
+      })
+      ;(supabaseAuthService.verifyAccessToken as jest.Mock).mockResolvedValue({
+        id: 'supabase-uuid',
+        email: 'u@test.com',
+        emailConfirmed: true,
+      })
+      ;(userService.findUserBySupabaseId as jest.Mock).mockResolvedValue(baseUser)
+
+      const token = await service.loginWithSupabasePassword(
+        'u@test.com',
+        'Password1',
+        '127.0.0.1',
+        'jest',
+      )
+
+      expect(supabaseAuthService.signInWithPassword).toHaveBeenCalledWith('u@test.com', 'Password1')
+      expect(token).toBe('nest-jwt-token')
+    })
+
+    it('normalizes email before Supabase sign-in', async () => {
+      ;(supabaseAuthService.signInWithPassword as jest.Mock).mockResolvedValue({
+        accessToken: 'supabase-access',
+        supabaseUserId: 'supabase-uuid',
+      })
+      ;(supabaseAuthService.verifyAccessToken as jest.Mock).mockResolvedValue({
+        id: 'supabase-uuid',
+        email: 'u@test.com',
+        emailConfirmed: true,
+      })
+      ;(userService.findUserBySupabaseId as jest.Mock).mockResolvedValue(baseUser)
+
+      await service.loginWithSupabasePassword(
+        '  U@Test.COM ',
+        'Password1',
+        '127.0.0.1',
+        'jest',
+      )
+
+      expect(supabaseAuthService.signInWithPassword).toHaveBeenCalledWith('u@test.com', 'Password1')
     })
   })
 

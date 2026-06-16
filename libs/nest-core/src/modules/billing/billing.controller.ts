@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { Request } from 'express'
-import { TenantGuard } from '~/common/guards/tenant.guard'
+import { TenantGuard } from '~/modules/tenant/tenant.guard'
 import { GetOrgFromRequest } from '~/libraries/nestjs_libraries/src/user/org.from.request'
 import { GetUserFromRequest } from '~/libraries/nestjs_libraries/src/user/user.from.request'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
@@ -16,9 +16,14 @@ import { BillingService } from './services/billing.service'
 export class BillingController {
   constructor(private readonly billingService: BillingService) {}
 
-  @Get('/check/:id')
-  checkId(@GetOrgFromRequest() org: Organization, @Param('id') id: string) {
-    return this.billingService.checkId(org, id)
+  @Get('/check/:sessionId')
+  checkSession(@GetOrgFromRequest() org: Organization, @Param('sessionId') sessionId: string) {
+    return this.billingService.checkSession(org, sessionId)
+  }
+
+  @Get('/usage')
+  getUsage(@GetOrgFromRequest() org: Organization) {
+    return this.billingService.getUsage(org)
   }
 
   @Get('/check-discount')
@@ -63,10 +68,10 @@ export class BillingController {
     return this.billingService.getCurrentBilling(org)
   }
 
-  // @Post('/cancel')
-  // cancel(@GetOrgFromRequest() org: Organization, @GetUserFromRequest() user: User, @Body() body: { feedback: string }) {
-  //   return this.billingService.cancel(org, user, body.feedback)
-  // }
+  @Post('/cancel')
+  cancel(@GetOrgFromRequest() org: Organization) {
+    return this.billingService.cancel(org)
+  }
 
   @Post('/prorate')
   prorate(@GetOrgFromRequest() org: Organization, @Body() body) {

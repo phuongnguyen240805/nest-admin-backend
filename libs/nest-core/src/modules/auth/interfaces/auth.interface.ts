@@ -1,6 +1,12 @@
 export interface IAuthUser {
     uid: number
     pv: number
+    /** Organization (workspace) UUID from sys_organizations */
+    organizationId?: string
+    /** Resolved tenant id (tenants.id) */
+    tenantId?: number
+    /** Active tenant for multi-tenant switching */
+    activeTenantId?: number
     /** 过期时间 */
     exp?: number
     /** 签发时间 */

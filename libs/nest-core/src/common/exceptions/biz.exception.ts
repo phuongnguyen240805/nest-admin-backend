@@ -20,7 +20,9 @@ export class BusinessException extends HttpException {
       return
     }
 
-    const [code, message] = error.split(':')
+    const colonIndex = error.indexOf(':')
+    const code = error.slice(0, colonIndex)
+    const message = error.slice(colonIndex + 1)
     super(
       HttpException.createBody({
         code,

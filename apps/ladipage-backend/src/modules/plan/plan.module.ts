@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BillingModule } from '@liora/nest-core';
+import { PlanController } from './plan.controller';
+import { PlanService } from './plan.service';
 
 /**
  * PlanModule + gating logic
@@ -8,6 +10,8 @@ import { BillingModule } from '@liora/nest-core';
  */
 @Module({
   imports: [BillingModule],
-  exports: [BillingModule],
+  controllers: [PlanController],
+  providers: [PlanService],
+  exports: [BillingModule, PlanService],
 })
 export class PlanModule {}

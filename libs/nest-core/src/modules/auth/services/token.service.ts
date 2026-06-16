@@ -14,6 +14,13 @@ import { generateUUID } from '~/utils'
 import { AccessTokenEntity } from '../entities/access-token.entity'
 import { RefreshTokenEntity } from '../entities/refresh-token.entity'
 import { IAuthUser } from '../interfaces/auth.interface'
+import { OrganizationProvisioningService } from '~/modules/tenant/organization-provisioning.service'
+
+export interface TokenTenantContext {
+  organizationId?: string
+  tenantId?: number
+  activeTenantId?: number
+}
 
 /**
  * 令牌服务
@@ -23,6 +30,7 @@ export class TokenService {
   constructor(
     private jwtService: JwtService,
     private roleService: RoleService,
+    private organizationProvisioningService: OrganizationProvisioningService,
     @InjectRedis() private redis: Redis,
     @Inject(SecurityConfig.KEY) private securityConfig: ISecurityConfig,
   ) {}
@@ -42,9 +50,10 @@ export class TokenService {
 
       const roleIds = await this.roleService.getRoleIdsByUser(user.id)
       const roleValues = await this.roleService.getRoleValues(roleIds)
+      const tenantContext = await this.resolveTenantContextForUser(user)
 
       // 如果没过期则生成新的access_token和refresh_token
-      const token = await this.generateAccessToken(user.id, roleValues)
+      const token = await this.generateAccessToken(user.id, roleValues, tenantContext)
 
       await accessToken.remove()
       return token
@@ -58,11 +67,18 @@ export class TokenService {
     return jwtSign
   }
 
-  async generateAccessToken(uid: number, roles: string[] = []) {
+  async generateAccessToken(
+    uid: number,
+    roles: string[] = [],
+    tenantContext?: TokenTenantContext,
+  ) {
     const payload: IAuthUser = {
       uid,
       pv: 1,
       roles,
+      ...(tenantContext?.organizationId && { organizationId: tenantContext.organizationId }),
+      ...(tenantContext?.tenantId != null && { tenantId: tenantContext.tenantId }),
+      ...(tenantContext?.activeTenantId != null && { activeTenantId: tenantContext.activeTenantId }),
     }
 
     const jwtSign = await this.jwtService.signAsync(payload)
@@ -172,5 +188,17 @@ export class TokenService {
    */
   async verifyAccessToken(token: string): Promise<IAuthUser> {
     return this.jwtService.verifyAsync(token)
+  }
+
+  private async resolveTenantContextForUser(
+    user: UserEntity,
+  ): Promise<TokenTenantContext> {
+    const workspace = await this.organizationProvisioningService.ensureWorkspaceForUser(user.id)
+
+    return {
+      organizationId: workspace.organizationId,
+      tenantId: workspace.tenantId,
+      activeTenantId: workspace.tenantId,
+    }
   }
 }

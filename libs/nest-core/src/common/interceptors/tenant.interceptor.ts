@@ -1,29 +1,30 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common'
-import { Request } from 'express'
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from '@nestjs/common'
+import type { FastifyRequest } from 'fastify'
 import { Observable } from 'rxjs'
 
-export interface JwtUserPayload {
-  organization?: string
-  org?: string
-  [key: string]: any
-}
+import { TenantRequestBootstrapService } from '~/modules/tenant/tenant-request-bootstrap.service'
 
-export interface TenantRequest extends Request {
-  user?: JwtUserPayload
-  organization?: string
-}
-
+/**
+ * Populates request + CLS tenant context from JWT claims (or lazy workspace provision).
+ * Runs after JwtAuthGuard on protected routes.
+ */
 @Injectable()
 export class TenantInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const request = context.switchToHttp().getRequest<TenantRequest>()
+  constructor(
+    private readonly tenantBootstrap: TenantRequestBootstrapService,
+  ) {}
 
-    const organization = request.user?.organization || request.user?.org
-
-    if (organization) {
-      request.organization = organization
-    }
-
+  async intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Promise<Observable<unknown>> {
+    const request = context.switchToHttp().getRequest<FastifyRequest>()
+    await this.tenantBootstrap.ensureRequestTenantContext(request)
     return next.handle()
   }
 }

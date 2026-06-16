@@ -5,7 +5,11 @@ import { TenantUser } from './tenant-user.entity';
 @Entity('tenants')
 export class Tenant extends CompleteEntity {
   @Column({ unique: true, length: 100 })
-  handle?: string;                    
+  handle?: string;
+
+  /** Bridge to sys_organizations — one tenant per organization */
+  @Column({ type: 'uuid', nullable: true, unique: true })
+  organizationId?: string;
 
   @Column({ length: 255 })
   name?: string;

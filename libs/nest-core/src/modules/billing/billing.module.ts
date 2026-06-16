@@ -4,11 +4,13 @@ import { ConfigService } from '@nestjs/config'
 
 import { Nowpayments } from '../../shared/crypto/nowpayments'
 import { AuthModule } from '../auth/auth.module'
+import { TenantModule } from '../tenant/tenant.module'
 // import { NotificationService } from '../sse/sse.service'
 import { BillingController } from './billing.controller'
 import { CreditWallet } from './entities/credit-wallet.entity'
 import { Subscription } from './entities/subscription.entity'
 import { Organization } from './entities/organization.entity'
+import { PlanConfigService } from './config/plan.config'
 import { BillingService } from './services/billing.service'
 import { SubscriptionService } from './services/subscription.service'
 import { BillingWebhookHandlers } from './services/billing-webhook.handlers'
@@ -23,6 +25,7 @@ import { StripeWebhookModule } from './stripe/modules/stripe-webhook.module'
   imports: [
     TypeOrmModule.forFeature([Subscription, CreditWallet, Organization]),
     AuthModule,
+    TenantModule,
     // Clean Stripe foundation (ported from reyco1/nestjs-stripe)
     StripeModule.forRootAsync({
       inject: [ConfigService],
@@ -35,7 +38,7 @@ import { StripeWebhookModule } from './stripe/modules/stripe-webhook.module'
     StripeWebhookModule.forRoot(),
   ],
   controllers: [BillingController],
-  providers: [BillingService, SubscriptionService, Nowpayments, BillingWebhookHandlers],
-  exports: [BillingService, SubscriptionService],
+  providers: [BillingService, SubscriptionService, PlanConfigService, Nowpayments, BillingWebhookHandlers],
+  exports: [BillingService, SubscriptionService, PlanConfigService],
 })
 export class BillingModule {}

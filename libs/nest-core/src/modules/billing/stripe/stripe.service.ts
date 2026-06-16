@@ -152,6 +152,10 @@ export class StripeService {
     return this.stripeClient.subscriptions.retrieve(subscriptionId);
   }
 
+  async retrieveCheckoutSession(sessionId: string) {
+    return this.stripeClient.checkout.sessions.retrieve(sessionId);
+  }
+
   // =========================
   // Billing Portal
   // =========================

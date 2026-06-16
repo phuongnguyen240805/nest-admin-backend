@@ -37,6 +37,7 @@
     "db:smoke": "node scripts/db/smoke-test.js",
     "db:smoke:api": "node scripts/db/smoke-test.js --api",
     "db:api:test": "node scripts/db/api-smoke-test.js",
+    "db:backfill-orgs": "node scripts/db/backfill-user-organizations.js",
     "migration:audit:pg": "node scripts/migration/audit-pg.js",
     "migration:audit:mysql": "node scripts/migration/audit-mysql.js",
     "migration:validate": "node scripts/migration/validate-cutover.js",
@@ -87,6 +88,7 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "@liora/api-types": "workspace:*",
     "@aws-sdk/client-s3": "^3.1024.0",
     "@aws-sdk/s3-request-presigner": "^3.1024.0",
     "@fastify/cookie": "^11.0.2",
@@ -114,7 +116,7 @@
     "@nestjs/websockets": "^11.1.19",
     "@socket.io/redis-adapter": "^8.3.0",
     "@socket.io/redis-emitter": "^5.1.0",
-    "@supabase/supabase-js": "^2.43.0",
+    "@supabase/supabase-js": "^2.55.0",
     "axios": "^1.15.2",
     "bcrypt": "^6.0.0",
     "bull": "^4.16.5",
@@ -151,6 +153,7 @@
     "systeminformation": "^5.31.6",
     "typeorm": "^0.3.28",
     "ua-parser-js": "^2.0.9",
+    "ws": "^8.18.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
   }

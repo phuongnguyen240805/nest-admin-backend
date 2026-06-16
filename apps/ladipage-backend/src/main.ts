@@ -12,7 +12,6 @@ import {
   LoggingInterceptor,
   RedisIoAdapter,
   ResOp,
-  TenantInterceptor,
   TreeResult,
   Pagination,
   AllExceptionsFilter, // Global exception filter from foundation
@@ -60,7 +59,6 @@ async function bootstrap() {
   if (isDev) {
     app.useGlobalInterceptors(new LoggingInterceptor());
   }
-  app.useGlobalInterceptors(new TenantInterceptor());
 
   // ============================================================
   // Global ValidationPipe - Giai đoạn 1 Foundation requirement
