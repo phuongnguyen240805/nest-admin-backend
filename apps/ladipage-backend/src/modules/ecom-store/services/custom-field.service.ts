@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 
-import { paginate } from '~/helper/paginate'
-import { Pagination } from '~/helper/paginate/pagination'
-import { TenantContextService } from '~/modules/tenant/tenant-context.service'
+import { paginate } from '@liora/nest-core/helper/paginate'
+import { Pagination } from '@liora/nest-core/helper/paginate/pagination'
+import { TenantContextService } from '@liora/nest-core'
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 
 import { EcomEntityType } from '../common/enums'

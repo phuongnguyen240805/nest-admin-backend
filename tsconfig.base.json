@@ -25,8 +25,8 @@
     "paths": {
       "~/*": ["libs/nest-core/src/*"],
       "~": ["libs/nest-core/src/index.ts"],
-      "@liora/api-types": ["libs/ladipage-types/src/index.ts"],
-      "@liora/api-types/*": ["libs/ladipage-types/src/*"],
+      "@liora/api-types": ["apps/ladipage-backend/libs/api-types/src/index.ts"],
+      "@liora/api-types/*": ["apps/ladipage-backend/libs/api-types/src/*"],
       "@liora/*": ["libs/*/src"],
       "@liora/dto": ["libs/dto/src/index.ts"],
       "@liora/dto/*": ["libs/dto/src/*"],

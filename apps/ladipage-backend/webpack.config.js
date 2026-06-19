@@ -4,7 +4,9 @@ const { join } = require('path');
 module.exports = {
   resolve: {
     alias: {
-      '@liora/api-types': join(__dirname, '../../libs/ladipage-types/src/index.ts'),
+      '@liora/api-types': join(__dirname, './libs/api-types/src/index.ts'),
+      // nest-core dùng alias nội bộ `~/*` khi webpack bundle source
+      '~': join(__dirname, '../../libs/nest-core/src'),
     },
   },
   output: {

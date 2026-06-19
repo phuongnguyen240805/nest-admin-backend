@@ -4,7 +4,8 @@ const { join } = require('path');
 module.exports = {
   resolve: {
     alias: {
-      '@liora/api-types': join(__dirname, '../../libs/ladipage-types/src/index.ts'),
+      '@liora/api-types': join(__dirname, '../ladipage-backend/libs/api-types/src/index.ts'),
+      '~': join(__dirname, '../../libs/nest-core/src'),
     },
   },
   output: {

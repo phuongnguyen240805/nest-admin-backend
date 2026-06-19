@@ -1,6 +1,8 @@
 packages:
   # Tất cả các ứng dụng (deployable)
   - 'apps/*'
+  # Thư viện scoped theo từng app (vd. ladipage api-types)
+  - 'apps/*/libs/*'
   # Tất cả các thư viện dùng chung (single source of truth)
   - 'libs/*'
   # Tools & generators (nếu sau này bạn thêm)

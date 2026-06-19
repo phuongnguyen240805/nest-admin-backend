@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common'
 import { FindOptionsWhere, ObjectLiteral, Repository } from 'typeorm'
 
-import { TenantContextService } from '~/modules/tenant/tenant-context.service'
+import { TenantContextService } from '@liora/nest-core'
 
 @Injectable()
 export abstract class TenantScopedService {

@@ -1,6 +1,6 @@
 import { Column, Entity, Index } from 'typeorm'
 
-import { TenantScopedEntity } from '~/common/entities/tenant-scoped.entity'
+import { TenantScopedEntity } from '@liora/nest-core/common/entities/tenant-scoped.entity'
 
 import { CustomFieldDataType, EcomEntityType } from '../common/enums'
 
