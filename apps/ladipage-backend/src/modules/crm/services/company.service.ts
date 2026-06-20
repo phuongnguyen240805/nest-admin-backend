@@ -7,6 +7,7 @@ import { Pagination } from '@liora/nest-core/helper/paginate/pagination'
 import { TenantContextService } from '@liora/nest-core'
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 
+import { assertLpCrmWritable } from '../common/lp-crm-write.guard'
 import {
   CompanyQueryDto,
   CreateCompanyDto,
@@ -47,6 +48,7 @@ export class CompanyService extends TenantScopedService {
   }
 
   async create(dto: CreateCompanyDto) {
+    assertLpCrmWritable('company')
     return this.companyRepository.save({
       tenantId: this.requireTenantId(),
       name: dto.name,
@@ -54,12 +56,14 @@ export class CompanyService extends TenantScopedService {
   }
 
   async update(id: number, dto: UpdateCompanyDto) {
+    assertLpCrmWritable('company')
     const company = await this.detail(id)
     Object.assign(company, dto)
     return this.companyRepository.save(company)
   }
 
   async remove(id: number) {
+    assertLpCrmWritable('company')
     const company = await this.detail(id)
     await this.companyRepository.remove(company)
   }

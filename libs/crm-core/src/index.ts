@@ -1,0 +1,6 @@
+export * from './crm-core.module'
+export * from './services'
+export * from './config/crm.config'
+export * from './config/custom-field.config'
+export * from './config/enterprise.config'
+export * from './utils'

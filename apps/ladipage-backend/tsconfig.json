@@ -14,6 +14,8 @@
       "~": ["../../libs/nest-core/src/index.ts"],
       "@liora/database": ["../../libs/database/src/index.ts"],
       "@liora/database/*": ["../../libs/database/src/*"],
+      "@liora/crm-core": ["../../libs/crm-core/src/index.ts"],
+      "@liora/crm-core/*": ["../../libs/crm-core/src/*"],
       "@liora/dto": ["../../libs/dto/src/index.ts"],
       "@liora/dto/*": ["../../libs/dto/src/*"],
       "@liora/shared": ["../../libs/shared/src/index.ts"],

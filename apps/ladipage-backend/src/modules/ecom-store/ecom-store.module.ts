@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
 
+import { CrmCoreModule } from '@liora/crm-core'
 import { TenantModule } from '@liora/nest-core'
 
 import { CrmModule } from '../crm/crm.module'
@@ -30,6 +31,7 @@ import { CategoryService } from './services/category.service'
 import { EcomCustomFieldService } from './services/custom-field.service'
 import { DeliveryNoteService } from './services/delivery-note.service'
 import { InventoryService } from './services/inventory.service'
+import { OrderCustomerResolver } from './services/order-customer.resolver'
 import { OrderService } from './services/order.service'
 import { ProductService } from './services/product.service'
 import { ReviewService } from './services/review.service'
@@ -38,6 +40,7 @@ import { EcomTagService } from './services/tag.service'
 @Module({
   imports: [
     TenantModule,
+    CrmCoreModule,
     CrmModule,
     TypeOrmModule.forFeature([
       ProductEntity,
@@ -64,6 +67,7 @@ import { EcomTagService } from './services/tag.service'
     DeliveryNoteController,
   ],
   providers: [
+    OrderCustomerResolver,
     OrderService,
     ProductService,
     CategoryService,

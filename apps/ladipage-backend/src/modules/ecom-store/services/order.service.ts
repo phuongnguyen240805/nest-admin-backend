@@ -6,7 +6,7 @@ import { paginate } from '@liora/nest-core/helper/paginate'
 import { Pagination } from '@liora/nest-core/helper/paginate/pagination'
 import { TenantContextService } from '@liora/nest-core'
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
-import { CustomerService } from '../../crm/services/customer.service'
+import { OrderCustomerResolver } from './order-customer.resolver'
 
 import { OrderStatus } from '../common/enums'
 import {
@@ -39,7 +39,7 @@ export class OrderService extends TenantScopedService {
     private readonly orderTagMapRepository: Repository<OrderTagMapEntity>,
     @InjectRepository(OrderTagEntity)
     private readonly orderTagRepository: Repository<OrderTagEntity>,
-    private readonly customerService: CustomerService,
+    private readonly orderCustomerResolver: OrderCustomerResolver,
     private readonly dataSource: DataSource,
   ) {
     super(tenantContext)
@@ -105,7 +105,7 @@ export class OrderService extends TenantScopedService {
 
   async create(dto: CreateOrderDto) {
     const tenantId = this.requireTenantId()
-    const customer = await this.customerService.findOrCreateByContact({
+    const customer = await this.orderCustomerResolver.resolve({
       name: dto.customerName,
       phone: dto.customerPhone,
       email: dto.customerEmail ?? null,
@@ -124,7 +124,8 @@ export class OrderService extends TenantScopedService {
       const order = await orderRepo.save({
         tenantId,
         code: await this.generateOrderCode(orderRepo, tenantId),
-        customerId: customer.id,
+        customerId: customer.customerId,
+        personId: customer.personId,
         status: dto.status ?? OrderStatus.PENDING,
         total,
         paymentMethod: dto.paymentMethod ?? null,
@@ -191,6 +192,7 @@ export class OrderService extends TenantScopedService {
       createdAt: order.createdAt,
       orderId: order.id,
       customerId: order.customerId,
+      personId: order.personId,
       isIncomplete: order.isIncomplete,
     }
   }

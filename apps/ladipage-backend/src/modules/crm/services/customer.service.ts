@@ -7,6 +7,7 @@ import { Pagination } from '@liora/nest-core/helper/paginate/pagination'
 import { TenantContextService } from '@liora/nest-core'
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 
+import { assertLpCrmWritable } from '../common/lp-crm-write.guard'
 import { CustomerStatus } from '../common/enums'
 import {
   CreateCustomerDto,
@@ -83,6 +84,7 @@ export class CustomerService extends TenantScopedService {
   }
 
   async create(dto: CreateCustomerDto) {
+    assertLpCrmWritable('customer')
     const tenantId = this.requireTenantId()
 
     return this.dataSource.transaction(async (manager) => {
@@ -100,6 +102,7 @@ export class CustomerService extends TenantScopedService {
   }
 
   async update(id: number, dto: UpdateCustomerDto) {
+    assertLpCrmWritable('customer')
     const customer = await this.findOneForTenantOrFail(
       this.customerRepository,
       { id },
@@ -123,6 +126,7 @@ export class CustomerService extends TenantScopedService {
   }
 
   async remove(id: number) {
+    assertLpCrmWritable('customer')
     const customer = await this.findOneForTenantOrFail(
       this.customerRepository,
       { id },
@@ -140,6 +144,7 @@ export class CustomerService extends TenantScopedService {
   async findOrCreateByContact(
     input: FindOrCreateCustomerInput,
   ): Promise<CustomerEntity> {
+    assertLpCrmWritable('customer')
     const tenantId = this.requireTenantId()
 
     if (input.phone) {

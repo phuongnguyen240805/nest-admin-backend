@@ -75,7 +75,7 @@ flowchart TB
 2. **API:** REST `/api/crm/*`, response `{ code, message, data }` — **không** GraphQL CRM trong các phase MVP.
 3. **Multi-tenancy:** Application-level filter trong services (giữ như hiện tại). RLS Supabase = phase tùy chọn sau MVP.
 4. **ID:** `crm_person.id` = **UUID**; migrate từ `lp_customer` int qua bảng `crm_id_map`.
-5. **Feature flag:** `CRM_V2_ENABLED=true|false` — rollback về `lp_*` trong cutover.
+5. **Feature flag:** `CRM_ENABLED=true|false` — rollback về `lp_*` trong cutover.
 6. **Twenty repo:** Chỉ đọc utils + entity design; **rewrite** code, không import `twenty-shared/metadata` hay `GlobalWorkspaceOrmManager`.
 
 ---
@@ -104,17 +104,17 @@ liora-monorepo/
 │   │   └── package.json
 │   ├── database/src/
 │   │   ├── entities/crm/
-│   │   └── migrations/                  # 1753xxxxxx-crm-v2-*.ts
+│   │   └── migrations/                  # 1753xxxxxx-crm-*.ts
 │   └── ladipage-types/src/crm.ts        # cập nhật DTO (UUID, pipeline, activity)
 └── apps/ladipage-backend/src/modules/crm/
     ├── crm.module.ts                    # import CrmCoreModule
     ├── controllers/                     # giữ routes hiện tại + mở rộng
-    └── crm-v2.facade.ts                 # optional: map CustomerItem ↔ Person
+    └── crm.facade.ts                 # optional: map CustomerItem ↔ Person
 ```
 
 ---
 
-## 4. Schema CRM v2 (Twenty-inspired, Ladipage-native)
+## 4. Schema CRM (Twenty-inspired, Ladipage-native)
 
 ### 4.1. Core tables
 
@@ -142,13 +142,25 @@ CREATE INDEX idx_lp_order_tenant_person ON lp_order ("tenantId", person_id);
 
 Giữ snapshot `customerName`, `customerPhone` trên order để audit; FK chính = `person_id`.
 
-### 4.3. Enterprise (Phase 6)
+### 4.3. Enterprise (Phase 8)
 
 | Bảng | Mục đích |
 |------|----------|
 | `crm_object_definition` | Custom object slug, label (Enterprise tier) |
 | `crm_field_definition` | Field metadata |
 | `crm_dynamic_record` | `data JSONB` + `tenantId` |
+
+### 4.4. Schema migrations
+
+| File | Phase |
+|------|-------|
+| `1753000002000-crm-core.ts` | 2 — person, company |
+| `1753000003000-crm-sales.ts` | 4 — pipeline, opportunity, task, note, activity |
+| `1753000004000-crm-order-person.ts` | 5 — order link, id_map |
+| `1753000005000-crm-custom-fields.ts` | 7 — custom fields |
+| `1753000006000-crm-enterprise.ts` | 8 — custom objects |
+
+Class name TypeORM (`CrmV2Core1753000002000`, …) giữ nguyên sau khi đã apply — chỉ đổi tên file.
 
 ---
 
@@ -164,14 +176,14 @@ Giữ snapshot `customerName`, `customerPhone` trên order để audit; FK chín
 - [ ] Viết `apps/ladipage-backend/crm-architecture.md` (ERD, map Twenty field → `crm_*`).
 - [ ] Chốt: `tenantId` trên CRM; `organizationId` chỉ ở JWT/billing bridge.
 - [ ] Fix `TenantGuard` / 403 trên business API (prerequisite từ smoke test).
-- [ ] Thêm env `CRM_V2_ENABLED=false` (default).
+- [ ] Thêm env `CRM_ENABLED=false` (default).
 - [ ] Review checklist cũ: **loại** GraphQL CRM và RLS khỏi MVP.
 
 #### Kết quả đạt được
 
 | # | Kết quả | Kiểm chứng |
 |---|---------|------------|
-| 0.1 | Tài liệu kiến trúc CRM v2 đã lock | File `crm-architecture.md` merged |
+| 0.1 | Tài liệu kiến trúc CRM đã lock | File `crm-architecture.md` merged |
 | 0.2 | JWT + `tenantId` ổn định trên business routes | `ladipage-tenant-smoke-test.js` ≥ pass auth + 1 CRM route |
 | 0.3 | Team thống nhất **không** deploy Twenty service | Ghi rõ trong plan |
 | 0.4 | Feature flag rollback sẵn sàng | Env documented trong `.env.example` |
@@ -224,19 +236,19 @@ Giữ snapshot `customerName`, `customerPhone` trên order để audit; FK chín
 | 2.1 | Bảng `crm_*` core tồn tại trên DB dev | `pnpm db:migration:run` + `pnpm db:validate` |
 | 2.2 | `findOrCreateByContact` dedup phone → email → create | Unit + integration test |
 | 2.3 | Auto-suggest/link `crm_company` từ email domain | Test case domain công ty |
-| 2.4 | Data **song song** `lp_*` (chưa cutover) | Flag `CRM_V2_ENABLED=false` vẫn dùng lp |
+| 2.4 | Data **song song** `lp_*` (chưa cutover) | Flag `CRM_ENABLED=false` vẫn dùng lp |
 
 ---
 
-### Phase 3 — REST API v2 + facade (giữ contract FE)
+### Phase 3 — REST API + facade (giữ contract FE)
 
 **Thời gian:** 2 tuần  
 **Phụ thuộc:** Phase 2
 
 #### Công việc
 
-- [ ] `CrmV2Facade` map `Person` ↔ `CustomerItem` (id string UUID).
-- [ ] Controllers: khi `CRM_V2_ENABLED=true` route tới `PersonService`.
+- [ ] `CrmFacade` map `Person` ↔ `CustomerItem` (id string UUID).
+- [ ] Controllers: khi `CRM_ENABLED=true` route tới `PersonService`.
 - [ ] Giữ nguyên paths:
   - `GET/POST/PATCH/DELETE /api/crm/customers`
   - `GET/POST/PATCH/DELETE /api/crm/companies`
@@ -249,9 +261,9 @@ Giữ snapshot `customerName`, `customerPhone` trên order để audit; FK chín
 | # | Kết quả | Kiểm chứng |
 |---|---------|------------|
 | 3.1 | `/api/crm/customers` trả `ResOp` đúng format | `pnpm db:api:test` / manual Swagger |
-| 3.2 | FE `/khach-hang` hoạt động với CRM v2 (flag on) | `ladipage-fe` build + manual QA |
+| 3.2 | FE `/khach-hang` hoạt động với CRM (flag on) | `ladipage-fe` build + manual QA |
 | 3.3 | **1 deploy** — không service Twenty | Chỉ `ladipage-backend` :7002 |
-| 3.4 | Rollback 1 env var về `lp_*` | Toggle `CRM_V2_ENABLED=false` |
+| 3.4 | Rollback 1 env var về `lp_*` | Toggle `CRM_ENABLED=false` |
 
 ---
 
@@ -290,7 +302,7 @@ Giữ snapshot `customerName`, `customerPhone` trên order để audit; FK chín
 
 #### Công việc
 
-- [ ] `order.service.ts`: `findOrCreateByContact` → `PersonService` (CRM v2).
+- [ ] `order.service.ts`: `findOrCreateByContact` → `PersonService` (CRM).
 - [ ] Migration `lp_order.person_id`; backfill từ `crm_id_map`.
 - [ ] `dashboard.service` / `analytics.service`: query `crm_person` thay `CustomerEntity` khi flag on.
 - [ ] Báo cáo customers report dùng count person + segment (giữ segment hoặc map view).
@@ -314,13 +326,13 @@ Giữ snapshot `customerName`, `customerPhone` trên order để audit; FK chín
 
 #### Công việc
 
-- [ ] Script `scripts/db/migrate-lp-crm-to-crm-v2.js`:
+- [ ] Script `scripts/db/migrate-lp-crm-to-crm.js`:
   - `lp_company` → `crm_company`
   - `lp_customer` → `crm_person`
   - maps → `crm_id_map`
   - backfill `lp_order.person_id`
 - [ ] Validate count per tenant (legacy vs new).
-- [ ] Staging cutover: `CRM_V2_ENABLED=true` default.
+- [ ] Staging cutover: `CRM_ENABLED=true` default.
 - [ ] Deprecate services đọc `lp_customer` (read-only 1 sprint).
 - [ ] Document rollback: flag off + `crm_id_map` retained.
 
@@ -329,7 +341,7 @@ Giữ snapshot `customerName`, `customerPhone` trên order để audit; FK chín
 | # | Kết quả | Kiểm chứng |
 |---|---------|------------|
 | 6.1 | Không mất dữ liệu KH khi migrate | Count diff = 0 per tenant |
-| 6.2 | Production chạy CRM v2 mặc định | Flag on prod |
+| 6.2 | Production chạy CRM mặc định | Flag on prod |
 | 6.3 | `lp_*` CRM tables deprecated (không xóa ngay) | Code không write lp_customer |
 | 6.4 | **Hệ thống CRM hoàn toàn nội bộ** — 1 deploy | Không container Twenty |
 
@@ -389,7 +401,7 @@ Giữ snapshot `customerName`, `customerPhone` trên order để audit; FK chín
 
 - [ ] Unit tests services critical (`person`, `opportunity`, `activity`).
 - [ ] E2E: login → tạo person → tạo deal → tạo order → dashboard.
-- [ ] `ladipage-tenant-smoke-test.js` mở rộng CRM v2 endpoints.
+- [ ] `ladipage-tenant-smoke-test.js` mở rộng CRM endpoints.
 - [ ] Swagger + `libs/ladipage-types` sync `ladipage-fe`.
 - [ ] Runbook: migrate, rollback, monitor.
 
@@ -398,7 +410,7 @@ Giữ snapshot `customerName`, `customerPhone` trên order để audit; FK chín
 | # | Kết quả | Kiểm chứng |
 |---|---------|------------|
 | 9.1 | CI test CRM pass | nx test / jest |
-| 9.2 | Smoke test CRM v2 20/20 pass | script exit 0 |
+| 9.2 | Smoke test CRM 20/20 pass | script exit 0 |
 | 9.3 | README module CRM cập nhật | `apps/ladipage-backend/README.md` |
 
 ---
@@ -419,7 +431,7 @@ Giữ snapshot `customerName`, `customerPhone` trên order để audit; FK chín
 |-----------|--------|----------------|----------------|
 | **M0 — Ready** | 0 | 1 | Tenant fix, arch locked |
 | **M1 — Foundation** | 1–2 | 3 | Schema + utils |
-| **M2 — API usable** | 3 | 5 | FE `/khach-hang` on v2 |
+| **M2 — API usable** | 3 | 5 | FE `/khach-hang` on CRM |
 | **M3 — Sales CRM** | 4 | 7 | Pipeline + timeline |
 | **M4 — Platform integrated** | 5–6 | 10 | Ecom + cutover |
 | **M5 — Monetization** | 7–8 | 14–15 | Pro/Enterprise tiers |
@@ -471,7 +483,7 @@ flowchart TB
 - [ ] `lp_order.person_id` liên kết `crm_person`.
 - [ ] Pipeline + activity timeline hoạt động.
 - [ ] Migrate `lp_*` → `crm_*` xong; không dual-write vĩnh viễn.
-- [ ] `CRM_V2_ENABLED=true` production; rollback documented.
+- [ ] `CRM_ENABLED=true` production; rollback documented.
 - [ ] `ladipage-fe` REST contract giữ path; id customer = UUID string.
 - [ ] Smoke test tenant + CRM pass.
 - [ ] **Không** import package từ repo `twenty/` at runtime.

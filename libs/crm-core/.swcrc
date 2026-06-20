@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/swcrc",
+  "sourceMaps": true,
+  "jsc": {
+    "parser": {
+      "syntax": "typescript",
+      "decorators": true,
+      "dynamicImport": true
+    },
+    "transform": {
+      "decoratorMetadata": true,
+      "legacyDecorator": true
+    },
+    "externalHelpers": true,
+    "target": "es2021"
+  },
+  "module": {
+    "type": "commonjs"
+  },
+  "exclude": [
+    "jest.config.ts",
+    ".*\\.spec.tsx?$",
+    ".*\\.test.tsx?$"
+  ]
+}

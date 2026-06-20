@@ -13,6 +13,9 @@ export class OrderEntity extends TenantScopedEntity {
   @Column({ type: 'int', nullable: true })
   customerId: number | null
 
+  @Column({ name: 'person_id', type: 'uuid', nullable: true })
+  personId: string | null
+
   @Column({ type: 'varchar', length: 20, default: OrderStatus.PENDING })
   status: OrderStatus
 

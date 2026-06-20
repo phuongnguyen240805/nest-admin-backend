@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
+import { CrmCoreModule } from '@liora/crm-core'
 import { BillingModule, TenantModule } from '@liora/nest-core'
 
 import { CustomerEntity } from '../crm/entities/customer.entity'
@@ -14,6 +15,7 @@ import { DashboardService } from './dashboard.service'
   imports: [
     TenantModule,
     BillingModule,
+    CrmCoreModule,
     TypeOrmModule.forFeature([
       OrderEntity,
       ProductEntity,

@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Between, In, Repository } from 'typeorm'
 import type { DashboardSummaryDto, OnboardingDto } from '@liora/api-types'
+import { CrmPersonService, isCrmEnabled } from '@liora/crm-core'
 import { BillingService } from '@liora/nest-core/modules/billing/services/billing.service'
 import { Organization } from '@liora/nest-core/modules/billing/entities/organization.entity'
 import { TenantContextService } from '@liora/nest-core'
@@ -34,6 +35,7 @@ export class DashboardService {
     private readonly segmentRepository: Repository<SegmentEntity>,
     private readonly tenantContext: TenantContextService,
     private readonly billingService: BillingService,
+    private readonly personService: CrmPersonService,
   ) {}
 
   async getSummary(org: Organization | undefined): Promise<DashboardSummaryDto> {
@@ -78,13 +80,8 @@ export class DashboardService {
         })
         .andWhere('order.status = :status', { status: OrderStatus.COMPLETED })
         .getRawOne<{ revenue: string }>(),
-      this.customerRepository.count({ where: { tenantId } }),
-      this.customerRepository.count({
-        where: {
-          tenantId,
-          createdAt: Between(weekStart, todayEnd),
-        },
-      }),
+      this.countTotalCustomers(tenantId),
+      this.countNewCustomers(weekStart, todayEnd),
       this.orderRepository.find({
         where: { tenantId },
         order: { createdAt: 'DESC' },
@@ -151,7 +148,7 @@ export class DashboardService {
     ] = await Promise.all([
       this.productRepository.count({ where: { tenantId } }),
       this.orderRepository.count({ where: { tenantId } }),
-      this.customerRepository.count({ where: { tenantId } }),
+      this.countTotalCustomers(tenantId),
       this.orderRepository.count({
         where: { tenantId, status: OrderStatus.COMPLETED },
       }),
@@ -198,6 +195,22 @@ export class DashboardService {
           ? Number(((completedCount / totalCount) * 100).toFixed(1))
           : 0,
     };
+  }
+
+  private async countTotalCustomers(tenantId: number): Promise<number> {
+    if (isCrmEnabled()) {
+      return this.personService.countActive()
+    }
+    return this.customerRepository.count({ where: { tenantId } })
+  }
+
+  private async countNewCustomers(from: Date, to: Date): Promise<number> {
+    if (isCrmEnabled()) {
+      return this.personService.countCreatedBetween(from, to)
+    }
+    return this.customerRepository.count({
+      where: { tenantId: this.requireTenantId(), createdAt: Between(from, to) },
+    })
   }
 
   private requireTenantId(): number {

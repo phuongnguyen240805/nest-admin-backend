@@ -4,56 +4,52 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
   UseGuards,
 } from '@nestjs/common'
-import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger'
+import { ApiSecurity, ApiTags } from '@nestjs/swagger'
 
 import { API_SECURITY_AUTH } from '@liora/nest-core'
 import { TenantGuard } from '@liora/nest-core'
 
+import { CrmFacade } from '../crm.facade'
 import {
   CreateCustomerDto,
   CustomerQueryDto,
   UpdateCustomerDto,
 } from '../dto/customer.dto'
-import { CustomerService } from '../services/customer.service'
 
 @ApiTags('CRM - Customers')
 @ApiSecurity(API_SECURITY_AUTH)
 @UseGuards(TenantGuard)
 @Controller('crm/customers')
 export class CustomerController {
-  constructor(private readonly customerService: CustomerService) {}
+  constructor(private readonly crmFacade: CrmFacade) {}
 
   @Get()
   list(@Query() dto: CustomerQueryDto) {
-    return this.customerService.list(dto)
+    return this.crmFacade.listCustomers(dto)
   }
 
   @Get(':id')
-  detail(@Param('id', ParseIntPipe) id: number) {
-    return this.customerService.detail(id)
+  detail(@Param('id') id: string) {
+    return this.crmFacade.detailCustomer(id)
   }
 
   @Post()
   create(@Body() dto: CreateCustomerDto) {
-    return this.customerService.create(dto)
+    return this.crmFacade.createCustomer(dto)
   }
 
   @Patch(':id')
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateCustomerDto,
-  ) {
-    return this.customerService.update(id, dto)
+  update(@Param('id') id: string, @Body() dto: UpdateCustomerDto) {
+    return this.crmFacade.updateCustomer(id, dto)
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.customerService.remove(id)
+  remove(@Param('id') id: string) {
+    return this.crmFacade.removeCustomer(id)
   }
 }

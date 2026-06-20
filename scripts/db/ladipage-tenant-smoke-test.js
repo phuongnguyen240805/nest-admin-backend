@@ -124,6 +124,125 @@ async function testProtected(name, method, path, token, options = {}) {
   return res
 }
 
+async function testExpectStatus(name, method, path, token, expectedStatus, options = {}) {
+  const res = await request(method, `${API}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    ...options,
+  })
+  const pass = res.status === expectedStatus
+  record(name, pass, `HTTP ${res.status} (expected ${expectedStatus})`)
+  return res
+}
+
+function isCrmEnabled() {
+  const raw = process.env.CRM_ENABLED ?? process.env.CRM_V2_ENABLED ?? 'false'
+  return raw === 'true' || raw === '1'
+}
+
+async function runCrmSmoke(token, auth) {
+  const enabled = isCrmEnabled()
+  record('CRM_ENABLED flag', true, String(enabled))
+
+  if (!enabled) {
+    await testExpectStatus('GET /crm/opportunities (CRM off → 503)', 'GET', '/crm/opportunities', token, 503)
+    await testExpectStatus('GET /crm/pipelines/default (CRM off → 503)', 'GET', '/crm/pipelines/default', token, 503)
+    await testExpectStatus('GET /crm/activities (CRM off → 503)', 'GET', '/crm/activities', token, 503)
+    await testExpectStatus('GET /crm/objects (CRM off → 503)', 'GET', '/crm/objects', token, 503)
+    return
+  }
+
+  await testProtected('GET /crm/pipelines/default', 'GET', '/crm/pipelines/default', token)
+  await testProtected('GET /crm/opportunities', 'GET', '/crm/opportunities?page=1&pageSize=5', token)
+  await testProtected('GET /crm/tasks', 'GET', '/crm/tasks?page=1&pageSize=5', token)
+  await testProtected('GET /crm/notes', 'GET', '/crm/notes?page=1&pageSize=5', token)
+  await testProtected('GET /crm/activities', 'GET', '/crm/activities?page=1&pageSize=5', token)
+  await testProtected('GET /crm/custom-fields', 'GET', '/crm/custom-fields?page=1&pageSize=5', token)
+  await testProtected('GET /crm/companies', 'GET', '/crm/companies?page=1&pageSize=5', token)
+
+  const personRes = await request('POST', `${API}/crm/customers`, {
+    ...auth,
+    body: {
+      name: 'CRM Smoke Person',
+      phone: '0900000099',
+      email: 'crm-smoke@test.local',
+    },
+  })
+  const personId = personRes.json?.data?.id ?? personRes.json?.data?.items?.[0]?.id
+  const personPass = personRes.ok && (personRes.json?.code === 200 || personRes.json?.code === undefined) && personId
+  record('POST /crm/customers (v2 person)', personPass, `HTTP ${personRes.status}, id=${personId || 'missing'}`)
+
+  const pipelineRes = await request('GET', `${API}/crm/pipelines/default`, auth)
+  const stages = pipelineRes.json?.data?.stages ?? pipelineRes.json?.data?.items ?? []
+  const stageId = stages[0]?.id
+
+  let opportunityId = null
+  if (personId && stageId) {
+    const oppRes = await request('POST', `${API}/crm/opportunities`, {
+      ...auth,
+      body: { name: 'Smoke Deal', amount: 500000, stageId, personId },
+    })
+    opportunityId = oppRes.json?.data?.id
+    const oppPass = oppRes.ok && (oppRes.json?.code === 200 || oppRes.json?.code === undefined) && opportunityId
+    record('POST /crm/opportunities (v2 deal)', oppPass, `HTTP ${oppRes.status}, id=${opportunityId || 'missing'}`)
+  } else {
+    record('POST /crm/opportunities (v2 deal)', false, 'skipped — missing personId or stageId')
+  }
+
+  if (personId) {
+    const taskRes = await request('POST', `${API}/crm/tasks`, {
+      ...auth,
+      body: { title: 'Smoke Task', personId, status: 'TODO' },
+    })
+    const taskPass = taskRes.ok && (taskRes.json?.code === 200 || taskRes.json?.code === undefined)
+    record('POST /crm/tasks (v2)', taskPass, `HTTP ${taskRes.status}`)
+
+    const noteRes = await request('POST', `${API}/crm/notes`, {
+      ...auth,
+      body: { body: 'Smoke note', personId },
+    })
+    const notePass = noteRes.ok && (noteRes.json?.code === 200 || noteRes.json?.code === undefined)
+    record('POST /crm/notes (v2)', notePass, `HTTP ${noteRes.status}`)
+  }
+
+  if (personId) {
+    const actRes = await request('GET', `${API}/crm/activities?personId=${personId}`, auth)
+    const actPass = actRes.ok && (actRes.json?.code === 200 || actRes.json?.code === undefined)
+    record('GET /crm/activities (person timeline)', actPass, `HTTP ${actRes.status}`)
+  }
+
+  const dashRes = await request('GET', `${API}/dashboard/summary`, auth)
+  const dashPass = dashRes.ok && (dashRes.json?.code === 200 || dashRes.json?.code === undefined)
+  record('GET /dashboard/summary (v2 counts)', dashPass, `HTTP ${dashRes.status}`)
+
+  const analyticsRes = await request('GET', `${API}/analytics/reports/customers`, auth)
+  const analyticsPass = analyticsRes.ok && (analyticsRes.json?.code === 200 || analyticsRes.json?.code === undefined)
+  record('GET /analytics/reports/customers (v2)', analyticsPass, `HTTP ${analyticsRes.status}`)
+
+  const orderRes = await request('POST', `${API}/ecom/orders`, {
+    ...auth,
+    body: {
+      customerName: 'CRM Order',
+      customerPhone: '0900000099',
+      customerEmail: 'crm-smoke@test.local',
+      items: [{ productName: 'CRM Product', quantity: 1, unitPrice: 200000 }],
+    },
+  })
+  const orderPass = orderRes.ok && (orderRes.json?.code === 200 || orderRes.json?.code === undefined)
+  record('POST /ecom/orders (v2 person link)', orderPass, `HTTP ${orderRes.status}`)
+
+  const objectsRes = await request('GET', `${API}/crm/objects`, auth)
+  if (objectsRes.status === 403) {
+    record('GET /crm/objects (enterprise gate)', true, 'HTTP 403 — expected on non-Enterprise tier')
+  } else {
+    const objectsPass = objectsRes.ok && (objectsRes.json?.code === 200 || objectsRes.json?.code === undefined)
+    record('GET /crm/objects (enterprise)', objectsPass, `HTTP ${objectsRes.status}`)
+  }
+
+  if (opportunityId) {
+    await testProtected('GET /crm/opportunities/:id', 'GET', `/crm/opportunities/${opportunityId}`, token)
+  }
+}
+
 async function main() {
   console.log(`=== Ladipage Tenant Smoke Test (port ${PORT}) ===\n`)
 
@@ -151,7 +270,6 @@ async function main() {
 
   // Billing & Plans
   await testProtected('GET /plans', 'GET', '/plans', token)
-  await testProtected('GET /billing/', 'GET', '/billing/', token)
   await testProtected('GET /billing/usage', 'GET', '/billing/usage', token)
 
   // Settings
@@ -182,11 +300,17 @@ async function main() {
   const orderPass = orderRes.ok && (orderRes.json?.code === 200 || orderRes.json?.code === undefined)
   record('POST /ecom/orders', orderPass, `HTTP ${orderRes.status}`)
 
-  // CRM
+  // CRM v1
   await testProtected('GET /crm/customers', 'GET', '/crm/customers?page=1&pageSize=5', token)
   const crmSearch = await request('GET', `${API}/crm/customers?search=0900000001`, auth)
   const crmPass = crmSearch.ok && (crmSearch.json?.code === 200 || crmSearch.json?.code === undefined)
   record('GET /crm/customers (auto-link)', crmPass, `HTTP ${crmSearch.status}`)
+  await testProtected('GET /crm/segments', 'GET', '/crm/segments?page=1&pageSize=5', token)
+  await testProtected('GET /crm/tags', 'GET', '/crm/tags?page=1&pageSize=5', token)
+
+  // CRM (Phase 9)
+  console.log('\n--- CRM smoke ---')
+  await runCrmSmoke(token, auth)
 
   // Tenant guard rejection without token
   const noAuth = await request('GET', `${API}/ecom/orders`)

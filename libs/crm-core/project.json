@@ -1,0 +1,29 @@
+{
+  "name": "crm-core",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/crm-core/src",
+  "projectType": "library",
+  "tags": ["scope:crm", "type:library"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:swc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/crm-core",
+        "main": "libs/crm-core/src/index.ts",
+        "tsConfig": "libs/crm-core/tsconfig.lib.json",
+        "skipTypeCheck": true,
+        "assets": ["libs/crm-core/*.md"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/crm-core/jest.config.js",
+        "passWithNoTests": true
+      }
+    }
+  },
+  "implicitDependencies": ["database", "nest-core"]
+}

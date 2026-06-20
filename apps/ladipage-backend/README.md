@@ -121,9 +121,60 @@ Tags chính: `publish`, `LadiPage`, `Auth`, `Billing`, `System`.
 pnpm nx build ladipage-backend
 ```
 
+## CRM Hybrid (Twenty-inspired)
+
+CRM chạy **trong cùng process** `ladipage-backend` — không deploy Twenty microservice.
+
+| Package / module | Vai trò |
+|----------------|---------|
+| `libs/crm-core` | Logic nghiệp vụ (person, pipeline, activity, custom fields, enterprise objects) |
+| `libs/database` entities `crm_*` | Schema PostgreSQL |
+| `src/modules/crm` | REST controllers + facade v1/v2 |
+
+### Feature flag
+
+```env
+CRM_ENABLED=false   # default — dùng bảng lp_* (customers, companies)
+CRM_ENABLED=true    # sau migrate — dùng crm_person, crm_company, ...
+```
+
+### API routes
+
+| Route | Phase | Ghi chú |
+|-------|-------|---------|
+| `GET/POST /api/crm/customers` | 3+ | Facade → `crm_person` khi flag on |
+| `GET/POST /api/crm/companies` | 3+ | Facade → `crm_company` |
+| `GET /api/crm/pipelines/default` | 4+ | Cần `CRM_ENABLED=true` |
+| `GET/POST /api/crm/opportunities` | 4+ | Deals + Kanban |
+| `GET/POST /api/crm/tasks`, `/notes`, `/activities` | 4+ | Timeline tự động |
+| `GET/POST /api/crm/custom-fields` | 7+ | Pro tier quota |
+| `GET/POST /api/crm/objects` | 8+ | Enterprise / Lifetime only |
+| `GET/POST /api/crm/objects/:slug/records` | 8+ | JSONB dynamic records |
+
+### Migrate & cutover
+
+```bash
+pnpm db:migration:run
+pnpm db:migrate-crm -- --dry-run   # preview
+pnpm db:migrate-crm                # migrate lp_* → crm_*
+# Sau đó: CRM_ENABLED=true + restart
+```
+
+Chi tiết: [crm-architecture.md](./crm-architecture.md), [plan-crm.md](../../plan-crm.md).
+
+### CRM smoke test
+
+```bash
+node scripts/db/ladipage-tenant-smoke-test.js
+```
+
+Script kiểm tra auth, ecom auto-link customer, và CRM endpoints (~20 tests khi `CRM_ENABLED=true`).
+
 ## Tài liệu
 
 - [README root](../../README.md)
+- [CRM architecture](./crm-architecture.md)
+- [CRM plan](../../plan-crm.md)
 - [nest-admin](../nest-admin-backend/README.md)
 - [Docker](../../docker/README.md)
 - [Supabase auth](../../libs/supabase/workflow.md)

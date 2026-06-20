@@ -4,7 +4,7 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "build": "nx run-many --target=build --all",
-    "build:libs": "nx run-many --target=build --projects=database,shared,dto,nest-core",
+    "build:libs": "nx run-many --target=build --projects=database,shared,dto,nest-core,crm-core",
     "build:core": "nx run nest-core:build",
     "build:apps": "nx run-many --target=build --projects=goodshort-backend,openclaw-backend,centrix-backend",
     "build:goodshort": "nx run goodshort-backend:build",
@@ -38,6 +38,7 @@
     "db:smoke:api": "node scripts/db/smoke-test.js --api",
     "db:api:test": "node scripts/db/api-smoke-test.js",
     "db:backfill-orgs": "node scripts/db/backfill-user-organizations.js",
+    "db:migrate-crm": "node scripts/db/migrate-lp-crm-to-crm.js",
     "migration:audit:pg": "node scripts/migration/audit-pg.js",
     "migration:audit:mysql": "node scripts/migration/audit-mysql.js",
     "migration:validate": "node scripts/migration/validate-cutover.js",

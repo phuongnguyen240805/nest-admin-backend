@@ -36,10 +36,12 @@
       "@liora/nest-core/*": ["libs/nest-core/src/*"],
       "@liora/database": ["libs/database/src/index.ts"],
       "@liora/database/*": ["libs/database/src/*"],
-      "@liora/librefang-client": ["libs/librefang-client/src/index.ts"],
-      "@liora/librefang-client/*": ["libs/librefang-client/src/*"],
+      "@liora/librefang-client": ["apps/librefang-backend/libs/librefang-client/src/index.ts"],
+      "@liora/librefang-client/*": ["apps/librefang-backend/libs/librefang-client/src/*"],
       "@liora/supabase": ["libs/supabase/src/index.ts"],
-      "@liora/supabase/*": ["libs/supabase/src/*"]
+      "@liora/supabase/*": ["libs/supabase/src/*"],
+      "@liora/crm-core": ["libs/crm-core/src/index.ts"],
+      "@liora/crm-core/*": ["libs/crm-core/src/*"]
     }
   },
   "include": ["src/types/**/*.d.ts", "**/*.d.ts"],

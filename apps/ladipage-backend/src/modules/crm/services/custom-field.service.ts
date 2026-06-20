@@ -7,6 +7,7 @@ import { Pagination } from '@liora/nest-core/helper/paginate/pagination'
 import { TenantContextService } from '@liora/nest-core'
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 
+import { assertLpCrmWritable } from '../common/lp-crm-write.guard'
 import {
   CreateCustomFieldDto,
   CustomFieldQueryDto,
@@ -45,6 +46,7 @@ export class CrmCustomFieldService extends TenantScopedService {
   }
 
   async create(dto: CreateCustomFieldDto) {
+    assertLpCrmWritable('custom_field')
     return this.fieldRepository.save({
       tenantId: this.requireTenantId(),
       fieldName: dto.fieldName,
@@ -56,6 +58,7 @@ export class CrmCustomFieldService extends TenantScopedService {
   }
 
   async update(id: number, dto: UpdateCustomFieldDto) {
+    assertLpCrmWritable('custom_field')
     const field = await this.detail(id)
     Object.assign(field, {
       fieldName: dto.fieldName ?? field.fieldName,
@@ -68,6 +71,7 @@ export class CrmCustomFieldService extends TenantScopedService {
   }
 
   async remove(id: number) {
+    assertLpCrmWritable('custom_field')
     const field = await this.detail(id)
     await this.valueRepository.delete({ fieldId: id })
     await this.fieldRepository.remove(field)

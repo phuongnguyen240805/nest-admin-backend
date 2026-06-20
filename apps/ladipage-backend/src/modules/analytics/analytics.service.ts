@@ -7,6 +7,8 @@ import type {
   ReportChartDto,
   SalesReportDto,
 } from '@liora/api-types'
+import { CrmPersonService, isCrmEnabled } from '@liora/crm-core'
+import { CrmPersonEntity } from '@liora/database/entities/crm'
 import { TenantContextService } from '@liora/nest-core'
 
 import { OrderStatus } from '../ecom-store/common/enums'
@@ -48,6 +50,7 @@ export class AnalyticsService {
     @InjectRepository(CustomerSegmentEntity)
     private readonly customerSegmentRepository: Repository<CustomerSegmentEntity>,
     private readonly tenantContext: TenantContextService,
+    private readonly personService: CrmPersonService,
   ) {}
 
   async getSalesReport(from?: string, to?: string): Promise<SalesReportDto> {
@@ -151,12 +154,7 @@ export class AnalyticsService {
             createdAt: Between(range.from, range.to),
           },
         }),
-        this.customerRepository.count({
-          where: {
-            tenantId,
-            createdAt: Between(range.from, range.to),
-          },
-        }),
+        this.countNewCustomersInRange(tenantId, range),
         this.getTopProducts(tenantId, range),
         this.aggregateOrdersByDay(tenantId, range),
         this.aggregateOrdersByDay(tenantId, previousRange),
@@ -327,10 +325,29 @@ export class AnalyticsService {
       .getRawMany<DailyOrderAggregate>();
   }
 
+  private async countNewCustomersInRange(
+    tenantId: number,
+    range: DateRange,
+  ): Promise<number> {
+    if (isCrmEnabled()) {
+      return this.personService.countCreatedBetween(range.from, range.to)
+    }
+    return this.customerRepository.count({
+      where: {
+        tenantId,
+        createdAt: Between(range.from, range.to),
+      },
+    })
+  }
+
   private async aggregateNewCustomersByDay(
     tenantId: number,
     range: DateRange,
   ): Promise<Array<{ day: string; count: string | number }>> {
+    if (isCrmEnabled()) {
+      return this.personService.aggregateCreatedByDay(range.from, range.to)
+    }
+
     return this.customerRepository
       .createQueryBuilder('customer')
       .select("TO_CHAR(customer.created_at, 'YYYY-MM-DD')", 'day')
@@ -369,6 +386,23 @@ export class AnalyticsService {
     tenantId: number,
     range: DateRange,
   ): Promise<number> {
+    if (isCrmEnabled()) {
+      const result = await this.orderRepository
+        .createQueryBuilder('order')
+        .innerJoin(CrmPersonEntity, 'person', 'person.id = order.person_id')
+        .where('order.tenantId = :tenantId', { tenantId })
+        .andWhere('order.created_at BETWEEN :from AND :to', {
+          from: range.from,
+          to: range.to,
+        })
+        .andWhere('person.created_at < :from', { from: range.from })
+        .andWhere('order.person_id IS NOT NULL')
+        .select('COUNT(DISTINCT order.person_id)', 'count')
+        .getRawOne<{ count: string }>()
+
+      return Number(result?.count ?? 0)
+    }
+
     const result = await this.orderRepository
       .createQueryBuilder('order')
       .innerJoin(CustomerEntity, 'customer', 'customer.id = order.customerId')
@@ -379,9 +413,9 @@ export class AnalyticsService {
       })
       .andWhere('customer.created_at < :from', { from: range.from })
       .select('COUNT(DISTINCT order.customerId)', 'count')
-      .getRawOne<{ count: string }>();
+      .getRawOne<{ count: string }>()
 
-    return Number(result?.count ?? 0);
+    return Number(result?.count ?? 0)
   }
 
   private async getTopProducts(
