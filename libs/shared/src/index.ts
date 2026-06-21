@@ -1,3 +1,4 @@
+export * from './utils/app-env.util'
 // export * from './shared.module';
 // export * from './crypto';
 // export * from './helper';

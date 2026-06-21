@@ -11,8 +11,8 @@
       "@liora/dto/*": ["../dto/src/*"],
       "@liora/shared": ["../shared/src/index.ts"],
       "@liora/shared/*": ["../shared/src/*"],
-      "@liora/librefang-client": ["../librefang-client/src/index.ts"],
-      "@liora/librefang-client/*": ["../librefang-client/src/*"],
+      "@liora/librefang-client": ["apps/librefang-backend/libs/librefang-client/src/index.ts"],
+      "@liora/librefang-client/*": ["apps/librefang-backend/libs/librefang-client/src/*"],
       "@liora/supabase": ["../supabase/src/index.ts"],
       "@liora/supabase/*": ["../supabase/src/*"]
     },

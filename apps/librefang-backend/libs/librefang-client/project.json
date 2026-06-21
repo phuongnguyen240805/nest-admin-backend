@@ -1,6 +1,6 @@
 {
   "name": "librefang-client",
-  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/librefang-backend/libs/librefang-client/src",
   "projectType": "library",
   "tags": ["scope:integration", "type:library"],
@@ -9,9 +9,9 @@
       "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "dist/libs/librefang-client",
-        "main": "libs/librefang-client/src/index.ts",
-        "tsConfig": "libs/librefang-client/tsconfig.lib.json",
+        "outputPath": "dist/apps/librefang-backend/libs/librefang-client",
+        "main": "apps/librefang-backend/libs/librefang-client/src/index.ts",
+        "tsConfig": "apps/librefang-backend/libs/librefang-client/tsconfig.lib.json",
         "assets": []
       }
     }

@@ -7,6 +7,7 @@ import { ClsModule } from "nestjs-cls";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 
+import { resolveWorkspaceEnvPaths } from "@liora/shared";
 import { DatabaseModule } from "@liora/database";
 import { LibrefangConfig } from "@liora/librefang-client";
 import { SupabaseConfig } from "@liora/supabase";
@@ -41,7 +42,7 @@ import {
       isGlobal: true,
       expandVariables: true,
       ignoreEnvFile: process.env.NODE_ENV === "production",
-      envFilePath: [".env.local", `.env.${process.env.NODE_ENV}`, ".env"],
+      envFilePath: resolveWorkspaceEnvPaths("nest-admin-backend"),
       load: [...Object.values(config), LibrefangConfig, SupabaseConfig],
     }),
     ClsModule.forRoot({
