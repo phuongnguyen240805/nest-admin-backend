@@ -58,6 +58,7 @@ import { SettingsModule } from '../modules/settings/settings.module';
 import { AnalyticsModule } from '../modules/analytics/analytics.module';
 import { DashboardModule } from '../modules/dashboard/dashboard.module';
 import { LadipageRpcModule } from '../modules/ladipage-rpc/ladipage-rpc.module';
+import { LadiflowRpcModule } from '../modules/ladiflow-rpc/ladiflow-rpc.module';
 
 @Module({
   imports: [
@@ -117,6 +118,7 @@ import { LadipageRpcModule } from '../modules/ladipage-rpc/ladipage-rpc.module';
     AnalyticsModule,
     DashboardModule,
     LadipageRpcModule,
+    LadiflowRpcModule,
   ],
   controllers: [AppController],
   providers: [

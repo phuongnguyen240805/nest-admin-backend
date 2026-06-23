@@ -1,0 +1,20 @@
+{
+  "url": "https://appv6.ladipage.com/customers",
+  "durationMs": 12000,
+  "headless": true,
+  "outputDir": "output/phase3-khachhang-detail",
+  "maxBodyBytes": 4194304,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 10000, "label": "customers-list" },
+    { "type": "waitForSelector", "selector": "table tbody tr", "ms": 25000, "label": "table-ready" },
+    { "type": "dblclick", "selector": "table tbody tr:first-child", "label": "open-customer-dblclick", "force": true },
+    { "type": "wait", "ms": 15000 },
+    { "type": "click", "selector": "table tbody tr:first-child", "label": "open-customer-click", "force": true },
+    { "type": "wait", "ms": 15000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/customers/13427358", "label": "customer-detail-url" },
+    { "type": "wait", "ms": 15000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ecommerce/orders/3289450", "label": "order-customer-crossref" },
+    { "type": "wait", "ms": 12000 }
+  ]
+}

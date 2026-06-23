@@ -1,0 +1,25 @@
+{
+  "url": "https://appv6.ladipage.com/automation",
+  "durationMs": 15000,
+  "headless": true,
+  "outputDir": "output/phaseC-automation-read",
+  "maxBodyBytes": 4194304,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 12000, "label": "automation-boot" },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladiflow", "label": "ladiflow-fallback" },
+    { "type": "wait", "ms": 10000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/automation", "label": "back-automation" },
+    { "type": "wait", "ms": 10000 },
+    { "type": "click", "selector": "button:has-text('Tạo'), button:has-text('Tạo mới'), button:has-text('Flow'), button:has-text('Chiến dịch')", "label": "open-create", "force": true },
+    { "type": "wait", "ms": 8000 },
+    { "type": "click", "selector": "table tbody tr:first-child, [class*='flow-card']:first-child, [class*='automation']:first-child", "label": "open-first-flow", "force": true },
+    { "type": "wait", "ms": 15000 },
+    { "type": "click", "selector": "[role='tab']:has-text('Broadcast'), button:has-text('Broadcast'), a:has-text('Broadcast')", "label": "tab-broadcast", "force": true },
+    { "type": "wait", "ms": 8000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/reports", "label": "reports" },
+    { "type": "wait", "ms": 8000 },
+    { "type": "click", "selector": "[role='tab']:has-text('Automation'), button:has-text('Automation')", "label": "tab-automation-report", "force": true },
+    { "type": "wait", "ms": 10000 }
+  ]
+}

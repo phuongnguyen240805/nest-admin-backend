@@ -41,6 +41,8 @@ const TODO_ROUTES = new Set([
   'product/list-products',
   'product/search',
   'product/show',
+  'report/overview',
+  'report/top-product',
   'shipping/list',
   'staff/list',
   'store/get-user-info',

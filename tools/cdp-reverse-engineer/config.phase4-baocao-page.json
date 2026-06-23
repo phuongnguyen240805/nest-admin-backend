@@ -1,0 +1,32 @@
+{
+  "url": "https://appv6.ladipage.com/ladipage",
+  "durationMs": 15000,
+  "headless": true,
+  "outputDir": "output/phase4-baocao-page",
+  "maxBodyBytes": 4194304,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 10000, "label": "landing-list" },
+    { "type": "waitForSelector", "selector": "table tbody tr", "ms": 25000, "label": "table-ready" },
+    { "type": "hover", "selector": "table tbody tr:first-child", "label": "hover-row-1" },
+    { "type": "wait", "ms": 800 },
+    { "type": "click", "selector": "table tbody tr:first-child [data-testid*='more'], table tbody tr:first-child button[aria-haspopup='menu'], table tbody tr:first-child button:last-child", "label": "row-menu", "force": true },
+    { "type": "wait", "ms": 2000 },
+    { "type": "click", "selector": "[role='menuitem']:has-text('Báo cáo'), [role='menuitem']:has-text('báo cáo'), li:has-text('Báo cáo'), button:has-text('Báo cáo')", "label": "page-report", "force": true },
+    { "type": "wait", "ms": 18000 },
+    { "type": "click", "selector": "button:has-text('7 ngày'), button:has-text('30 ngày'), [data-testid*='date-range']", "label": "page-report-range", "force": true },
+    { "type": "wait", "ms": 12000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladipage/6a37eb9931cd7400125f766f", "label": "page-detail-url" },
+    { "type": "wait", "ms": 12000 },
+    { "type": "click", "selector": "button:has-text('Báo cáo'), [role='tab']:has-text('Báo cáo'), a:has-text('Báo cáo')", "label": "page-detail-report-tab", "force": true },
+    { "type": "wait", "ms": 15000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladipage", "label": "second-page" },
+    { "type": "wait", "ms": 8000 },
+    { "type": "hover", "selector": "table tbody tr:nth-child(2)", "label": "hover-row-2" },
+    { "type": "wait", "ms": 800 },
+    { "type": "click", "selector": "table tbody tr:nth-child(2) button:last-child, table tbody tr:nth-child(2) [data-testid*='more']", "label": "row-menu-2", "force": true },
+    { "type": "wait", "ms": 2000 },
+    { "type": "click", "selector": "[role='menuitem']:has-text('Báo cáo')", "label": "page-report-2", "force": true },
+    { "type": "wait", "ms": 15000 }
+  ]
+}

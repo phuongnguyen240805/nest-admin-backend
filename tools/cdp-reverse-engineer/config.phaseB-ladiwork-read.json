@@ -1,0 +1,24 @@
+{
+  "url": "https://appv6.ladipage.com/ladiwork",
+  "durationMs": 15000,
+  "headless": true,
+  "outputDir": "output/phaseB-ladiwork-read",
+  "maxBodyBytes": 4194304,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 12000, "label": "module-boot" },
+    { "type": "waitForSelector", "selector": "table tbody tr, [class*='task'], [class*='board'], [class*='ladiwork'], main", "ms": 25000, "label": "content-ready" },
+    { "type": "click", "selector": "[role='tab']:has-text('Công việc'), button:has-text('Công việc'), a:has-text('Công việc')", "label": "tab-tasks", "force": true },
+    { "type": "wait", "ms": 8000 },
+    { "type": "click", "selector": "[role='tab']:has-text('Dự án'), button:has-text('Dự án'), a:has-text('Dự án')", "label": "tab-projects", "force": true },
+    { "type": "wait", "ms": 8000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladiwork/tasks", "label": "tasks-route" },
+    { "type": "wait", "ms": 10000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladiwork/projects", "label": "projects-route" },
+    { "type": "wait", "ms": 10000 },
+    { "type": "click", "selector": "table tbody tr:first-child, [class*='task-card']:first-child, [class*='board-card']:first-child", "label": "open-first-item", "force": true },
+    { "type": "wait", "ms": 12000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladiwork/settings", "label": "settings" },
+    { "type": "wait", "ms": 8000 }
+  ]
+}

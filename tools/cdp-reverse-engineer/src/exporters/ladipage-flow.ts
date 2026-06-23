@@ -8,8 +8,9 @@ const NOISE_HOSTS =
   /google|yandex|facebook|doubleclick|hotjar|analytics|googletagmanager|clarity|linkedin|tiktok|twitter|bing|taboola|pinterest/i;
 
 const LADI_HOSTS =
-  /\.ladipage\.com$|^a\.ladipage\.com$|^api(v5)?\.ladipage|^apps\.ladipage|^build\.ladipage|^app\.ladipage|\.ldpform\.net$|^apiv5\.sales\.ldpform/i;
-const LADI_PATHS = /\/ladi-[-a-z/]+|\/api\//i;
+  /\.ladipage\.com$|^a\.ladipage\.com$|^api(v5)?\.ladipage|^apps\.ladipage|^build\.ladipage|^app\.ladipage|\.ldpform\.net$|^apiv5\.sales\.ldpform|\.ladiflow\.com$|^api\.lcrm/i;
+const LADI_PATHS =
+  /\/ladi-[-a-z/]+|\/api\/|\/1\.0\/(customer|segment|crm|report|dashboard|custom-field|sync)/i;
 
 export function isLadipageApi(api: ApiEntry): boolean {
   if (api.url.startsWith('file:') || api.url.startsWith('data:')) return false;
@@ -81,8 +82,11 @@ export function buildLadipageFlow(
   const postEndpoints = backendPosts.map(toEndpoint);
   const uniqueRoutes = [...new Set(postEndpoints.map((e) => `${e.method} ${e.host}${e.path}`))].sort();
   const apiPath = (route: string) => {
-    const idx = route.indexOf('/2.0/');
-    return idx >= 0 ? route.slice(idx) : route;
+    const idx20 = route.indexOf('/2.0/');
+    if (idx20 >= 0) return route.slice(idx20);
+    const idx10 = route.indexOf('/1.0/');
+    if (idx10 >= 0) return route.slice(idx10);
+    return route;
   };
   const readRoutes = uniqueRoutes.filter((r) => classifyRoute(apiPath(r)) === 'read');
   const mutationRoutes = uniqueRoutes.filter((r) => classifyRoute(apiPath(r)) === 'mutation');

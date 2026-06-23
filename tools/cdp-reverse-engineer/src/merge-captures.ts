@@ -18,8 +18,12 @@ async function latestDir(parent: string): Promise<string | null> {
 }
 
 async function loadPostApis(dir: string): Promise<LadipageEndpoint[]> {
-  const raw = await readFile(join(dir, 'ladipage-post-apis.json'), 'utf8');
-  return JSON.parse(raw) as LadipageEndpoint[];
+  try {
+    const raw = await readFile(join(dir, 'ladipage-post-apis.json'), 'utf8');
+    return JSON.parse(raw) as LadipageEndpoint[];
+  } catch {
+    return [];
+  }
 }
 
 async function loadSchema(dir: string): Promise<SchemaDraft | null> {
@@ -40,7 +44,23 @@ async function main(): Promise<void> {
     { name: 'phase2-read', path: join(root, 'phase2-banhang-read') },
     { name: 'phase2-detail', path: join(root, 'phase2-banhang-detail') },
     { name: 'phase2-mutations', path: join(root, 'phase2-banhang-mutations') },
+    { name: 'phase3-read', path: join(root, 'phase3-khachhang-read') },
+    { name: 'phase3-detail', path: join(root, 'phase3-khachhang-detail') },
+    { name: 'phase3-mutations', path: join(root, 'phase3-khachhang-mutations') },
+    { name: 'phase4-read', path: join(root, 'phase4-baocao-read') },
+    { name: 'phase4-page', path: join(root, 'phase4-baocao-page') },
     { name: 'api-probe', path: join(root, 'api-probe') },
+    { name: 'api-probe-p34', path: join(root, 'api-probe-phase34') },
+    { name: 'phaseA-read', path: join(root, 'phaseA-kho-ung-dung-read') },
+    { name: 'phaseA-mutations', path: join(root, 'phaseA-kho-ung-dung-mutations') },
+    { name: 'phaseB-read', path: join(root, 'phaseB-ladiwork-read') },
+    { name: 'phaseB-board', path: join(root, 'phaseB-ladiwork-board') },
+    { name: 'phaseB-detail', path: join(root, 'phaseB-ladiwork-detail') },
+    { name: 'phaseB-mutations', path: join(root, 'phaseB-ladiwork-mutations') },
+    { name: 'phaseC-read', path: join(root, 'phaseC-automation-read') },
+    { name: 'phaseC-editor', path: join(root, 'phaseC-automation-flow-editor') },
+    { name: 'phaseC-mutations', path: join(root, 'phaseC-automation-mutations') },
+    { name: 'api-probe-bc', path: join(root, 'api-probe-phaseBC') },
     { name: 'legacy-p1', path: join(root, 'ladipage-appv6-full/2026-06-22T15-03-02-972Z'), fixed: true },
     { name: 'legacy-p2', path: join(root, 'banhang-appv6-full/2026-06-23T03-18-13-221Z'), fixed: true },
   ];

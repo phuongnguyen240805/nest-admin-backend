@@ -4,8 +4,8 @@
 
 export * from './checkout-config.types';
 export * from './custom-field.types';
-export * from './customer.types';
 export * from './inventory.types';
+export * from './order-history.types';
 export * from './order-item.types';
 export * from './order-tag.types';
 export * from './order.types';

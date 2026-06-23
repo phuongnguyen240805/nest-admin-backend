@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "types": ["jest", "node"]
+  },
+  "include": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "src/**/*.ts",
+    "test/**/*.spec.ts",
+    "test/**/*.test.ts",
+    "../../libs/nest-core/src/types/**/*.d.ts"
+  ]
+}

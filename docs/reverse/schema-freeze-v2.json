@@ -1,0 +1,404 @@
+{
+  "frozenAt": "2026-06-23T13:40:51.538Z",
+  "source": "tools/cdp-reverse-engineer/output/merged",
+  "routeCount": 56,
+  "tableCount": 21,
+  "mutationRoutes": 0,
+  "readRoutes": 56,
+  "routes": [
+    "POST api.ladiflow.com/1.0/broadcast/list",
+    "POST api.ladiflow.com/1.0/call-center/list-integrations",
+    "POST api.ladiflow.com/1.0/crm-insight-folder/list",
+    "POST api.ladiflow.com/1.0/crm-organization/list",
+    "POST api.ladiflow.com/1.0/custom-field/list-all",
+    "POST api.ladiflow.com/1.0/customer-tag/list",
+    "POST api.ladiflow.com/1.0/customer-tag/list-all",
+    "POST api.ladiflow.com/1.0/customer/activity",
+    "POST api.ladiflow.com/1.0/customer/customer-detail",
+    "POST api.ladiflow.com/1.0/customer/list",
+    "POST api.ladiflow.com/1.0/customer/list-customer-merge",
+    "POST api.ladiflow.com/1.0/customer/show",
+    "POST api.ladiflow.com/1.0/dash-board/list-subscriber-by-time",
+    "POST api.ladiflow.com/1.0/ladipage-notification/list",
+    "POST api.ladiflow.com/1.0/progress-bar/list-sections-latest",
+    "POST api.ladiflow.com/1.0/segment/list",
+    "POST api.ladipage.com/2.0/application/list",
+    "POST api.ladipage.com/2.0/data-form-error/list",
+    "POST api.ladipage.com/2.0/domain/list",
+    "POST api.ladipage.com/2.0/form-config/list",
+    "POST api.ladipage.com/2.0/ladi-page-tag/list",
+    "POST api.ladipage.com/2.0/ladi-page/list",
+    "POST api.ladipage.com/2.0/list-show-case",
+    "POST api.ladipage.com/2.0/staff/list",
+    "POST api.ladipage.com/2.0/store/info",
+    "POST api.ladipage.com/2.0/theme-list",
+    "POST api.ladipage.com/2.0/theme-tag-list",
+    "POST apiv5.ladipage.com/2.0/asset-list",
+    "POST apiv5.ladipage.com/2.0/domain/list",
+    "POST apiv5.ladipage.com/2.0/ladi-page/show",
+    "POST apiv5.ladipage.com/2.0/store/info",
+    "POST apiv5.sales.ldpform.net/2.0/checkout-config/list",
+    "POST apiv5.sales.ldpform.net/2.0/checkout/list",
+    "POST apiv5.sales.ldpform.net/2.0/custom-field/list",
+    "POST apiv5.sales.ldpform.net/2.0/customer/show",
+    "POST apiv5.sales.ldpform.net/2.0/filter/list",
+    "POST apiv5.sales.ldpform.net/2.0/inventory/list",
+    "POST apiv5.sales.ldpform.net/2.0/order-history/list",
+    "POST apiv5.sales.ldpform.net/2.0/order-tag/list",
+    "POST apiv5.sales.ldpform.net/2.0/order-tag/list-all",
+    "POST apiv5.sales.ldpform.net/2.0/order/list-order",
+    "POST apiv5.sales.ldpform.net/2.0/order/show",
+    "POST apiv5.sales.ldpform.net/2.0/page-checkout/list-store",
+    "POST apiv5.sales.ldpform.net/2.0/payment/list-gateways",
+    "POST apiv5.sales.ldpform.net/2.0/product-category/list",
+    "POST apiv5.sales.ldpform.net/2.0/product-category/list-select",
+    "POST apiv5.sales.ldpform.net/2.0/product-review/list",
+    "POST apiv5.sales.ldpform.net/2.0/product-tag/list",
+    "POST apiv5.sales.ldpform.net/2.0/product-tag/list-all",
+    "POST apiv5.sales.ldpform.net/2.0/product/list-products",
+    "POST apiv5.sales.ldpform.net/2.0/product/search",
+    "POST apiv5.sales.ldpform.net/2.0/product/show",
+    "POST apiv5.sales.ldpform.net/2.0/report/overview",
+    "POST apiv5.sales.ldpform.net/2.0/report/top-product",
+    "POST apiv5.sales.ldpform.net/2.0/shipping/list",
+    "POST apiv5.sales.ldpform.net/2.0/store/get-user-info"
+  ],
+  "tables": [
+    {
+      "table": "lp_analytics_report",
+      "fieldCount": 10,
+      "sourceRoutes": [
+        "POST apiv5.sales.ldpform.net/2.0/report/overview",
+        "POST apiv5.sales.ldpform.net/2.0/report/top-product"
+      ]
+    },
+    {
+      "table": "lp_application",
+      "fieldCount": 15,
+      "sourceRoutes": [
+        "POST api.ladipage.com/2.0/application/list"
+      ]
+    },
+    {
+      "table": "lp_checkout_config",
+      "fieldCount": 12,
+      "sourceRoutes": [
+        "POST apiv5.sales.ldpform.net/2.0/checkout-config/list"
+      ]
+    },
+    {
+      "table": "lp_custom_field",
+      "fieldCount": 10,
+      "sourceRoutes": [
+        "POST apiv5.sales.ldpform.net/2.0/custom-field/list"
+      ]
+    },
+    {
+      "table": "lp_customer",
+      "fieldCount": 68,
+      "sourceRoutes": [
+        "POST api.ladiflow.com/1.0/customer/list",
+        "POST api.ladiflow.com/1.0/customer/show",
+        "POST apiv5.sales.ldpform.net/2.0/customer/show"
+      ]
+    },
+    {
+      "table": "lp_customer_custom_field",
+      "fieldCount": 4,
+      "sourceRoutes": [
+        "POST api.ladiflow.com/1.0/custom-field/list-all"
+      ]
+    },
+    {
+      "table": "lp_customer_segment",
+      "fieldCount": 16,
+      "sourceRoutes": [
+        "POST api.ladiflow.com/1.0/segment/list"
+      ]
+    },
+    {
+      "table": "lp_customer_tag",
+      "fieldCount": 13,
+      "sourceRoutes": [
+        "POST api.ladiflow.com/1.0/customer-tag/list",
+        "POST api.ladiflow.com/1.0/customer-tag/list-all"
+      ]
+    },
+    {
+      "table": "lp_domain",
+      "fieldCount": 12,
+      "sourceRoutes": [
+        "POST apiv5.ladipage.com/2.0/domain/list"
+      ]
+    },
+    {
+      "table": "lp_inventory",
+      "fieldCount": 39,
+      "sourceRoutes": [
+        "POST apiv5.sales.ldpform.net/2.0/product/show → variants"
+      ]
+    },
+    {
+      "table": "lp_order",
+      "fieldCount": 144,
+      "sourceRoutes": [
+        "POST apiv5.sales.ldpform.net/2.0/order/list-order",
+        "POST apiv5.sales.ldpform.net/2.0/order/show"
+      ]
+    },
+    {
+      "table": "lp_order_history",
+      "fieldCount": 7,
+      "sourceRoutes": [
+        "POST apiv5.sales.ldpform.net/2.0/order-history/list"
+      ]
+    },
+    {
+      "table": "lp_order_item",
+      "fieldCount": 27,
+      "sourceRoutes": [
+        "POST apiv5.sales.ldpform.net/2.0/order/show → order_details"
+      ]
+    },
+    {
+      "table": "lp_order_tag",
+      "fieldCount": 7,
+      "sourceRoutes": [
+        "POST apiv5.sales.ldpform.net/2.0/order-tag/list",
+        "POST apiv5.sales.ldpform.net/2.0/order-tag/list-all"
+      ]
+    },
+    {
+      "table": "lp_page",
+      "fieldCount": 41,
+      "sourceRoutes": [
+        "POST api.ladipage.com/2.0/ladi-page/list",
+        "POST apiv5.ladipage.com/2.0/ladi-page/show"
+      ]
+    },
+    {
+      "table": "lp_page_checkout",
+      "fieldCount": 7,
+      "sourceRoutes": [
+        "POST apiv5.sales.ldpform.net/2.0/page-checkout/list-store"
+      ]
+    },
+    {
+      "table": "lp_page_tag",
+      "fieldCount": 16,
+      "sourceRoutes": [
+        "POST api.ladipage.com/2.0/ladi-page-tag/list"
+      ]
+    },
+    {
+      "table": "lp_payment",
+      "fieldCount": 10,
+      "sourceRoutes": [
+        "POST apiv5.sales.ldpform.net/2.0/payment/list-gateways"
+      ]
+    },
+    {
+      "table": "lp_product",
+      "fieldCount": 66,
+      "sourceRoutes": [
+        "POST apiv5.sales.ldpform.net/2.0/product/list-products",
+        "POST apiv5.sales.ldpform.net/2.0/product/search",
+        "POST apiv5.sales.ldpform.net/2.0/product/show"
+      ]
+    },
+    {
+      "table": "lp_staff",
+      "fieldCount": 13,
+      "sourceRoutes": [
+        "POST api.ladipage.com/2.0/staff/list"
+      ]
+    },
+    {
+      "table": "lp_store",
+      "fieldCount": 26,
+      "sourceRoutes": [
+        "POST api.ladipage.com/2.0/store/info",
+        "POST apiv5.ladipage.com/2.0/store/info",
+        "POST apiv5.sales.ldpform.net/2.0/store/get-user-info"
+      ]
+    }
+  ],
+  "knownGaps": [
+    "POST api.ladiflow.com/1.0/broadcast/list — response invalid (status=0)",
+    "POST api.ladiflow.com/1.0/call-center/list-integrations — read OK but empty sample (cần seed data hoặc mutation)",
+    "POST api.ladiflow.com/1.0/crm-insight-folder/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "POST api.ladiflow.com/1.0/customer/activity — response invalid (status=0)",
+    "POST api.ladiflow.com/1.0/customer/customer-detail — response invalid (status=200)",
+    "POST api.ladiflow.com/1.0/dash-board/list-subscriber-by-time — response invalid (status=0)",
+    "POST api.ladiflow.com/1.0/progress-bar/list-sections-latest — read OK but empty sample (cần seed data hoặc mutation)",
+    "POST api.ladipage.com/2.0/data-form-error/list — response invalid (status=0)",
+    "POST apiv5.sales.ldpform.net/2.0/checkout/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "POST apiv5.sales.ldpform.net/2.0/filter/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "POST apiv5.sales.ldpform.net/2.0/inventory/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "POST apiv5.sales.ldpform.net/2.0/product-category/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "POST apiv5.sales.ldpform.net/2.0/product-category/list-select — read OK but empty sample (cần seed data hoặc mutation)",
+    "POST apiv5.sales.ldpform.net/2.0/product-review/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "POST apiv5.sales.ldpform.net/2.0/product-tag/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "POST apiv5.sales.ldpform.net/2.0/product-tag/list-all — read OK but empty sample (cần seed data hoặc mutation)",
+    "POST apiv5.sales.ldpform.net/2.0/shipping/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "Bảng lp_product_category — chưa có itemFields từ capture",
+    "Bảng lp_product_tag — chưa có itemFields từ capture",
+    "Bảng lp_company — chưa có itemFields từ capture",
+    "Bảng lp_dashboard — chưa có itemFields từ capture",
+    "[2026-06-23T05:00:05.503Z] POST api.ladipage.com/2.0/data-form-error/list — response invalid (status=0)",
+    "[2026-06-23T05:00:05.503Z] POST apiv5.ladipage.com/2.0/store/info — response invalid (status=0)",
+    "[2026-06-23T05:00:05.503Z] Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "[2026-06-23T05:00:05.503Z] Bảng lp_order — chưa có itemFields từ capture",
+    "[2026-06-23T05:00:05.503Z] Bảng lp_order_item — chưa có itemFields từ capture",
+    "[2026-06-23T05:00:05.503Z] Bảng lp_product — chưa có itemFields từ capture",
+    "[2026-06-23T05:00:05.503Z] Bảng lp_product_category — chưa có itemFields từ capture",
+    "[2026-06-23T05:00:05.503Z] Bảng lp_product_tag — chưa có itemFields từ capture",
+    "[2026-06-23T05:00:05.503Z] Bảng lp_order_tag — chưa có itemFields từ capture",
+    "[2026-06-23T05:00:05.503Z] Bảng lp_custom_field — chưa có itemFields từ capture",
+    "[2026-06-23T05:36:59.942Z] Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "[2026-06-23T05:36:59.942Z] Bảng lp_order — chưa có itemFields từ capture",
+    "[2026-06-23T05:36:59.942Z] Bảng lp_order_item — chưa có itemFields từ capture",
+    "[2026-06-23T05:36:59.942Z] Bảng lp_product — chưa có itemFields từ capture",
+    "[2026-06-23T05:36:59.942Z] Bảng lp_product_category — chưa có itemFields từ capture",
+    "[2026-06-23T05:36:59.942Z] Bảng lp_product_tag — chưa có itemFields từ capture",
+    "[2026-06-23T05:36:59.942Z] Bảng lp_order_tag — chưa có itemFields từ capture",
+    "[2026-06-23T05:36:59.942Z] Bảng lp_custom_field — chưa có itemFields từ capture",
+    "[2026-06-23T05:08:14.431Z] Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "[2026-06-23T05:08:14.431Z] Bảng lp_order — chưa có itemFields từ capture",
+    "[2026-06-23T05:08:14.431Z] Bảng lp_order_item — chưa có itemFields từ capture",
+    "[2026-06-23T05:08:14.431Z] Bảng lp_product — chưa có itemFields từ capture",
+    "[2026-06-23T05:08:14.431Z] Bảng lp_product_category — chưa có itemFields từ capture",
+    "[2026-06-23T05:08:14.431Z] Bảng lp_product_tag — chưa có itemFields từ capture",
+    "[2026-06-23T05:08:14.431Z] Bảng lp_order_tag — chưa có itemFields từ capture",
+    "[2026-06-23T05:08:14.431Z] Bảng lp_custom_field — chưa có itemFields từ capture",
+    "[2026-06-23T05:11:32.353Z] POST apiv5.sales.ldpform.net/2.0/checkout/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:11:32.353Z] POST apiv5.sales.ldpform.net/2.0/filter/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:11:32.353Z] POST apiv5.sales.ldpform.net/2.0/inventory/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:11:32.353Z] POST apiv5.sales.ldpform.net/2.0/order/list-order — response invalid (status=0)",
+    "[2026-06-23T05:11:32.353Z] POST apiv5.sales.ldpform.net/2.0/product-category/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:11:32.353Z] POST apiv5.sales.ldpform.net/2.0/product-category/list-select — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:11:32.353Z] POST apiv5.sales.ldpform.net/2.0/product-review/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:11:32.353Z] POST apiv5.sales.ldpform.net/2.0/product-tag/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:11:32.353Z] POST apiv5.sales.ldpform.net/2.0/product-tag/list-all — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:11:32.353Z] POST apiv5.sales.ldpform.net/2.0/shipping/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:11:32.353Z] Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "[2026-06-23T05:11:32.353Z] Bảng lp_page — chưa có itemFields từ capture",
+    "[2026-06-23T05:11:32.353Z] Bảng lp_order — chưa có itemFields từ capture",
+    "[2026-06-23T05:11:32.353Z] Bảng lp_order_item — chưa có itemFields từ capture",
+    "[2026-06-23T05:11:32.353Z] Bảng lp_product_category — chưa có itemFields từ capture",
+    "[2026-06-23T05:11:32.353Z] Bảng lp_product_tag — chưa có itemFields từ capture",
+    "[2026-06-23T05:32:52.138Z] POST apiv5.sales.ldpform.net/2.0/custom-field/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:32:52.138Z] POST apiv5.sales.ldpform.net/2.0/filter/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:32:52.138Z] POST apiv5.sales.ldpform.net/2.0/order-history/list — response invalid (status=0)",
+    "[2026-06-23T05:32:52.138Z] POST apiv5.sales.ldpform.net/2.0/order/list-order — response invalid (status=0)",
+    "[2026-06-23T05:32:52.138Z] POST apiv5.sales.ldpform.net/2.0/product-category/list-select — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:32:52.138Z] POST apiv5.sales.ldpform.net/2.0/product-tag/list-all — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:32:52.138Z] POST apiv5.sales.ldpform.net/2.0/product/search — response invalid (status=0)",
+    "[2026-06-23T05:32:52.138Z] Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "[2026-06-23T05:32:52.138Z] Bảng lp_page — chưa có itemFields từ capture",
+    "[2026-06-23T05:32:52.138Z] Bảng lp_order_item — chưa có itemFields từ capture",
+    "[2026-06-23T05:32:52.138Z] Bảng lp_product_category — chưa có itemFields từ capture",
+    "[2026-06-23T05:32:52.138Z] Bảng lp_product_tag — chưa có itemFields từ capture",
+    "[2026-06-23T05:32:52.138Z] Bảng lp_custom_field — chưa có itemFields từ capture",
+    "[2026-06-23T05:16:52.951Z] POST apiv5.sales.ldpform.net/2.0/filter/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:16:52.951Z] POST apiv5.sales.ldpform.net/2.0/product-category/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:16:52.951Z] POST apiv5.sales.ldpform.net/2.0/product-category/list-select — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T05:16:52.951Z] POST apiv5.sales.ldpform.net/2.0/product-tag/list-all — response invalid (status=0)",
+    "[2026-06-23T05:16:52.951Z] Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "[2026-06-23T05:16:52.951Z] Bảng lp_page — chưa có itemFields từ capture",
+    "[2026-06-23T05:16:52.951Z] Bảng lp_order_item — chưa có itemFields từ capture",
+    "[2026-06-23T05:16:52.951Z] Bảng lp_product_category — chưa có itemFields từ capture",
+    "[2026-06-23T05:16:52.951Z] Bảng lp_product_tag — chưa có itemFields từ capture",
+    "[2026-06-23T10:20:27.130Z] POST api.ladiflow.com/1.0/call-center/list-integrations — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T10:20:27.130Z] POST api.ladiflow.com/1.0/customer/show — response invalid (status=200)",
+    "[2026-06-23T10:20:27.130Z] POST api.ladiflow.com/1.0/progress-bar/list-sections-latest — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T10:20:27.130Z] POST api.ladipage.com/2.0/data-form-error/list — response invalid (status=499)",
+    "[2026-06-23T10:20:27.130Z] Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "[2026-06-23T10:20:27.130Z] Bảng lp_page — chưa có itemFields từ capture",
+    "[2026-06-23T10:20:27.130Z] Bảng lp_order — chưa có itemFields từ capture",
+    "[2026-06-23T10:20:27.130Z] Bảng lp_order_item — chưa có itemFields từ capture",
+    "[2026-06-23T10:20:27.130Z] Bảng lp_product — chưa có itemFields từ capture",
+    "[2026-06-23T10:20:27.130Z] Bảng lp_product_category — chưa có itemFields từ capture",
+    "[2026-06-23T10:20:27.130Z] Bảng lp_product_tag — chưa có itemFields từ capture",
+    "[2026-06-23T10:20:27.130Z] Bảng lp_order_tag — chưa có itemFields từ capture",
+    "[2026-06-23T10:20:27.130Z] Bảng lp_custom_field — chưa có itemFields từ capture",
+    "[2026-06-23T10:22:22.396Z] POST api.ladiflow.com/1.0/call-center/list-integrations — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T10:22:22.396Z] POST api.ladiflow.com/1.0/customer/activity — response invalid (status=0)",
+    "[2026-06-23T10:22:22.396Z] POST api.ladiflow.com/1.0/customer/customer-detail — response invalid (status=200)",
+    "[2026-06-23T10:22:22.396Z] POST api.ladiflow.com/1.0/progress-bar/list-sections-latest — response invalid (status=0)",
+    "[2026-06-23T10:22:22.396Z] POST apiv5.sales.ldpform.net/2.0/checkout-config/list — response invalid (status=0)",
+    "[2026-06-23T10:22:22.396Z] POST apiv5.sales.ldpform.net/2.0/filter/list — response invalid (status=0)",
+    "[2026-06-23T10:22:22.396Z] POST apiv5.sales.ldpform.net/2.0/payment/list-gateways — response invalid (status=0)",
+    "[2026-06-23T10:22:22.396Z] Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "[2026-06-23T10:22:22.396Z] Bảng lp_page — chưa có itemFields từ capture",
+    "[2026-06-23T10:22:22.396Z] Bảng lp_product — chưa có itemFields từ capture",
+    "[2026-06-23T10:22:22.396Z] Bảng lp_product_category — chưa có itemFields từ capture",
+    "[2026-06-23T10:22:22.396Z] Bảng lp_product_tag — chưa có itemFields từ capture",
+    "[2026-06-23T10:22:22.396Z] Bảng lp_custom_field — chưa có itemFields từ capture",
+    "[2026-06-23T10:32:08.629Z] POST api.ladiflow.com/1.0/call-center/list-integrations — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T10:32:08.629Z] POST api.ladiflow.com/1.0/customer/list — response invalid (status=0)",
+    "[2026-06-23T10:32:08.629Z] POST api.ladiflow.com/1.0/progress-bar/list-sections-latest — response invalid (status=0)",
+    "[2026-06-23T10:32:08.629Z] Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "[2026-06-23T10:32:08.629Z] Bảng lp_page — chưa có itemFields từ capture",
+    "[2026-06-23T10:32:08.629Z] Bảng lp_order — chưa có itemFields từ capture",
+    "[2026-06-23T10:32:08.629Z] Bảng lp_order_item — chưa có itemFields từ capture",
+    "[2026-06-23T10:32:08.629Z] Bảng lp_product — chưa có itemFields từ capture",
+    "[2026-06-23T10:32:08.629Z] Bảng lp_product_category — chưa có itemFields từ capture",
+    "[2026-06-23T10:32:08.629Z] Bảng lp_product_tag — chưa có itemFields từ capture",
+    "[2026-06-23T10:32:08.629Z] Bảng lp_order_tag — chưa có itemFields từ capture",
+    "[2026-06-23T10:32:08.629Z] Bảng lp_custom_field — chưa có itemFields từ capture",
+    "[2026-06-23T10:32:08.629Z] Bảng lp_customer — chưa có itemFields từ capture",
+    "[2026-06-23T10:32:08.629Z] Bảng lp_company — chưa có itemFields từ capture",
+    "[2026-06-23T10:32:08.629Z] Bảng lp_analytics_report — chưa có itemFields từ capture",
+    "[2026-06-23T10:32:08.629Z] Bảng lp_dashboard — chưa có itemFields từ capture",
+    "[2026-06-23T10:26:21.172Z] POST api.ladiflow.com/1.0/broadcast/list — response invalid (status=0)",
+    "[2026-06-23T10:26:21.172Z] POST api.ladiflow.com/1.0/call-center/list-integrations — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T10:26:21.172Z] POST api.ladiflow.com/1.0/crm-insight-folder/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T10:26:21.172Z] POST api.ladiflow.com/1.0/dash-board/list-subscriber-by-time — response invalid (status=0)",
+    "[2026-06-23T10:26:21.172Z] POST apiv5.sales.ldpform.net/2.0/filter/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T10:26:21.172Z] Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "[2026-06-23T10:26:21.172Z] Bảng lp_page — chưa có itemFields từ capture",
+    "[2026-06-23T10:26:21.172Z] Bảng lp_order_item — chưa có itemFields từ capture",
+    "[2026-06-23T10:26:21.172Z] Bảng lp_product_category — chưa có itemFields từ capture",
+    "[2026-06-23T10:26:21.172Z] Bảng lp_product_tag — chưa có itemFields từ capture",
+    "[2026-06-23T10:26:21.172Z] Bảng lp_custom_field — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:16.675Z] POST api.ladiflow.com/1.0/call-center/list-integrations — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T10:35:16.675Z] POST api.ladiflow.com/1.0/crm-insight-folder/list — read OK but empty sample (cần seed data hoặc mutation)",
+    "[2026-06-23T10:35:16.675Z] Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "[2026-06-23T10:35:16.675Z] Bảng lp_order — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:16.675Z] Bảng lp_order_item — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:16.675Z] Bảng lp_product — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:16.675Z] Bảng lp_product_category — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:16.675Z] Bảng lp_product_tag — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:16.675Z] Bảng lp_order_tag — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:16.675Z] Bảng lp_custom_field — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:16.675Z] Bảng lp_customer — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:16.675Z] Bảng lp_customer_segment — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:16.675Z] Bảng lp_customer_tag — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:16.675Z] Bảng lp_customer_custom_field — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:16.675Z] Bảng lp_company — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:16.675Z] Bảng lp_dashboard — chưa có itemFields từ capture",
+    "[2026-06-23T05:29:39.031Z] Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "[2026-06-23T05:29:39.031Z] Bảng lp_page — chưa có itemFields từ capture",
+    "[2026-06-23T05:29:39.031Z] Bảng lp_order_item — chưa có itemFields từ capture",
+    "[2026-06-23T05:29:39.031Z] Bảng lp_product_category — chưa có itemFields từ capture",
+    "[2026-06-23T05:29:39.031Z] Bảng lp_product_tag — chưa có itemFields từ capture",
+    "[2026-06-23T05:29:39.031Z] Bảng lp_order_tag — chưa có itemFields từ capture",
+    "[2026-06-23T05:29:39.031Z] Bảng lp_custom_field — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:27.910Z] Không có mutation route — cần chạy config *-mutations.json với form submit",
+    "[2026-06-23T10:35:27.910Z] Bảng lp_page — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:27.910Z] Bảng lp_order — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:27.910Z] Bảng lp_order_item — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:27.910Z] Bảng lp_product — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:27.910Z] Bảng lp_product_category — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:27.910Z] Bảng lp_product_tag — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:27.910Z] Bảng lp_order_tag — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:27.910Z] Bảng lp_custom_field — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:27.910Z] Bảng lp_customer_segment — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:27.910Z] Bảng lp_customer_tag — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:27.910Z] Bảng lp_customer_custom_field — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:27.910Z] Bảng lp_company — chưa có itemFields từ capture",
+    "[2026-06-23T10:35:27.910Z] Bảng lp_dashboard — chưa có itemFields từ capture"
+  ]
+}

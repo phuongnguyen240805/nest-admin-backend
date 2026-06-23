@@ -49,6 +49,41 @@ function kebabCase(input: string): string {
 
 function tableToFolder(table: string): string {
   if (
+    table.startsWith('lp_crm_') ||
+    table === 'lp_ladiwork_dashboard'
+  ) {
+    return 'ladiwork';
+  }
+  if (
+    table.startsWith('lp_flow') ||
+    table === 'lp_integration' ||
+    table === 'lp_broadcast' ||
+    table === 'lp_recurring_topic'
+  ) {
+    return 'automation';
+  }
+  if (
+    table.startsWith('lp_customer') ||
+    [
+      'lp_company',
+      'lp_sync_error_log',
+      'lp_notification',
+      'lp_onboarding',
+    ].includes(table)
+  ) {
+    return 'crm';
+  }
+  if (
+    [
+      'lp_analytics_report',
+      'lp_dashboard',
+      'lp_dashboard_widget',
+      'lp_analytics_widget',
+    ].includes(table)
+  ) {
+    return 'analytics';
+  }
+  if (
     [
       'lp_page',
       'lp_page_tag',
@@ -74,13 +109,25 @@ function tableToFolder(table: string): string {
       'lp_delivery_note',
       'lp_inventory',
       'lp_filter',
-      'lp_customer',
       'lp_store',
     ].includes(table)
   ) {
     return 'ecom';
   }
   return 'misc';
+}
+
+function parseTableFilter(argv: string[]): Set<string> | null {
+  const direct = argv.find((arg) => arg.startsWith('--tables='));
+  const nextIndex = argv.findIndex((arg) => arg === '--tables');
+  const raw = direct?.slice('--tables='.length) ?? (nextIndex >= 0 ? argv[nextIndex + 1] : undefined);
+  if (!raw) return null;
+  return new Set(
+    raw
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
 }
 
 function fieldType(field: FieldSchema): string {
@@ -118,20 +165,29 @@ async function main(): Promise<void> {
   const mergedDir = join(toolRoot, 'output/merged');
   const outputRoot = join(workspaceRoot, 'apps/ladipage-backend/libs/ladipage-types/src');
   const raw = await readFile(join(mergedDir, 'schema-tables-merged.json'), 'utf8');
-  const tables = JSON.parse(raw) as MergedTableSchema[];
+  const allTables = JSON.parse(raw) as MergedTableSchema[];
+  const tableFilter = parseTableFilter(process.argv.slice(2));
+  const tables = tableFilter
+    ? allTables.filter((table) => tableFilter.has(table.table))
+    : allTables;
 
   await mkdir(outputRoot, { recursive: true });
   await writeGeneratedFile(join(outputRoot, 'common.ts'), renderCommon());
 
   const byFolder = new Map<string, OutputFile>();
-  for (const table of tables) {
+  for (const table of allTables) {
     const folder = tableToFolder(table.table);
     const fileName = `${kebabCase(table.table)}.types`;
-    await writeGeneratedFile(join(outputRoot, folder, `${fileName}.ts`), renderTable(table));
 
     const entry = byFolder.get(folder) ?? { path: folder, exports: [] };
     entry.exports.push(fileName);
     byFolder.set(folder, entry);
+  }
+
+  for (const table of tables) {
+    const folder = tableToFolder(table.table);
+    const fileName = `${kebabCase(table.table)}.types`;
+    await writeGeneratedFile(join(outputRoot, folder, `${fileName}.ts`), renderTable(table));
   }
 
   const folderIndexes = [...byFolder.values()].sort((a, b) => a.path.localeCompare(b.path));
@@ -148,6 +204,14 @@ async function main(): Promise<void> {
       .map((folder) => `export * from './${folder.path}';`)
       .join('\n')}\n`,
   );
+
+  if (tableFilter) {
+    const emitted = new Set(tables.map((table) => table.table));
+    const missing = [...tableFilter].filter((table) => !emitted.has(table));
+    if (missing.length) {
+      console.warn(`[export] missing tables in schema-tables-merged.json: ${missing.join(', ')}`);
+    }
+  }
 
   console.log(`[export] ${tables.length} tables -> apps/ladipage-backend/libs/ladipage-types/src`);
 }

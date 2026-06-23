@@ -1,0 +1,32 @@
+{
+  "url": "https://appv6.ladipage.com/customers",
+  "durationMs": 12000,
+  "headless": true,
+  "outputDir": "output/phase3-khachhang-mutations",
+  "maxBodyBytes": 4194304,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 8000 },
+    { "type": "click", "selector": "button:has-text('Tạo khách hàng'), button:has-text('Thêm khách hàng'), button:has-text('Tạo')", "label": "open-create-customer", "force": true },
+    { "type": "wait", "ms": 4000 },
+    { "type": "fill", "selector": "input[name*='name'], input[placeholder*='tên'], input[placeholder*='Tên']", "value": "CDP CRM Test", "label": "customer-name" },
+    { "type": "fill", "selector": "input[name*='phone'], input[placeholder*='điện thoại'], input[placeholder*='SĐT']", "value": "0909999888", "label": "customer-phone" },
+    { "type": "fill", "selector": "input[name*='email'], input[placeholder*='email']", "value": "cdp-crm-test@example.com", "label": "customer-email" },
+    { "type": "click", "selector": "button:has-text('Lưu'), button:has-text('Tạo'), button:has-text('Xác nhận')", "label": "submit-customer", "force": true },
+    { "type": "wait", "ms": 10000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/customers/segments", "label": "create-segment" },
+    { "type": "wait", "ms": 5000 },
+    { "type": "click", "selector": "button:has-text('Tạo'), button:has-text('Thêm phân khúc')", "label": "open-segment", "force": true },
+    { "type": "wait", "ms": 2000 },
+    { "type": "fill", "selector": "input[type='text'], input[name='name']", "value": "CDP Segment", "label": "segment-name" },
+    { "type": "click", "selector": "button:has-text('Lưu'), button:has-text('Tạo')", "label": "submit-segment", "force": true },
+    { "type": "wait", "ms": 8000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/customers/tags", "label": "create-tag" },
+    { "type": "wait", "ms": 5000 },
+    { "type": "click", "selector": "button:has-text('Tạo'), button:has-text('Thêm tag')", "label": "open-tag", "force": true },
+    { "type": "wait", "ms": 2000 },
+    { "type": "fill", "selector": "input[type='text']", "value": "cdp-crm-tag", "label": "tag-name" },
+    { "type": "click", "selector": "button:has-text('Lưu'), button:has-text('Tạo')", "label": "submit-tag", "force": true },
+    { "type": "wait", "ms": 8000 }
+  ]
+}

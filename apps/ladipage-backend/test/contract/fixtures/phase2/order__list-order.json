@@ -1,0 +1,89 @@
+{
+  "route": "order/list-order",
+  "host": "apiv5.sales.ldpform.net",
+  "path": "/2.0/order/list-order",
+  "status": 200,
+  "request": {
+    "lang": "vi",
+    "type": "SEARCH_ALL",
+    "paged": 1,
+    "limit": 10,
+    "sort": {},
+    "search": {
+      "name": "",
+      "mark_spam": null,
+      "tag_ids": [],
+      "from_date": "2026-05-24 00:00:00 +07:00",
+      "to_date": "2026-06-23 23:59:59 +07:00"
+    },
+    "search_v2": {}
+  },
+  "response": {
+    "data": {
+      "orders": [
+        {
+          "order_id": 3289450,
+          "reference_no": "1000",
+          "created_at": "2026-06-23T02:55:37.000Z",
+          "ordered_at": "2026-06-23T02:55:37.000Z",
+          "customer_id": 13427358,
+          "customer_first_name": "nguyen van b",
+          "customer_last_name": "",
+          "customer_email": "text2@gmail.com",
+          "customer_phone": "0398838677",
+          "status": "Open",
+          "is_draft": 0,
+          "payment_status": "Success",
+          "shipping_status": "Pending",
+          "total": 0,
+          "refund": null,
+          "creator_id": "6a2c26c92d543800211b5157",
+          "assignee_id": "6a2c26c92d543800211b5157",
+          "url_page": null,
+          "utm_source": null,
+          "utm_medium": null,
+          "utm_campaign": null,
+          "utm_term": null,
+          "utm_content": null,
+          "ad_id": null,
+          "ref": null,
+          "msg_id": null,
+          "fb_id": null,
+          "ip": null,
+          "source": "Landing Page",
+          "mark_spam": 0,
+          "parent_id": null,
+          "total_child": 0,
+          "is_show": 1,
+          "store_name": null,
+          "payment_retry_get_status": 0,
+          "payment_method": "COD",
+          "payment_type": "",
+          "parent_reference_no": null,
+          "tag_ids": "995",
+          "tag_names": "VIP",
+          "tag_colors": "#BBF7D0"
+        }
+      ],
+      "total": 0,
+      "total_record": 1,
+      "total_page": 1,
+      "total_duplication": 0,
+      "is_empty": 1
+    },
+    "message": "Thành công",
+    "code": 200
+  },
+  "requestHeaders": {
+    "owner-id": "6a2c26c92d543800211b5157",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "c588de441f49361e9d88ec98cd4fdb9fa54690d1f05542b5a56f838ad558e5f218b17b07e8392dc5e342ae73784ef985729e75ea72e53c0f39091e216bdf353b1128a5060c690b0d50cedf379770bcc2ec81bf87c4c7f1cd5d103d81d1a16a033413473606bcdeb600af92be385b77832c67a69ad7573d986bc2983feb1f722223e3509e0e03391a51180eca76a4bc8f7b9cb189c60bcfc8b181ccfb9a0128704a06a8e64cbadfb97f7dfd79c31e39024e68db40b342515f85f4e945e7457420fc491dfee74c452797ec680b69cb300132556cdf33c26f6a4d4e0509dc8bd611e0f1ab2cec87167e8b6117ea7b85aa15d2d10a11d949806d74c77b2583af6e2e4317910780f4d102c3081667f93970ffd4e66d156582c5266e6930b0332a6080",
+    "Referer": "https://appv6.ladipage.com/",
+    "sec-ch-ua": "\"HeadlessChrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+    "sec-ch-ua-mobile": "?0",
+    "store-id": "110263",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LioraCDP/1.0",
+    "accept": "application/json, text/plain, */*",
+    "content-type": "application/json;charset=UTF-8"
+  }
+}

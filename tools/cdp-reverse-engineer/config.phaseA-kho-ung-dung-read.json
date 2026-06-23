@@ -1,0 +1,24 @@
+{
+  "url": "https://appv6.ladipage.com/dashboard",
+  "durationMs": 12000,
+  "headless": true,
+  "outputDir": "output/phaseA-kho-ung-dung-read",
+  "maxBodyBytes": 4194304,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 10000, "label": "dashboard-boot" },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/applications", "label": "app-store" },
+    { "type": "wait", "ms": 10000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/apps", "label": "apps-fallback" },
+    { "type": "wait", "ms": 8000 },
+    { "type": "click", "selector": "[href*='application'], [href*='apps'], button:has-text('Kho ứng dụng'), [data-testid*='app-store'], a:has-text('Ứng dụng')", "label": "open-app-store", "force": true },
+    { "type": "wait", "ms": 10000 },
+    { "type": "click", "selector": "input[placeholder*='Tìm'], input[placeholder*='tìm'], input[type='search']", "label": "search-apps", "force": true },
+    { "type": "fill", "selector": "input[type='search'], input[placeholder*='Tìm'], input[placeholder*='tìm']", "value": "LadiWork", "label": "search-ladiwork" },
+    { "type": "wait", "ms": 5000 },
+    { "type": "click", "selector": "text=LadiWork, text=Automation, [data-app-code='LadiWork'], [data-app-code='Automation']", "label": "view-app-detail", "force": true },
+    { "type": "wait", "ms": 10000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/settings/apps", "label": "settings-apps" },
+    { "type": "wait", "ms": 8000 }
+  ]
+}

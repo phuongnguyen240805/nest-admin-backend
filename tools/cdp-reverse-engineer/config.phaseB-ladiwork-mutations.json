@@ -1,0 +1,24 @@
+{
+  "url": "https://appv6.ladipage.com/ladiwork/board/6a3a8d71da6cd800128221ee",
+  "durationMs": 12000,
+  "headless": true,
+  "outputDir": "output/phaseB-ladiwork-mutations",
+  "maxBodyBytes": 4194304,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 10000, "label": "board-load" },
+    { "type": "click", "selector": "button:has-text('Thêm công việc'), button:has-text('Thêm deal'), button:has-text('Tạo'), button:has-text('Tạo mới'), [class*='add-deal'], [class*='add-card'] button, [aria-label*='Thêm']", "label": "open-create-deal", "force": true },
+    { "type": "wait", "ms": 5000 },
+    { "type": "fill", "selector": "input[name*='title'], input[name*='name'], input[placeholder*='tên'], input[placeholder*='Tiêu đề'], input[type='text']:visible", "value": "CDP LadiWork Deal", "label": "deal-title" },
+    { "type": "fill", "selector": "textarea:visible, input[placeholder*='mô tả'], input[placeholder*='Mô tả']", "value": "Created by CDP capture board", "label": "deal-desc" },
+    { "type": "click", "selector": "button:has-text('Lưu'), button:has-text('Tạo'), button:has-text('Xác nhận'), button:has-text('Thêm')", "label": "submit-deal", "force": true },
+    { "type": "wait", "ms": 12000 },
+    { "type": "click", "selector": "[class*='deal']:first-child, [class*='card']:first-child", "label": "open-deal-edit", "force": true },
+    { "type": "wait", "ms": 5000 },
+    { "type": "click", "selector": "button:has-text('Sửa'), button:has-text('Chỉnh sửa'), [aria-label*='edit'], [aria-label*='Sửa']", "label": "edit-deal", "force": true },
+    { "type": "wait", "ms": 3000 },
+    { "type": "fill", "selector": "input[type='text']:visible", "value": "CDP LadiWork Deal Updated", "label": "deal-title-update" },
+    { "type": "click", "selector": "button:has-text('Lưu'), button:has-text('Cập nhật')", "label": "save-deal", "force": true },
+    { "type": "wait", "ms": 10000 }
+  ]
+}

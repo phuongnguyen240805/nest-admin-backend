@@ -26,6 +26,16 @@
         }
       }
     },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{workspaceRoot}/coverage/apps/ladipage-backend"
+      ],
+      "options": {
+        "jestConfig": "apps/ladipage-backend/jest.config.ts",
+        "passWithNoTests": true
+      }
+    },
     "prune-lockfile": {
       "dependsOn": [
         "build"

@@ -1,0 +1,32 @@
+{
+  "url": "https://appv6.ladipage.com/customers",
+  "durationMs": 15000,
+  "headless": true,
+  "outputDir": "output/phase3-khachhang-read",
+  "maxBodyBytes": 4194304,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 10000, "label": "customers-list" },
+    { "type": "waitForSelector", "selector": "table tbody tr, [data-testid*='customer'], .customer-row", "ms": 25000, "label": "table-ready" },
+    { "type": "click", "selector": "button:has-text('Lọc nâng cao'), button:has-text('Bộ lọc')", "label": "advanced-filter", "force": true },
+    { "type": "wait", "ms": 5000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/customers/segments", "label": "segments" },
+    { "type": "wait", "ms": 8000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/customers/tags", "label": "tags" },
+    { "type": "wait", "ms": 8000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/customers/custom-fields", "label": "custom-fields" },
+    { "type": "wait", "ms": 8000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/customers/sync-errors", "label": "sync-errors" },
+    { "type": "wait", "ms": 8000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/customers/companies", "label": "companies" },
+    { "type": "wait", "ms": 8000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/customers", "label": "back-list" },
+    { "type": "wait", "ms": 6000 },
+    { "type": "click", "selector": "[role='tab']:has-text('Phân khúc'), button:has-text('Phân khúc')", "label": "tab-segments", "force": true },
+    { "type": "wait", "ms": 6000 },
+    { "type": "click", "selector": "[role='tab']:has-text('Tag'), button:has-text('Tag')", "label": "tab-tags", "force": true },
+    { "type": "wait", "ms": 6000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladipage/leads", "label": "leads-crossref" },
+    { "type": "wait", "ms": 10000 }
+  ]
+}

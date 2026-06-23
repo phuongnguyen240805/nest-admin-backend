@@ -1,7 +1,7 @@
 import type { LadipageEndpoint } from './ladipage-flow.js';
 
 const READ_ACTION_RE =
-  /\/(list|show|get|search|info|theme|asset|select|checkout|filter)(-|\/|$)/i;
+  /\/(list|show|get|search|info|theme|asset|select|checkout|filter|report|summary|analytics|overview|top-product|activity|customer-detail)(-|\/|$)/i;
 const MUTATION_ACTION_RE =
   /\/(create|update|delete|save|duplicate|publish|insert|remove|clone|copy|add|edit|submit|sync|export|import)(-|\/|$)/i;
 
@@ -10,7 +10,8 @@ export type RouteKind = 'read' | 'mutation' | 'unknown';
 export function classifyRoute(path: string): RouteKind {
   const segment = (path.split('/').pop() ?? path).toLowerCase();
   const mutPrefix = /^(create|update|delete|save|duplicate|publish|insert|remove|clone|copy|add|edit|submit|sync|export|import)/;
-  const readPrefix = /^(list|show|get|search|info|theme|asset|select|checkout|filter)/;
+  const readPrefix =
+    /^(list|show|get|search|info|theme|asset|select|checkout|filter|report|summary|analytics|activity|customer-detail)/;
   if (mutPrefix.test(segment) || MUTATION_ACTION_RE.test(path)) return 'mutation';
   if (readPrefix.test(segment) || READ_ACTION_RE.test(path)) return 'read';
   return 'unknown';
@@ -101,9 +102,20 @@ const ITEM_ARRAY_KEYS = [
   'categories',
   'reviews',
   'inventories',
+  'customers',
+  'persons',
+  'companies',
+  'segments',
+  'activities',
+  'broadcasts',
+  'organizations',
+  'subscribers',
+  'sync_errors',
   'list',
   'records',
   'data',
+  'series',
+  'labels',
 ];
 
 const ENTITY_OBJECT_KEYS = [
@@ -118,6 +130,12 @@ const ENTITY_OBJECT_KEYS = [
   'shipping',
   'inventory',
   'customer',
+  'segment',
+  'person',
+  'company',
+  'report',
+  'dashboard',
+  'analytics',
 ];
 
 const NESTED_ARRAY_TABLE: Record<string, string> = {
@@ -270,6 +288,30 @@ function isEmptyData(data: unknown): boolean {
 }
 
 function suggestTable(path: string): string | undefined {
+  if (/\/ladi-page\/report/i.test(path)) return 'lp_page_report';
+  if (/\/dashboard\//i.test(path)) return 'lp_dashboard';
+  if (/\/2\.0\/report\//i.test(path)) return 'lp_analytics_report';
+
+  const m10 = path.match(/\/1\.0\/([^/]+)\//);
+  if (m10) {
+    const raw10 = m10[1].replace(/-/g, '_');
+    const map10: Record<string, string> = {
+      customer: 'lp_customer',
+      customer_tag: 'lp_customer_tag',
+      segment: 'lp_customer_segment',
+      custom_field: 'lp_customer_custom_field',
+      crm_organization: 'lp_company',
+      sync_error: 'lp_sync_error_log',
+      ladipage_notification: 'lp_notification',
+      progress_bar: 'lp_onboarding',
+      call_center: 'lp_call_center',
+      dash_board: 'lp_dashboard',
+      crm_insight_folder: 'lp_analytics_widget',
+      broadcast: 'lp_broadcast',
+    };
+    return map10[raw10] ?? `lp_${raw10}`;
+  }
+
   const m = path.match(/\/2\.0\/([^/]+)\//);
   if (!m) return undefined;
   const raw = m[1].replace(/-/g, '_');
@@ -300,6 +342,17 @@ function suggestTable(path: string): string | undefined {
     payment: 'lp_payment',
     checkout_config: 'lp_checkout_config',
     order_history: 'lp_order_history',
+    customer_segment: 'lp_customer_segment',
+    customer_tag: 'lp_customer_tag',
+    customer_custom_field: 'lp_customer_custom_field',
+    sync_error: 'lp_sync_error_log',
+    data_form_error: 'lp_lead',
+    person: 'lp_customer',
+    company: 'lp_company',
+    report: 'lp_analytics_report',
+    dashboard: 'lp_dashboard',
+    analytics: 'lp_analytics_report',
+    workspace: 'lp_workspace',
   };
   return map[raw] ?? `lp_${raw}`;
 }
@@ -376,6 +429,13 @@ export function buildSchemaDraft(endpoints: LadipageEndpoint[]): SchemaDraft {
     'lp_product_tag',
     'lp_order_tag',
     'lp_custom_field',
+    'lp_customer',
+    'lp_customer_segment',
+    'lp_customer_tag',
+    'lp_customer_custom_field',
+    'lp_company',
+    'lp_analytics_report',
+    'lp_dashboard',
   ];
   const mergedTables = buildMergedTables({
     generatedAt: new Date().toISOString(),
