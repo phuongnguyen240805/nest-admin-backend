@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+  <head><title>CDP Demo Target</title></head>
+  <body>
+    <h1>Ladipage / FunnelX / LadiChat simulation</h1>
+    <script>
+      window.__LADI__ = { store_id: 'demo-store', module: 'ladipage' };
+      window.__FUNNELX__ = { funnelId: 'fx-001' };
+      window.__LADICHAT__ = { room: 'support' };
+
+      localStorage.setItem('ladipage_session', JSON.stringify({ token: 'demo-token' }));
+      localStorage.setItem('funnelx_state', JSON.stringify({ step: 2 }));
+
+      fetch('https://api.ladipage-demo.test/ladi-page/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lang: 'vi', type: 'LADIPAGE', page: 1, limit: 20 }),
+      }).catch(() => {});
+
+      fetch('https://fx-api.funnelx-demo.test/events/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event: 'page_view', funnel_id: 'fx-001' }),
+      }).catch(() => {});
+
+      try {
+        const ws = new WebSocket('wss://ladichat-demo.test/socket.io/?EIO=4');
+        ws.onopen = () => ws.send(JSON.stringify({ type: 'join', room: 'support' }));
+      } catch (_) {}
+    </script>
+  </body>
+</html>

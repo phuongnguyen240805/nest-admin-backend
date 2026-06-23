@@ -9,4 +9,10 @@ export class ProductCategoryEntity extends TenantScopedEntity {
 
   @Column({ type: 'int', nullable: true })
   parentId: number | null
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  imageUrl: string | null
+
+  @Column({ type: 'boolean', default: true })
+  visible: boolean
 }

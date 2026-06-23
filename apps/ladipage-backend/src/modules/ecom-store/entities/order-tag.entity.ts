@@ -7,4 +7,7 @@ import { TenantScopedEntity } from '@liora/nest-core/common/entities/tenant-scop
 export class OrderTagEntity extends TenantScopedEntity {
   @Column({ type: 'varchar', length: 100 })
   name: string
+
+  @Column({ type: 'varchar', length: 20, default: '#e5e7eb' })
+  color: string
 }

@@ -1,0 +1,12 @@
+{
+  "url": "https://app.ladipage.com",
+  "durationMs": 30000,
+  "headless": false,
+  "outputDir": "output",
+  "maxBodyBytes": 524288,
+  "actions": [
+    { "type": "wait", "ms": 5000 },
+    { "type": "scroll" },
+    { "type": "wait", "ms": 10000 }
+  ]
+}

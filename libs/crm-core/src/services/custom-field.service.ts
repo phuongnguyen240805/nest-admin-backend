@@ -109,7 +109,7 @@ export class CrmCustomFieldService extends CrmTenantScopedService {
     const limit = getCustomFieldLimit(subscriptionTier)
     if (limit === 0) {
       throw new ForbiddenException(
-        'CRM custom fields require Pro plan or higher',
+        'CRM custom fields are not available on your current plan',
       )
     }
     if (limit > 0) {

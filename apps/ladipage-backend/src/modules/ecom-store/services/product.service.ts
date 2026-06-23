@@ -75,7 +75,7 @@ export class ProductService extends TenantScopedService {
   async create(dto: CreateProductDto) {
     const tenantId = this.requireTenantId()
 
-    return this.dataSource.transaction(async (manager) => {
+    const productId = await this.dataSource.transaction(async (manager) => {
       const product = await manager.getRepository(ProductEntity).save({
         tenantId,
         name: dto.name,
@@ -86,6 +86,8 @@ export class ProductService extends TenantScopedService {
         description: dto.description ?? null,
         categoryId: dto.categoryId ?? null,
         imageUrl: dto.imageUrl ?? null,
+        type: dto.type ?? 'physical',
+        typeName: dto.typeName ?? 'Sản phẩm vật lý',
       })
 
       if (dto.tagIds?.length) {
@@ -94,8 +96,10 @@ export class ProductService extends TenantScopedService {
         )
       }
 
-      return this.detail(product.id)
+      return product.id
     })
+
+    return this.detail(productId)
   }
 
   async update(id: number, dto: UpdateProductDto) {
@@ -105,7 +109,7 @@ export class ProductService extends TenantScopedService {
       'Product not found',
     )
 
-    return this.dataSource.transaction(async (manager) => {
+    await this.dataSource.transaction(async (manager) => {
       await manager.getRepository(ProductEntity).update(id, {
         name: dto.name,
         sku: dto.sku,
@@ -115,6 +119,8 @@ export class ProductService extends TenantScopedService {
         description: dto.description,
         categoryId: dto.categoryId,
         imageUrl: dto.imageUrl,
+        type: dto.type,
+        typeName: dto.typeName,
       })
 
       if (dto.tagIds) {
@@ -125,9 +131,9 @@ export class ProductService extends TenantScopedService {
           )
         }
       }
-
-      return this.detail(id)
     })
+
+    return this.detail(id)
   }
 
   async remove(id: number) {

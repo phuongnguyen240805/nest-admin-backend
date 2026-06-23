@@ -42,7 +42,7 @@ async function bootstrap() {
 
   // Global Prefix
   app.setGlobalPrefix("api", {
-    exclude: ["health", "readyz", "", "v1/public/(.*)"],
+    exclude: ["health", "readyz", "", "v1/public/(.*)", "2.0/(.*)"],
   });
 
   // Shutdown Hooks in Prod

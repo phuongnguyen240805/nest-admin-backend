@@ -1,0 +1,36 @@
+{
+  "name": "@liora/cdp-reverse-engineer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture": "tsx src/index.ts",
+    "capture:ladipage": "tsx src/index.ts --config config.ladipage.json",
+    "capture:ladipage:login": "tsx src/index.ts --config config.ladipage.login.json",
+    "capture:ladipage:session": "tsx src/index.ts --config config.ladipage.session.json",
+    "capture:ladipage:appv6": "tsx src/index.ts --config config.ladipage.appv6.json",
+    "capture:banhang:appv6": "tsx src/index.ts --config config.banhang.appv6.json",
+    "capture:phase1:read": "tsx src/index.ts --config config.phase1-landing-read.json",
+    "capture:phase1:mutations": "tsx src/index.ts --config config.phase1-landing-mutations.json",
+    "capture:phase2:read": "tsx src/index.ts --config config.phase2-banhang-read.json",
+    "capture:phase2:mutations": "tsx src/index.ts --config config.phase2-banhang-mutations.json",
+    "capture:phase1:editor": "tsx src/index.ts --config config.phase1-landing-editor.json",
+    "capture:phase2:detail": "tsx src/index.ts --config config.phase2-banhang-detail.json",
+    "probe:api": "tsx src/api-probe.ts",
+    "capture:phase-all": "npm run capture:phase1:read && npm run capture:phase1:editor && npm run capture:phase1:mutations && npm run capture:phase2:read && npm run capture:phase2:detail && npm run capture:phase2:mutations && npm run probe:api && npm run merge:schema && npm run export:typeorm",
+    "merge:schema": "tsx src/merge-captures.ts",
+    "export:typeorm": "tsx src/export-typeorm-hints.ts",
+    "export:ts-types": "tsx src/export-ts-types.ts",
+    "capture:ladipage:headed": "tsx src/index.ts --config config.ladipage.json --headed",
+    "capture:demo": "tsx src/index.ts --url https://httpbin.org/forms/post --duration 8000",
+    "install:browsers": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.52.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.9",
+    "tsx": "^4.19.4",
+    "typescript": "~5.9.2"
+  }
+}

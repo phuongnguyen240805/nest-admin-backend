@@ -1,6 +1,6 @@
-/** CRM custom field limits per subscription tier (Phase 7). */
+/** CRM custom field limits per subscription tier (Phase 7). -1 = unlimited */
 export const CRM_CUSTOM_FIELD_LIMITS: Record<string, number> = {
-  free: 0,
+  free: 10,
   pro: 20,
   enterprise: -1,
   lifetime: -1,

@@ -30,4 +30,10 @@ export class ProductEntity extends TenantScopedEntity {
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   imageUrl: string | null
+
+  @Column({ type: 'varchar', length: 50, default: 'physical' })
+  type: string
+
+  @Column({ type: 'varchar', length: 100, default: 'Sản phẩm vật lý' })
+  typeName: string
 }

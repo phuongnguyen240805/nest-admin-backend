@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger'
-import { IsInt, IsOptional, IsString, MaxLength } from 'class-validator'
+import { IsBoolean, IsInt, IsOptional, IsString, MaxLength } from 'class-validator'
 
 import { PagerDto } from '@liora/dto'
 
@@ -20,6 +20,17 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsInt()
   parentId?: number
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  imageUrl?: string
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  visible?: boolean
 }
 
 export class UpdateCategoryDto extends PartialType(CreateCategoryDto) {}

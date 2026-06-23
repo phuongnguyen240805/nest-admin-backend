@@ -57,6 +57,7 @@ import { SdkModule } from '../modules/sdk/sdk.module';
 import { SettingsModule } from '../modules/settings/settings.module';
 import { AnalyticsModule } from '../modules/analytics/analytics.module';
 import { DashboardModule } from '../modules/dashboard/dashboard.module';
+import { LadipageRpcModule } from '../modules/ladipage-rpc/ladipage-rpc.module';
 
 @Module({
   imports: [
@@ -115,6 +116,7 @@ import { DashboardModule } from '../modules/dashboard/dashboard.module';
     SettingsModule,
     AnalyticsModule,
     DashboardModule,
+    LadipageRpcModule,
   ],
   controllers: [AppController],
   providers: [

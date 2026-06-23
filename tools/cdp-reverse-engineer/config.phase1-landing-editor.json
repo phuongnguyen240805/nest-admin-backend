@@ -1,0 +1,18 @@
+{
+  "url": "https://appv6.ladipage.com/editor/6a37eb9931cd7400125f766f",
+  "durationMs": 20000,
+  "headless": true,
+  "outputDir": "output/phase1-landing-editor",
+  "maxBodyBytes": 8388608,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 35000, "label": "editor-load" },
+    { "type": "waitForSelector", "selector": "button:has-text('Lưu'), button:has-text('Save'), [aria-label*='Lưu']", "ms": 60000, "label": "save-btn-ready" },
+    { "type": "click", "selector": "button:has-text('Lưu'), button:has-text('Save'), [aria-label*='Lưu']", "label": "save-editor", "force": true },
+    { "type": "wait", "ms": 12000 },
+    { "type": "click", "selector": "button:has-text('Xuất bản'), button:has-text('Publish')", "label": "open-publish", "force": true },
+    { "type": "wait", "ms": 5000 },
+    { "type": "click", "selector": "button:has-text('Xuất bản'), button:has-text('Publish'), button:has-text('Xác nhận')", "label": "confirm-publish", "force": true },
+    { "type": "wait", "ms": 15000 }
+  ]
+}

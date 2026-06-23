@@ -1,0 +1,18 @@
+{
+  "url": "https://app.ladipage.com/ladipagede",
+  "durationMs": 45000,
+  "headless": false,
+  "outputDir": "output/ladipage",
+  "maxBodyBytes": 1048576,
+  "loginUrl": "https://app.ladipage.com/auth/login",
+  "pauseForLoginMs": 180000,
+  "saveStorageStatePath": ".session/ladipage-auth.json",
+  "actions": [
+    { "type": "navigate", "value": "https://app.ladipage.com/ladipagede" },
+    { "type": "wait", "ms": 10000 },
+    { "type": "scroll" },
+    { "type": "wait", "ms": 15000 },
+    { "type": "scroll" },
+    { "type": "wait", "ms": 15000 }
+  ]
+}

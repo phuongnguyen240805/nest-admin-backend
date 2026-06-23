@@ -27,7 +27,9 @@
       "@liora/supabase": ["../../libs/supabase/src/index.ts"],
       "@liora/supabase/*": ["../../libs/supabase/src/*"],
       "@liora/api-types": ["./libs/api-types/src/index.ts"],
-      "@liora/api-types/*": ["./libs/api-types/src/*"]
+      "@liora/api-types/*": ["./libs/api-types/src/*"],
+      "@liora/ladipage-types": ["./libs/ladipage-types/src/index.ts"],
+      "@liora/ladipage-types/*": ["./libs/ladipage-types/src/*"]
     },
     "esModuleInterop": true
   }

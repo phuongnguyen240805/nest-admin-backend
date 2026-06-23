@@ -12,7 +12,11 @@ import {
   SegmentQueryDto,
   UpdateSegmentDto,
 } from '../dto/segment.dto'
-import { CustomerSegmentEntity, SegmentEntity } from '../entities'
+import {
+  CrmPersonSegmentMapEntity,
+  CustomerSegmentEntity,
+  SegmentEntity,
+} from '../entities'
 
 @Injectable()
 export class SegmentService extends TenantScopedService {
@@ -22,6 +26,8 @@ export class SegmentService extends TenantScopedService {
     private readonly segmentRepository: Repository<SegmentEntity>,
     @InjectRepository(CustomerSegmentEntity)
     private readonly customerSegmentRepository: Repository<CustomerSegmentEntity>,
+    @InjectRepository(CrmPersonSegmentMapEntity)
+    private readonly personSegmentMapRepository: Repository<CrmPersonSegmentMapEntity>,
   ) {
     super(tenantContext)
   }
@@ -42,9 +48,7 @@ export class SegmentService extends TenantScopedService {
     const items = await Promise.all(
       result.items.map(async (segment) => ({
         ...segment,
-        customerCount: await this.customerSegmentRepository.count({
-          where: { segmentId: segment.id },
-        }),
+        customerCount: await this.countCustomersForSegment(segment.id),
       })),
     )
 
@@ -57,9 +61,7 @@ export class SegmentService extends TenantScopedService {
       { id },
       'Segment not found',
     )
-    const customerCount = await this.customerSegmentRepository.count({
-      where: { segmentId: id },
-    })
+    const customerCount = await this.countCustomersForSegment(id)
     return { ...segment, customerCount }
   }
 
@@ -89,6 +91,15 @@ export class SegmentService extends TenantScopedService {
       'Segment not found',
     )
     await this.customerSegmentRepository.delete({ segmentId: id })
+    await this.personSegmentMapRepository.delete({ segmentId: id })
     await this.segmentRepository.remove(segment)
+  }
+
+  private async countCustomersForSegment(segmentId: number): Promise<number> {
+    const [legacy, persons] = await Promise.all([
+      this.customerSegmentRepository.count({ where: { segmentId } }),
+      this.personSegmentMapRepository.count({ where: { segmentId } }),
+    ])
+    return legacy + persons
   }
 }

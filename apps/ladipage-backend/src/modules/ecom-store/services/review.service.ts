@@ -1,13 +1,18 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { In, Repository } from 'typeorm'
 
 import { paginate } from '@liora/nest-core/helper/paginate'
 import { Pagination } from '@liora/nest-core/helper/paginate/pagination'
 import { TenantContextService } from '@liora/nest-core'
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 
-import { CreateReviewDto, ReviewQueryDto, UpdateReviewDto } from '../dto/review.dto'
+import {
+  CreateGlobalReviewDto,
+  CreateReviewDto,
+  ReviewQueryDto,
+  UpdateReviewDto,
+} from '../dto/review.dto'
 import { ProductEntity, ProductReviewEntity } from '../entities'
 
 @Injectable()
@@ -20,6 +25,41 @@ export class ReviewService extends TenantScopedService {
     private readonly productRepository: Repository<ProductEntity>,
   ) {
     super(tenantContext)
+  }
+
+  async listAll(dto: ReviewQueryDto) {
+    const tenantId = this.requireTenantId()
+    const qb = this.reviewRepository
+      .createQueryBuilder('review')
+      .where('review.tenantId = :tenantId', { tenantId })
+      .orderBy('review.createdAt', 'DESC')
+
+    const result = await paginate(qb, { page: dto.page, pageSize: dto.pageSize })
+
+    const productIds = [
+      ...new Set(result.items.map((review) => review.productId)),
+    ]
+    const products = productIds.length
+      ? await this.productRepository.find({
+          where: { id: In(productIds), tenantId },
+        })
+      : []
+    const productMap = new Map(products.map((p) => [p.id, p.name]))
+
+    const items = result.items.map((review) => {
+      const productName = productMap.get(review.productId) ?? ''
+      return {
+        ...review,
+        productName,
+        productNames: review.productNames?.length
+          ? review.productNames
+          : productName
+            ? [productName]
+            : [],
+      }
+    })
+
+    return new Pagination(items, result.meta)
   }
 
   async list(
@@ -74,6 +114,31 @@ export class ReviewService extends TenantScopedService {
       rating: dto.rating,
       content: dto.content ?? null,
       reviewerName: dto.reviewerName ?? null,
+      avatarUrl: dto.avatarUrl ?? null,
+      imageUrls: dto.imageUrls ?? null,
+      productNames: dto.productNames ?? null,
+    })
+  }
+
+  async createGlobal(dto: CreateGlobalReviewDto) {
+    const product = await this.findOneForTenantOrFail(
+      this.productRepository,
+      { id: dto.productId },
+      'Product not found',
+    )
+
+    const productNames =
+      dto.productNames?.length ? dto.productNames : [product.name]
+
+    return this.reviewRepository.save({
+      tenantId: this.requireTenantId(),
+      productId: dto.productId,
+      rating: dto.rating,
+      content: dto.content ?? null,
+      reviewerName: dto.reviewerName ?? null,
+      avatarUrl: dto.avatarUrl ?? null,
+      imageUrls: dto.imageUrls ?? null,
+      productNames,
     })
   }
 
@@ -85,6 +150,15 @@ export class ReviewService extends TenantScopedService {
 
   async remove(productId: number, id: number) {
     const review = await this.detail(productId, id)
+    await this.reviewRepository.remove(review)
+  }
+
+  async removeGlobal(id: number) {
+    const review = await this.findOneForTenantOrFail(
+      this.reviewRepository,
+      { id },
+      'Review not found',
+    )
     await this.reviewRepository.remove(review)
   }
 }

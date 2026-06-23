@@ -12,7 +12,7 @@ import {
   CreateCategoryDto,
   UpdateCategoryDto,
 } from '../dto/category.dto'
-import { ProductCategoryEntity } from '../entities'
+import { ProductCategoryEntity, ProductEntity } from '../entities'
 
 @Injectable()
 export class CategoryService extends TenantScopedService {
@@ -20,11 +20,13 @@ export class CategoryService extends TenantScopedService {
     tenantContext: TenantContextService,
     @InjectRepository(ProductCategoryEntity)
     private readonly categoryRepository: Repository<ProductCategoryEntity>,
+    @InjectRepository(ProductEntity)
+    private readonly productRepository: Repository<ProductEntity>,
   ) {
     super(tenantContext)
   }
 
-  async list(dto: CategoryQueryDto): Promise<Pagination<ProductCategoryEntity>> {
+  async list(dto: CategoryQueryDto) {
     const tenantId = this.requireTenantId()
     const qb = this.categoryRepository
       .createQueryBuilder('category')
@@ -35,7 +37,18 @@ export class CategoryService extends TenantScopedService {
     }
 
     qb.orderBy('category.createdAt', 'DESC')
-    return paginate(qb, { page: dto.page, pageSize: dto.pageSize })
+    const result = await paginate(qb, { page: dto.page, pageSize: dto.pageSize })
+
+    const items = await Promise.all(
+      result.items.map(async (category) => ({
+        ...category,
+        productCount: await this.productRepository.count({
+          where: { categoryId: category.id, tenantId },
+        }),
+      })),
+    )
+
+    return new Pagination(items, result.meta)
   }
 
   async detail(id: number) {
@@ -47,11 +60,14 @@ export class CategoryService extends TenantScopedService {
   }
 
   async create(dto: CreateCategoryDto) {
-    return this.categoryRepository.save({
+    const category = await this.categoryRepository.save({
       tenantId: this.requireTenantId(),
       name: dto.name,
       parentId: dto.parentId ?? null,
+      imageUrl: dto.imageUrl ?? null,
+      visible: dto.visible ?? true,
     })
+    return { ...category, productCount: 0 }
   }
 
   async update(id: number, dto: UpdateCategoryDto) {

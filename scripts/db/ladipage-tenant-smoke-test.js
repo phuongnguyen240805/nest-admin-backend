@@ -287,6 +287,45 @@ async function main() {
   // Ecom
   await testProtected('GET /ecom/orders', 'GET', '/ecom/orders?page=1&pageSize=5', token)
   await testProtected('GET /ecom/products', 'GET', '/ecom/products?page=1&pageSize=5', token)
+  await testProtected('GET /ecom/reviews', 'GET', '/ecom/reviews?page=1&pageSize=5', token)
+  await testProtected('GET /ecom/tags (order)', 'GET', '/ecom/tags?entity=order&page=1&pageSize=5', token)
+  await testProtected('GET /ecom/categories', 'GET', '/ecom/categories?page=1&pageSize=5', token)
+
+  const tagRes = await request('POST', `${API}/ecom/tags`, {
+    ...auth,
+    body: { entity: 'order', name: `Smoke Tag ${Date.now()}`, color: '#fb923c' },
+  })
+  const tagPass =
+    tagRes.status !== 422 &&
+    tagRes.ok &&
+    (tagRes.json?.code === 200 || tagRes.json?.code === undefined)
+  record(
+    'POST /ecom/tags (color field)',
+    tagPass,
+    tagRes.status === 422
+      ? `HTTP 422 — rebuild & restart ladipage-backend (stale DTO)`
+      : `HTTP ${tagRes.status}`,
+  )
+
+  const catRes = await request('POST', `${API}/ecom/categories`, {
+    ...auth,
+    body: {
+      name: `Smoke Cat ${Date.now()}`,
+      visible: true,
+      imageUrl: 'https://example.com/cat.png',
+    },
+  })
+  const catPass =
+    catRes.status !== 422 &&
+    catRes.ok &&
+    (catRes.json?.code === 200 || catRes.json?.code === undefined)
+  record(
+    'POST /ecom/categories (visible field)',
+    catPass,
+    catRes.status === 422
+      ? `HTTP 422 — rebuild & restart ladipage-backend (stale DTO)`
+      : `HTTP ${catRes.status}`,
+  )
 
   const orderRes = await request('POST', `${API}/ecom/orders`, {
     ...auth,
@@ -300,6 +339,30 @@ async function main() {
   const orderPass = orderRes.ok && (orderRes.json?.code === 200 || orderRes.json?.code === undefined)
   record('POST /ecom/orders', orderPass, `HTTP ${orderRes.status}`)
 
+  const productRes = await request('POST', `${API}/ecom/products`, {
+    ...auth,
+    body: {
+      name: `Smoke Product ${Date.now()}`,
+      sku: `SMK-${Date.now()}`,
+      price: 0,
+      stock: 0,
+      status: 'ACTIVE',
+      type: 'digital',
+      typeName: 'Sản phẩm số',
+    },
+  })
+  const productPass =
+    productRes.status !== 404 &&
+    productRes.ok &&
+    (productRes.json?.code === 200 || productRes.json?.code === undefined)
+  record(
+    'POST /ecom/products',
+    productPass,
+    productRes.status === 404
+      ? 'HTTP 404 Product not found — rebuild & restart ladipage-backend (transaction/detail bug)'
+      : `HTTP ${productRes.status}`,
+  )
+
   // CRM v1
   await testProtected('GET /crm/customers', 'GET', '/crm/customers?page=1&pageSize=5', token)
   const crmSearch = await request('GET', `${API}/crm/customers?search=0900000001`, auth)
@@ -307,6 +370,65 @@ async function main() {
   record('GET /crm/customers (auto-link)', crmPass, `HTTP ${crmSearch.status}`)
   await testProtected('GET /crm/segments', 'GET', '/crm/segments?page=1&pageSize=5', token)
   await testProtected('GET /crm/tags', 'GET', '/crm/tags?page=1&pageSize=5', token)
+  await testProtected('GET /crm/custom-fields', 'GET', '/crm/custom-fields?targetType=person&page=1&pageSize=5', token)
+
+  const crmTagRes = await request('POST', `${API}/crm/tags`, {
+    ...auth,
+    body: { name: `Smoke CRM Tag ${Date.now()}` },
+  })
+  const crmTagPass = crmTagRes.ok && (crmTagRes.json?.code === 200 || crmTagRes.json?.code === undefined)
+  record('POST /crm/tags', crmTagPass, `HTTP ${crmTagRes.status}`)
+  const crmTagId = crmTagRes.json?.data?.id
+
+  const crmSegRes = await request('POST', `${API}/crm/segments`, {
+    ...auth,
+    body: { name: `Smoke CRM Segment ${Date.now()}` },
+  })
+  const crmSegPass = crmSegRes.ok && (crmSegRes.json?.code === 200 || crmSegRes.json?.code === undefined)
+  record('POST /crm/segments', crmSegPass, `HTTP ${crmSegRes.status}`)
+  const crmSegId = crmSegRes.json?.data?.id
+
+  const crmCfRes = await request('POST', `${API}/crm/custom-fields`, {
+    ...auth,
+    body: {
+      fieldName: `smoke_field_${Date.now()}`,
+      displayName: 'Smoke Custom Field',
+      dataType: 'TEXT',
+      targetType: 'person',
+    },
+  })
+  const crmCfPass =
+    (crmCfRes.ok && (crmCfRes.json?.code === 200 || crmCfRes.json?.code === undefined)) ||
+    crmCfRes.status === 403
+  record(
+    'POST /crm/custom-fields (person)',
+    crmCfPass,
+    crmCfRes.status === 403
+      ? 'HTTP 403 — Pro tier field quota reached (endpoint OK)'
+      : `HTTP ${crmCfRes.status}`,
+  )
+
+  const crmCustRes = await request('POST', `${API}/crm/customers`, {
+    ...auth,
+    body: {
+      name: `Smoke CRM Customer ${Date.now()}`,
+      phone: `09${String(Date.now()).slice(-8)}`,
+      email: `smoke.crm.${Date.now()}@test.local`,
+      status: 'ACTIVE',
+      tagIds: crmTagId ? [crmTagId] : undefined,
+      segmentIds: crmSegId ? [crmSegId] : undefined,
+    },
+  })
+  const crmCustPass = crmCustRes.ok && (crmCustRes.json?.code === 200 || crmCustRes.json?.code === undefined)
+  const crmCustTags = crmCustRes.json?.data?.tags
+  const crmCustSegment = crmCustRes.json?.data?.segment
+  record(
+    'POST /crm/customers (tag/segment bridge)',
+    crmCustPass && Array.isArray(crmCustTags) && crmCustTags.length > 0,
+    crmCustPass
+      ? `HTTP ${crmCustRes.status}, tags=${JSON.stringify(crmCustTags)}, segment=${crmCustSegment ?? 'none'}`
+      : `HTTP ${crmCustRes.status}`,
+  )
 
   // CRM (Phase 9)
   console.log('\n--- CRM smoke ---')

@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger'
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator'
+import {
+  IsArray,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator'
 
 import { PagerDto } from '@liora/dto'
 
@@ -22,6 +30,30 @@ export class CreateReviewDto {
   @IsString()
   @MaxLength(255)
   reviewerName?: string
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  avatarUrl?: string
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  imageUrls?: string[]
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  productNames?: string[]
+}
+
+export class CreateGlobalReviewDto extends CreateReviewDto {
+  @ApiProperty()
+  @IsInt()
+  productId: number
 }
 
 export class UpdateReviewDto extends PartialType(CreateReviewDto) {}

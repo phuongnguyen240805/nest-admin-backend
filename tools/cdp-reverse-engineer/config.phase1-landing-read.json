@@ -1,0 +1,31 @@
+{
+  "url": "https://appv6.ladipage.com/ladipage",
+  "durationMs": 20000,
+  "headless": true,
+  "outputDir": "output/phase1-landing-read",
+  "maxBodyBytes": 4194304,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 8000, "label": "landing-list" },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladipage/templates", "label": "templates" },
+    { "type": "wait", "ms": 8000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladipage/tags", "label": "tags" },
+    { "type": "wait", "ms": 6000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladipage/forms", "label": "forms" },
+    { "type": "wait", "ms": 6000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladipage/domains", "label": "domains" },
+    { "type": "wait", "ms": 6000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladipage/leads", "label": "leads" },
+    { "type": "wait", "ms": 8000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/editor/6a37eb9931cd7400125f766f", "label": "editor" },
+    { "type": "wait", "ms": 30000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladipage", "label": "back-list" },
+    { "type": "wait", "ms": 6000 },
+    { "type": "click", "selector": "table tbody tr:first-child", "label": "select-first-page" },
+    { "type": "wait", "ms": 2000 },
+    { "type": "click", "selector": "table tbody tr:first-child button:last-child", "label": "row-menu" },
+    { "type": "wait", "ms": 1500 },
+    { "type": "click", "selector": "[role='menuitem']:has-text('Báo cáo')", "label": "page-report" },
+    { "type": "wait", "ms": 12000 }
+  ]
+}

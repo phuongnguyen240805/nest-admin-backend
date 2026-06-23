@@ -73,6 +73,18 @@ export class CreateProductDto {
   @IsArray()
   @IsInt({ each: true })
   tagIds?: number[]
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  type?: string
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  typeName?: string
 }
 
 export class UpdateProductDto extends PartialType(CreateProductDto) {}

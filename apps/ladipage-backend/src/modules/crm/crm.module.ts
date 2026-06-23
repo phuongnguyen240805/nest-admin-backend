@@ -30,6 +30,8 @@ import {
   CustomerTagMapEntity,
   SegmentEntity,
   SyncErrorLogEntity,
+  CrmPersonTagMapEntity,
+  CrmPersonSegmentMapEntity,
 } from './entities'
 import { CrmCustomFieldFacade } from './crm-custom-field.facade'
 import { CrmFacade } from './crm.facade'
@@ -39,6 +41,7 @@ import { CustomerService } from './services/customer.service'
 import { ErrorLogService } from './services/error-log.service'
 import { SegmentService } from './services/segment.service'
 import { CrmTagService } from './services/tag.service'
+import { PersonRelationService } from './services/person-relation.service'
 
 @Module({
   imports: [
@@ -56,6 +59,8 @@ import { CrmTagService } from './services/tag.service'
       CustomerCustomFieldEntity,
       CustomerFieldValueEntity,
       SyncErrorLogEntity,
+      CrmPersonTagMapEntity,
+      CrmPersonSegmentMapEntity,
     ]),
   ],
   controllers: [
@@ -84,6 +89,7 @@ import { CrmTagService } from './services/tag.service'
     CrmTagService,
     CrmCustomFieldService,
     ErrorLogService,
+    PersonRelationService,
   ],
   exports: [CustomerService, TypeOrmModule],
 })

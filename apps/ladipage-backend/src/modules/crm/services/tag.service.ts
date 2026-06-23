@@ -8,7 +8,11 @@ import { TenantContextService } from '@liora/nest-core'
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 
 import { CreateTagDto, TagQueryDto, UpdateTagDto } from '../dto/tag.dto'
-import { CustomerTagEntity, CustomerTagMapEntity } from '../entities'
+import {
+  CrmPersonTagMapEntity,
+  CustomerTagEntity,
+  CustomerTagMapEntity,
+} from '../entities'
 
 @Injectable()
 export class CrmTagService extends TenantScopedService {
@@ -18,6 +22,8 @@ export class CrmTagService extends TenantScopedService {
     private readonly tagRepository: Repository<CustomerTagEntity>,
     @InjectRepository(CustomerTagMapEntity)
     private readonly tagMapRepository: Repository<CustomerTagMapEntity>,
+    @InjectRepository(CrmPersonTagMapEntity)
+    private readonly personTagMapRepository: Repository<CrmPersonTagMapEntity>,
   ) {
     super(tenantContext)
   }
@@ -38,7 +44,7 @@ export class CrmTagService extends TenantScopedService {
     const items = await Promise.all(
       result.items.map(async (tag) => ({
         ...tag,
-        count: await this.tagMapRepository.count({ where: { tagId: tag.id } }),
+        count: await this.countCustomersForTag(tag.id),
       })),
     )
 
@@ -51,7 +57,7 @@ export class CrmTagService extends TenantScopedService {
       { id },
       'Tag not found',
     )
-    const count = await this.tagMapRepository.count({ where: { tagId: id } })
+    const count = await this.countCustomersForTag(id)
     return { ...tag, count }
   }
 
@@ -81,6 +87,15 @@ export class CrmTagService extends TenantScopedService {
       'Tag not found',
     )
     await this.tagMapRepository.delete({ tagId: id })
+    await this.personTagMapRepository.delete({ tagId: id })
     await this.tagRepository.remove(tag)
+  }
+
+  private async countCustomersForTag(tagId: number): Promise<number> {
+    const [legacy, persons] = await Promise.all([
+      this.tagMapRepository.count({ where: { tagId } }),
+      this.personTagMapRepository.count({ where: { tagId } }),
+    ])
+    return legacy + persons
   }
 }

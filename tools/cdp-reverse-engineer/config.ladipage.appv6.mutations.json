@@ -1,0 +1,23 @@
+{
+  "url": "https://appv6.ladipage.com/ladipage",
+  "durationMs": 15000,
+  "headless": true,
+  "outputDir": "output/ladipage-appv6-full",
+  "maxBodyBytes": 2097152,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 8000 },
+    { "type": "click", "selector": "table tbody tr:first-child button:last-child" },
+    { "type": "wait", "ms": 1500 },
+    { "type": "click", "selector": "[role='menuitem']:has-text('Báo cáo')" },
+    { "type": "wait", "ms": 10000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ladipage" },
+    { "type": "wait", "ms": 6000 },
+    { "type": "click", "selector": "table tbody tr:first-child button:last-child" },
+    { "type": "wait", "ms": 1500 },
+    { "type": "click", "selector": "[role='menuitem']:has-text('Nhân bản')" },
+    { "type": "wait", "ms": 2000 },
+    { "type": "click", "selector": "button:has-text('Xác nhận'), button:has-text('Nhân bản'), button:has-text('Đồng ý')" },
+    { "type": "wait", "ms": 10000 }
+  ]
+}

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger'
-import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator'
+import { IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator'
 
 import { PagerDto } from '@liora/dto'
 
@@ -25,6 +25,12 @@ export class CreateTagDto {
   @IsString()
   @MaxLength(100)
   name: string
+
+  @ApiPropertyOptional({ description: 'Order tag color (hex), ignored for product tags' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9A-Fa-f]{6}$/)
+  color?: string
 }
 
 export class UpdateTagDto extends PartialType(

@@ -23,6 +23,7 @@ import {
 } from './dto/customer.dto'
 import { CompanyService } from './services/company.service'
 import { CustomerService } from './services/customer.service'
+import { PersonRelationService } from './services/person-relation.service'
 
 /** FE-compatible customer shape (matches CustomerItem contract) */
 export interface CustomerFacadeItem {
@@ -34,6 +35,7 @@ export interface CustomerFacadeItem {
   createdAt: Date
   updatedAt?: Date
   tags?: string[]
+  segment?: string
 }
 
 export interface CompanyFacadeItem {
@@ -50,6 +52,7 @@ export class CrmFacade {
     private readonly companyService: CompanyService,
     private readonly personService: CrmPersonService,
     private readonly crmCompanyService: CrmCompanyService,
+    private readonly personRelationService: PersonRelationService,
   ) {}
 
   get isEnabled(): boolean {
@@ -75,10 +78,10 @@ export class CrmFacade {
       search: dto.search,
       status: dto.status,
     })
-    return {
-      ...result,
-      items: result.items.map((p) => this.mapPerson(p)),
-    }
+    const items = await Promise.all(
+      result.items.map((p) => this.mapPersonWithRelations(p)),
+    )
+    return { ...result, items }
   }
 
   async detailCustomer(id: string): Promise<CustomerFacadeItem> {
@@ -88,7 +91,7 @@ export class CrmFacade {
     }
 
     const person = await this.personService.detail(id)
-    return this.mapPerson(person)
+    return this.mapPersonWithRelations(person)
   }
 
   async createCustomer(dto: CreateCustomerDto): Promise<CustomerFacadeItem> {
@@ -103,7 +106,15 @@ export class CrmFacade {
       email: dto.email,
       status: dto.status,
     })
-    return this.mapPerson(person)
+
+    if (dto.tagIds || dto.segmentIds) {
+      await this.personRelationService.syncRelations(person.id, {
+        tagIds: dto.tagIds,
+        segmentIds: dto.segmentIds,
+      })
+    }
+
+    return this.mapPersonWithRelations(person)
   }
 
   async updateCustomer(
@@ -121,7 +132,15 @@ export class CrmFacade {
       email: dto.email,
       status: dto.status,
     })
-    return this.mapPerson(person)
+
+    if (dto.tagIds || dto.segmentIds) {
+      await this.personRelationService.syncRelations(person.id, {
+        tagIds: dto.tagIds,
+        segmentIds: dto.segmentIds,
+      })
+    }
+
+    return this.mapPersonWithRelations(person)
   }
 
   async removeCustomer(id: string): Promise<void> {
@@ -129,6 +148,7 @@ export class CrmFacade {
       await this.customerService.remove(this.parseV1Id(id))
       return
     }
+    await this.personRelationService.removeRelations(id)
     await this.personService.remove(id)
   }
 
@@ -216,7 +236,13 @@ export class CrmFacade {
     }
   }
 
-  private mapPerson(person: CrmPersonEntity): CustomerFacadeItem {
+  private async mapPersonWithRelations(
+    person: CrmPersonEntity,
+  ): Promise<CustomerFacadeItem> {
+    const [tags, segment] = await Promise.all([
+      this.personRelationService.getTagNames(person.id),
+      this.personRelationService.getPrimarySegmentName(person.id),
+    ])
     return {
       id: person.id,
       name: person.name,
@@ -225,7 +251,8 @@ export class CrmFacade {
       status: person.status as CustomerStatus,
       createdAt: person.createdAt,
       updatedAt: person.updatedAt,
-      tags: [],
+      tags,
+      segment,
     }
   }
 

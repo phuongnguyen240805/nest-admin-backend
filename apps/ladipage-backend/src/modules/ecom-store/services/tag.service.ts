@@ -67,28 +67,61 @@ export class EcomTagService extends TenantScopedService {
   }
 
   async create(dto: CreateTagDto) {
-    const repo = this.getTagRepository(dto.entity)
-    return repo.save({
-      tenantId: this.requireTenantId(),
+    const tenantId = this.requireTenantId()
+    if (dto.entity === EcomEntityType.ORDER) {
+      return this.orderTagRepository.save({
+        tenantId,
+        name: dto.name,
+        color: dto.color ?? '#e5e7eb',
+      })
+    }
+    return this.productTagRepository.save({
+      tenantId,
       name: dto.name,
     })
   }
 
   async update(entity: EcomEntityType, id: number, dto: UpdateTagDto) {
-    const repo = this.getTagRepository(entity)
-    const tag = await this.findOneForTenantOrFail(repo, { id }, 'Tag not found')
-    if (dto.name) {
-      tag.name = dto.name
+    if (entity === EcomEntityType.ORDER) {
+      const tag = await this.findOneForTenantOrFail(
+        this.orderTagRepository,
+        { id },
+        'Tag not found',
+      )
+      if (dto.name) tag.name = dto.name
+      if (dto.color) tag.color = dto.color
+      return this.orderTagRepository.save(tag)
     }
-    return repo.save(tag)
+
+    const tag = await this.findOneForTenantOrFail(
+      this.productTagRepository,
+      { id },
+      'Tag not found',
+    )
+    if (dto.name) tag.name = dto.name
+    return this.productTagRepository.save(tag)
   }
 
   async remove(entity: EcomEntityType, id: number) {
-    const repo = this.getTagRepository(entity)
     const mapRepo = this.getTagMapRepository(entity)
-    const tag = await this.findOneForTenantOrFail(repo, { id }, 'Tag not found')
     await mapRepo.delete({ tagId: id })
-    await repo.remove(tag)
+
+    if (entity === EcomEntityType.ORDER) {
+      const tag = await this.findOneForTenantOrFail(
+        this.orderTagRepository,
+        { id },
+        'Tag not found',
+      )
+      await this.orderTagRepository.remove(tag)
+      return
+    }
+
+    const tag = await this.findOneForTenantOrFail(
+      this.productTagRepository,
+      { id },
+      'Tag not found',
+    )
+    await this.productTagRepository.remove(tag)
   }
 
   private getTagRepository(entity: EcomEntityType) {

@@ -13,6 +13,7 @@ import { InventoryController } from './controllers/inventory.controller'
 import { OrderController } from './controllers/order.controller'
 import { ProductController } from './controllers/product.controller'
 import { ReviewController } from './controllers/review.controller'
+import { ReviewGlobalController } from './controllers/review-global.controller'
 import { TagController } from './controllers/tag.controller'
 import {
   CustomFieldEntity,
@@ -63,6 +64,7 @@ import { EcomTagService } from './services/tag.service'
     TagController,
     InventoryController,
     ReviewController,
+    ReviewGlobalController,
     CustomFieldController,
     DeliveryNoteController,
   ],

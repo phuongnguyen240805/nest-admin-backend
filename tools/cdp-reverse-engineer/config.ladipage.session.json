@@ -1,0 +1,15 @@
+{
+  "url": "https://app.ladipage.com/ladipagede",
+  "durationMs": 45000,
+  "headless": true,
+  "outputDir": "output/ladipage",
+  "maxBodyBytes": 1048576,
+  "storageStatePath": ".session/ladipage-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 8000 },
+    { "type": "scroll" },
+    { "type": "wait", "ms": 12000 },
+    { "type": "scroll" },
+    { "type": "wait", "ms": 12000 }
+  ]
+}

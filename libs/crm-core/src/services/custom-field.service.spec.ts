@@ -36,7 +36,13 @@ describe('CrmCustomFieldService', () => {
   })
 
   describe('assertQuota', () => {
-    it('blocks free tier', async () => {
+    it('allows free tier under limit', async () => {
+      mockDefRepo.count.mockResolvedValue(5)
+      await expect(service.assertQuota('free')).resolves.toBeUndefined()
+    })
+
+    it('blocks free tier when limit reached', async () => {
+      mockDefRepo.count.mockResolvedValue(10)
       await expect(service.assertQuota('free')).rejects.toThrow(ForbiddenException)
     })
 

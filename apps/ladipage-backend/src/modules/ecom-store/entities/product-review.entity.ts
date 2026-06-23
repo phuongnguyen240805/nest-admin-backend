@@ -16,4 +16,13 @@ export class ProductReviewEntity extends TenantScopedEntity {
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   reviewerName: string | null
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  avatarUrl: string | null
+
+  @Column({ type: 'jsonb', nullable: true })
+  imageUrls: string[] | null
+
+  @Column({ type: 'jsonb', nullable: true })
+  productNames: string[] | null
 }

@@ -1,0 +1,23 @@
+{
+  "url": "https://appv6.ladipage.com/ecommerce/orders",
+  "durationMs": 12000,
+  "headless": true,
+  "outputDir": "output/phase2-banhang-detail",
+  "maxBodyBytes": 4194304,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 8000, "label": "orders-list" },
+    { "type": "waitForSelector", "selector": "table tbody tr", "ms": 20000, "label": "table-ready" },
+    { "type": "dblclick", "selector": "table tbody tr:first-child", "label": "open-order-dblclick", "force": true },
+    { "type": "wait", "ms": 15000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ecommerce/orders/3289450", "label": "order-detail-url" },
+    { "type": "wait", "ms": 15000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ecommerce/products", "label": "products-list" },
+    { "type": "wait", "ms": 8000 },
+    { "type": "waitForSelector", "selector": "table tbody tr", "ms": 20000, "label": "product-table" },
+    { "type": "dblclick", "selector": "table tbody tr:first-child", "label": "open-product-dblclick", "force": true },
+    { "type": "wait", "ms": 15000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/ecommerce/products/118752", "label": "product-detail-url" },
+    { "type": "wait", "ms": 15000 }
+  ]
+}
