@@ -11,6 +11,7 @@ interface CapturedPostApi {
   requestBody?: unknown;
   responseBody?: unknown;
   requestHeaders?: Record<string, unknown>;
+  timestamp?: string;
 }
 
 interface ContractFixture {
@@ -21,6 +22,7 @@ interface ContractFixture {
   request: unknown;
   response: unknown;
   requestHeaders?: Record<string, unknown>;
+  capturedAt?: string;
 }
 
 function parseRouteFilter(argv: string[]): Set<string> | null {
@@ -45,18 +47,57 @@ function fixtureFileName(route: string): string {
 }
 
 function phaseFolder(api: CapturedPostApi): string {
-  if (api.host === 'api.ladiflow.com') return 'phase3';
-  if (routeKey(api).startsWith('report/')) return 'phase4';
+  const route = routeKey(api);
+  if (api.host === 'api.ladipage.com' && route.startsWith('application/')) return 'phaseA';
   if (
-    routeKey(api).startsWith('order/') ||
-    routeKey(api).startsWith('product/') ||
-    routeKey(api).startsWith('checkout') ||
-    routeKey(api).startsWith('payment/') ||
-    routeKey(api).startsWith('shipping/')
+    api.host === 'api.ladiflow.com' &&
+    (
+      route.startsWith('ladiwork-dashboard/') ||
+      route.startsWith('crm-pipeline/') ||
+      route.startsWith('crm-pipeline-category/') ||
+      route.startsWith('crm-deal/') ||
+      route.startsWith('crm-deal-custom-field/') ||
+      route.startsWith('crm-filter/') ||
+      route.startsWith('crm-label/') ||
+      route.startsWith('crm-organization/') ||
+      route.startsWith('crm-staff-configuration/')
+    )
+  ) {
+    return 'phaseB';
+  }
+  if (
+    (api.host === 'api.ladiflow.com' || api.host === 'apiv5.ladiflow.com') &&
+    (
+      route.startsWith('flow/') ||
+      route.startsWith('flow-tag/') ||
+      route.startsWith('integration/') ||
+      route.startsWith('broadcast/') ||
+      route.startsWith('recurring-topic/') ||
+      route === 'customer-tag/list-all' ||
+      route === 'segment/list-all'
+    )
+  ) {
+    return 'phaseC';
+  }
+  if (api.host === 'api.ladiflow.com') return 'phase3';
+  if (route.startsWith('report/')) return 'phase4';
+  if (
+    route.startsWith('order/') ||
+    route.startsWith('product/') ||
+    route.startsWith('checkout') ||
+    route.startsWith('payment/') ||
+    route.startsWith('shipping/')
   ) {
     return 'phase2';
   }
   return 'phase1';
+}
+
+function isValidFixture(api: CapturedPostApi): boolean {
+  if (api.status !== 200) return false;
+  if (!api.responseBody || typeof api.responseBody !== 'object') return false;
+  const code = (api.responseBody as { code?: number }).code;
+  return code === 200;
 }
 
 async function main(): Promise<void> {
@@ -73,6 +114,7 @@ async function main(): Promise<void> {
     if (api.method !== 'POST') continue;
     const key = routeKey(api);
     if (routeFilter && !routeFilter.has(key)) continue;
+    if (!isValidFixture(api)) continue;
 
     const fixture: ContractFixture = {
       route: key,
@@ -82,6 +124,7 @@ async function main(): Promise<void> {
       request: api.requestBody ?? null,
       response: api.responseBody ?? null,
       requestHeaders: api.requestHeaders,
+      capturedAt: api.timestamp,
     };
     const output = join(outputRoot, phaseFolder(api), fixtureFileName(key));
     await mkdir(dirname(output), { recursive: true });

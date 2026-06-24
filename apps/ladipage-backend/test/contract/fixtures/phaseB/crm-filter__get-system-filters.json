@@ -1,0 +1,202 @@
+{
+  "route": "crm-filter/get-system-filters",
+  "host": "api.ladiflow.com",
+  "path": "/1.0/crm-filter/get-system-filters",
+  "status": 200,
+  "request": {
+    "lang": "vi"
+  },
+  "response": {
+    "data": [
+      {
+        "_id": 1,
+        "name": "All deleted deals",
+        "key_name": "CRM.FILTER_DEAL.ALL_DELETED_DEALS",
+        "filter_type": "system",
+        "entity": "deal",
+        "is_editable": false,
+        "is_temporary": false,
+        "is_active": true,
+        "visibility": "public",
+        "conditions": {
+          "glue": "and",
+          "conditions": [
+            {
+              "glue": "and",
+              "conditions": [
+                {
+                  "object": "deal",
+                  "field_id": "status",
+                  "operator": "=",
+                  "value": [
+                    "DELETED"
+                  ],
+                  "extra_value": null,
+                  "json_value_flag": false
+                }
+              ]
+            },
+            {
+              "glue": "or",
+              "conditions": []
+            }
+          ]
+        }
+      },
+      {
+        "_id": 2,
+        "name": "All lost deals",
+        "key_name": "CRM.FILTER_DEAL.ALL_LOST_DEALS",
+        "filter_type": "system",
+        "entity": "deal",
+        "is_editable": false,
+        "is_temporary": false,
+        "is_active": true,
+        "visibility": "public",
+        "conditions": {
+          "glue": "and",
+          "conditions": [
+            {
+              "glue": "and",
+              "conditions": [
+                {
+                  "object": "deal",
+                  "field_id": "status",
+                  "operator": "=",
+                  "value": [
+                    "LOST"
+                  ],
+                  "extra_value": null,
+                  "json_value_flag": false
+                }
+              ]
+            },
+            {
+              "glue": "or",
+              "conditions": []
+            }
+          ]
+        }
+      },
+      {
+        "_id": 3,
+        "name": "All open deals",
+        "key_name": "CRM.FILTER_DEAL.ALL_OPEN_DEALS",
+        "filter_type": "system",
+        "entity": "deal",
+        "is_editable": false,
+        "is_temporary": false,
+        "is_active": true,
+        "visibility": "public",
+        "conditions": {
+          "glue": "and",
+          "conditions": [
+            {
+              "glue": "and",
+              "conditions": [
+                {
+                  "object": "deal",
+                  "field_id": "status",
+                  "operator": "=",
+                  "value": [
+                    "OPEN"
+                  ],
+                  "extra_value": null,
+                  "json_value_flag": false
+                }
+              ]
+            },
+            {
+              "glue": "or",
+              "conditions": []
+            }
+          ]
+        }
+      },
+      {
+        "_id": 4,
+        "name": "All won deals",
+        "key_name": "CRM.FILTER_DEAL.ALL_WON_DEALS",
+        "filter_type": "system",
+        "entity": "deal",
+        "is_editable": false,
+        "is_temporary": false,
+        "is_active": true,
+        "visibility": "public",
+        "conditions": {
+          "glue": "and",
+          "conditions": [
+            {
+              "glue": "and",
+              "conditions": [
+                {
+                  "object": "deal",
+                  "field_id": "status",
+                  "operator": "=",
+                  "value": [
+                    "WON"
+                  ],
+                  "extra_value": null,
+                  "json_value_flag": false
+                }
+              ]
+            },
+            {
+              "glue": "or",
+              "conditions": []
+            }
+          ]
+        }
+      },
+      {
+        "_id": 7,
+        "name": "Rotten deals",
+        "key_name": "CRM.FILTER_DEAL.ROTTEN_DEALS",
+        "filter_type": "system",
+        "entity": "deal",
+        "is_editable": false,
+        "is_temporary": false,
+        "is_active": true,
+        "visibility": "public",
+        "conditions": {
+          "glue": "and",
+          "conditions": [
+            {
+              "glue": "and",
+              "conditions": [
+                {
+                  "object": "deal",
+                  "field_id": "rotten_flag",
+                  "operator": "=",
+                  "value": [
+                    true
+                  ],
+                  "extra_value": null,
+                  "json_value_flag": false
+                }
+              ]
+            },
+            {
+              "glue": "or",
+              "conditions": []
+            }
+          ]
+        }
+      }
+    ],
+    "message": "Thành công",
+    "code": 200
+  },
+  "requestHeaders": {
+    "owner-id": "6a2c26c92d543800211b5157",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "c588de441f49361e9d88ec98cd4fdb9fa54690d1f05542b5a56f838ad558e5f218b17b07e8392dc5e342ae73784ef985729e75ea72e53c0f39091e216bdf353b1128a5060c690b0d50cedf379770bcc2ec81bf87c4c7f1cd5d103d81d1a16a033413473606bcdeb600af92be385b77832c67a69ad7573d986bc2983feb1f722223e3509e0e03391a51180eca76a4bc8f7b9cb189c60bcfc8b181ccfb9a0128704a06a8e64cbadfb97f7dfd79c31e39024e68db40b342515f85f4e945e7457420fc491dfee74c452797ec680b69cb300132556cdf33c26f6a4d4e0509dc8bd611e0f1ab2cec87167e8b6117ea7b85aa15d2d10a11d949806d74c77b2583af6e2e4317910780f4d102c3081667f93970ffd4e66d156582c5266e6930b0332a6080",
+    "Referer": "https://appv6.ladipage.com/",
+    "sec-ch-ua": "\"HeadlessChrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+    "sec-ch-ua-mobile": "?0",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LioraCDP/1.0",
+    "accept": "application/json, text/plain, */*",
+    "content-type": "application/json;charset=UTF-8"
+  },
+  "capturedAt": "2026-06-23T15:20:54.413Z"
+}

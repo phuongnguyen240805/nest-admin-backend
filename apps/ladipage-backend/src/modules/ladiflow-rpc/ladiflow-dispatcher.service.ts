@@ -15,8 +15,17 @@ export type LadiflowRpcHandler = (
 const TODO_ROUTES = new Set([
   'broadcast/list',
   'call-center/list-integrations',
+  'crm-deal-custom-field/list',
+  'crm-deal/get-summary',
+  'crm-deal/list',
+  'crm-filter/get-system-filters',
   'crm-insight-folder/list',
+  'crm-label/list-all',
   'crm-organization/list',
+  'crm-pipeline-category/list',
+  'crm-pipeline/list',
+  'crm-pipeline/search',
+  'crm-staff-configuration/get-list-staff-configuration',
   'custom-field/list-all',
   'customer-tag/list',
   'customer-tag/list-all',
@@ -26,7 +35,16 @@ const TODO_ROUTES = new Set([
   'customer/list-customer-merge',
   'customer/show',
   'dash-board/list-subscriber-by-time',
+  'flow-tag/list-all',
+  'flow/list',
+  'integration/list-all',
   'ladipage-notification/list',
+  'ladiwork-dashboard/attention-stats',
+  'ladiwork-dashboard/config',
+  'ladiwork-dashboard/job-status-stats',
+  'ladiwork-dashboard/list-pipelines',
+  'ladiwork-dashboard/member-performance',
+  'ladiwork-dashboard/pipeline-by-stage',
   'progress-bar/list-sections-latest',
   'segment/list',
 ]);
@@ -34,6 +52,10 @@ const TODO_ROUTES = new Set([
 @Injectable()
 export class LadiflowDispatcherService {
   private readonly handlers: Record<string, LadiflowRpcHandler> = {};
+
+  registerHandler(routeKey: string, handler: LadiflowRpcHandler): void {
+    this.handlers[routeKey] = handler;
+  }
 
   async dispatch(
     resource: string,

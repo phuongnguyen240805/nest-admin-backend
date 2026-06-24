@@ -1,0 +1,336 @@
+{
+  "route": "dash-board/list-subscriber-by-time",
+  "host": "api.ladiflow.com",
+  "path": "/1.0/dash-board/list-subscriber-by-time",
+  "status": 200,
+  "request": {
+    "lang": "vi",
+    "from_date": "2026-04-24",
+    "to_date": "2026-06-23"
+  },
+  "response": {
+    "data": {
+      "overview": [
+        {
+          "date": "2026-04-24T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-04-25T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-04-26T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-04-27T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-04-28T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-04-29T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-04-30T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-01T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-02T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-03T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-04T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-05T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-06T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-07T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-08T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-09T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-10T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-11T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-12T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-13T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-14T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-15T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-16T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-17T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-18T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-19T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-20T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-21T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-22T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-23T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-24T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-25T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-26T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-27T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-28T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-29T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-30T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-05-31T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-01T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-02T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-03T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-04T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-05T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-06T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-07T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-08T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-09T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-10T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-11T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-12T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-13T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-14T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-15T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-16T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-17T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-18T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-19T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-20T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-21T00:00:00.000Z",
+          "subscriber": 1,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-22T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        },
+        {
+          "date": "2026-06-23T00:00:00.000Z",
+          "subscriber": 0,
+          "unsubscribe": 0
+        }
+      ]
+    },
+    "message": "Thành công",
+    "code": 200
+  },
+  "requestHeaders": {
+    "owner-id": "6a2c26c92d543800211b5157",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "c588de441f49361e9d88ec98cd4fdb9fa54690d1f05542b5a56f838ad558e5f218b17b07e8392dc5e342ae73784ef985729e75ea72e53c0f39091e216bdf353b1128a5060c690b0d50cedf379770bcc2ec81bf87c4c7f1cd5d103d81d1a16a033413473606bcdeb600af92be385b77832c67a69ad7573d986bc2983feb1f722223e3509e0e03391a51180eca76a4bc8f7b9cb189c60bcfc8b181ccfb9a0128704a06a8e64cbadfb97f7dfd79c31e39024e68db40b342515f85f4e945e7457420fc491dfee74c452797ec680b69cb300132556cdf33c26f6a4d4e0509dc8bd611e0f1ab2cec87167e8b6117ea7b85aa15d2d10a11d949806d74c77b2583af6e2e4317910780f4d102c3081667f93970ffd4e66d156582c5266e6930b0332a6080",
+    "Referer": "https://appv6.ladipage.com/",
+    "sec-ch-ua": "\"HeadlessChrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+    "sec-ch-ua-mobile": "?0",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LioraCDP/1.0",
+    "accept": "application/json, text/plain, */*",
+    "content-type": "application/json;charset=UTF-8"
+  },
+  "capturedAt": "2026-06-23T15:13:37.878Z"
+}

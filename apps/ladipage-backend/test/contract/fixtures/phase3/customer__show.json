@@ -1,0 +1,221 @@
+{
+  "route": "customer/show",
+  "host": "api.ladiflow.com",
+  "path": "/1.0/customer/show",
+  "status": 200,
+  "request": {
+    "lang": "vi",
+    "customer_id": "13427358"
+  },
+  "response": {
+    "data": {
+      "customer": {
+        "_id": "6a37b0f63966b500200474b3",
+        "organizations": [],
+        "score": 0,
+        "channels": [
+          "DASHBOARD",
+          "LADISALES"
+        ],
+        "tags": [],
+        "vouchers": [],
+        "is_email_verified": false,
+        "email_subscribe_status": true,
+        "bounce": 0,
+        "complaint": 0,
+        "total_order": 1,
+        "total_order_value": 0,
+        "avg_order_value": 0,
+        "total_pending_order": 0,
+        "total_pending_order_value": 0,
+        "avg_pending_order_value": 0,
+        "total_paid_order": 1,
+        "total_paid_order_value": 0,
+        "avg_paid_order_value": 0,
+        "total_cancel_order": 0,
+        "total_cancel_order_value": 0,
+        "avg_cancel_order_value": 0,
+        "messenger_recurring_message_tokens": [],
+        "messenger_recurring_topics": [],
+        "fb_page_ids": [],
+        "fb_uids": [],
+        "zalo_oa_ids": [],
+        "zalo_uids": [],
+        "ladichat_uids": [],
+        "ladichat_store_ids": [],
+        "is_merge": false,
+        "phone_verified": false,
+        "is_delete": false,
+        "scope_users": [],
+        "scope_teams": [],
+        "followers": [],
+        "email": "text2@gmail.com",
+        "key": "text2@gmail.com-6a2c26cc1a3dc4001241341d",
+        "custom_fields": [],
+        "name": "nguyen van b",
+        "first_name": "nguyen van b",
+        "phone": "0398838677",
+        "gender": "male",
+        "language": "vi",
+        "alias": "text2gmail-com-nguyen-van-b-0398838677",
+        "status": "SUBSCRIBER",
+        "subscribed_at": "2026-06-21T09:37:58.735Z",
+        "store_id": "6a2c26cc1a3dc4001241341d",
+        "owner_id": "6a2c26c92d543800211b5157",
+        "creator_id": "6a2c26c92d543800211b5157",
+        "avatar_color": "#597FCA",
+        "fb_page_uids": [],
+        "zalo_oa_uids": [],
+        "zalo_oa_uids_v2": [],
+        "ladichat_store_uids": [],
+        "created_at": "2026-06-21T09:37:58.741Z",
+        "updated_at": "2026-06-23T02:55:37.951Z",
+        "ladisales_uid": "13427358"
+      },
+      "custom_field_configs": [
+        {
+          "_id": "6a37b1d03c19500012d29959",
+          "name": "adfsd",
+          "label": "ádfsd",
+          "data_type": "TEXT_AREA"
+        },
+        {
+          "_id": "6a37e1db3c19500012db4908",
+          "name": "2",
+          "label": "2",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e1e23c19500012db4918",
+          "name": "3",
+          "label": "3",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e1e43c19500012db4951",
+          "name": "4",
+          "label": "4",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e1e63c19500012db495a",
+          "name": "5",
+          "label": "5",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e1e93c19500012db4964",
+          "name": "6",
+          "label": "6",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e1eb3c19500012db4978",
+          "name": "7",
+          "label": "7",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e1ee3c19500012db4998",
+          "name": "8",
+          "label": "8",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e1f13c19500012db49a5",
+          "name": "9",
+          "label": "9",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e1f53c19500012db49b4",
+          "name": "10",
+          "label": "10",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e1f93c19500012db49d2",
+          "name": "11",
+          "label": "11",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e2003c19500012db49f7",
+          "name": "12",
+          "label": "12",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e2033c19500012db4a26",
+          "name": "13",
+          "label": "13",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e2073c19500012db4a5d",
+          "name": "14",
+          "label": "14",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e20e3c19500012db5538",
+          "name": "15",
+          "label": "15",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e2113c19500012db554b",
+          "name": "26",
+          "label": "26",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e2143c19500012db5555",
+          "name": "17",
+          "label": "17",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e2183c19500012db5560",
+          "name": "18",
+          "label": "18",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e21c3c19500012db556b",
+          "name": "19",
+          "label": "19",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e2213c19500012db55b6",
+          "name": "20",
+          "label": "20",
+          "data_type": "TEXT_INPUT"
+        },
+        {
+          "_id": "6a37e2283c19500012db55d7",
+          "name": "16",
+          "label": "16",
+          "data_type": "TEXT_INPUT"
+        }
+      ],
+      "tags": [],
+      "info_field": null
+    },
+    "message": "Thành công",
+    "code": 200
+  },
+  "requestHeaders": {
+    "owner-id": "6a2c26c92d543800211b5157",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "c588de441f49361e9d88ec98cd4fdb9fa54690d1f05542b5a56f838ad558e5f218b17b07e8392dc5e342ae73784ef985729e75ea72e53c0f39091e216bdf353b1128a5060c690b0d50cedf379770bcc2ec81bf87c4c7f1cd5d103d81d1a16a033413473606bcdeb600af92be385b77832c67a69ad7573d986bc2983feb1f722223e3509e0e03391a51180eca76a4bc8f7b9cb189c60bcfc8b181ccfb9a0128704a06a8e64cbadfb97f7dfd79c31e39024e68db40b342515f85f4e945e7457420fc491dfee74c452797ec680b69cb300132556cdf33c26f6a4d4e0509dc8bd611e0f1ab2cec87167e8b6117ea7b85aa15d2d10a11d949806d74c77b2583af6e2e4317910780f4d102c3081667f93970ffd4e66d156582c5266e6930b0332a6080",
+    "Referer": "https://appv6.ladipage.com/",
+    "sec-ch-ua": "\"HeadlessChrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+    "sec-ch-ua-mobile": "?0",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LioraCDP/1.0",
+    "accept": "application/json, text/plain, */*",
+    "content-type": "application/json;charset=UTF-8"
+  },
+  "capturedAt": "2026-06-23T10:21:37.979Z"
+}

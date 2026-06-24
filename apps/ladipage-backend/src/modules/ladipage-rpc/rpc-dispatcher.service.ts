@@ -12,6 +12,7 @@ export type RpcHandler = (
 
 const TODO_ROUTES = new Set([
   'application/list',
+  'application/update',
   'asset-list',
   'checkout-config/list',
   'checkout/list',

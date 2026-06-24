@@ -1,0 +1,988 @@
+{
+  "route": "flow/show",
+  "host": "apiv5.ladiflow.com",
+  "path": "/1.0/flow/show",
+  "status": 200,
+  "request": {
+    "flow_id": "6a3a8bd0da6cd8001281cbd2"
+  },
+  "response": {
+    "data": {
+      "flow": {
+        "triggers": [
+          {
+            "_id": "6a3a8bd0da6cd8001281cbda",
+            "tags": [],
+            "store_id": "6a2c26cc1a3dc4001241341d",
+            "creator_id": "6a2c26c92d543800211b5157",
+            "owner_id": "6a2c26c92d543800211b5157",
+            "name": "Gắn Tag khi điền Form",
+            "alias": "gan-tag-khi-dien-form",
+            "type": "TAG_APPLY",
+            "status": false,
+            "flow_id": "6a3a8bd0da6cd8001281cbd2",
+            "config": {
+              "integration_id": "",
+              "page_id": "",
+              "is_check_last_message": false
+            },
+            "email": {
+              "integration_id": "",
+              "subject": "",
+              "sender_email": "",
+              "sender_name": "",
+              "address": "",
+              "content": ""
+            },
+            "sms": {
+              "integration_id": ""
+            },
+            "zalo": {
+              "integration_id": "",
+              "message_template_configs": []
+            },
+            "trigger_conditions": [],
+            "trigger_operator": "AND",
+            "multi_conditions": [],
+            "operator": "OR",
+            "ref": "b8dfd55a2744009f",
+            "all_keyword": false,
+            "email_detect": false,
+            "phone_detect": false,
+            "is_delete": false,
+            "hook_mapping_fields": [],
+            "created_at": "2026-06-23T13:36:16.061Z",
+            "updated_at": "2026-06-23T13:36:16.061Z"
+          }
+        ],
+        "broadcast": null,
+        "listVoucherCampaigns": [],
+        "listCustomField": [
+          {
+            "_id": "6a37b1d03c19500012d29959",
+            "name": "adfsd",
+            "label": "ádfsd",
+            "data_type": "TEXT_AREA"
+          },
+          {
+            "_id": "6a37e1db3c19500012db4908",
+            "name": "2",
+            "label": "2",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e1e23c19500012db4918",
+            "name": "3",
+            "label": "3",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e1e43c19500012db4951",
+            "name": "4",
+            "label": "4",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e1e63c19500012db495a",
+            "name": "5",
+            "label": "5",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e1e93c19500012db4964",
+            "name": "6",
+            "label": "6",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e1eb3c19500012db4978",
+            "name": "7",
+            "label": "7",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e1ee3c19500012db4998",
+            "name": "8",
+            "label": "8",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e1f13c19500012db49a5",
+            "name": "9",
+            "label": "9",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e1f53c19500012db49b4",
+            "name": "10",
+            "label": "10",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e1f93c19500012db49d2",
+            "name": "11",
+            "label": "11",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e2003c19500012db49f7",
+            "name": "12",
+            "label": "12",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e2033c19500012db4a26",
+            "name": "13",
+            "label": "13",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e2073c19500012db4a5d",
+            "name": "14",
+            "label": "14",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e20e3c19500012db5538",
+            "name": "15",
+            "label": "15",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e2113c19500012db554b",
+            "name": "26",
+            "label": "26",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e2143c19500012db5555",
+            "name": "17",
+            "label": "17",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e2183c19500012db5560",
+            "name": "18",
+            "label": "18",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e21c3c19500012db556b",
+            "name": "19",
+            "label": "19",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e2213c19500012db55b6",
+            "name": "20",
+            "label": "20",
+            "data_type": "TEXT_INPUT"
+          },
+          {
+            "_id": "6a37e2283c19500012db55d7",
+            "name": "16",
+            "label": "16",
+            "data_type": "TEXT_INPUT"
+          }
+        ],
+        "customerTagList": [
+          {
+            "_id": "6a37b1af3c19500012d29835",
+            "name": "sgasd",
+            "alias": "sgasd"
+          }
+        ],
+        "listSequence": [],
+        "listIntegrations": [
+          {
+            "_id": "6a3a8f9ada6cd80012828dd7",
+            "scope_users": [],
+            "scope_teams": [],
+            "name": "Ecommerce",
+            "alias": "ecommerce",
+            "type": "LADISALES",
+            "store_id": "6a2c26cc1a3dc4001241341d",
+            "owner_id": "6a2c26c92d543800211b5157",
+            "creator_id": "6a2c26c92d543800211b5157",
+            "is_delete": false,
+            "status": true,
+            "config": {
+              "_id": "6a3a8f9ada6cd80012828dd8",
+              "api_key": "zR9n8TtnaIO86AD1XlY0yUk1",
+              "refresh_token": ""
+            },
+            "is_default": false,
+            "scope_type": "PRIVATE",
+            "attachments": [],
+            "created_at": "2026-06-23T13:52:26.909Z",
+            "updated_at": "2026-06-23T13:52:26.909Z"
+          }
+        ],
+        "listRecurringTopics": [],
+        "tags": [
+          "6a3a8bcfda6cd8001281cbce"
+        ],
+        "name": "flow-1",
+        "type": null,
+        "_id": "6a3a8bd0da6cd8001281cbd2",
+        "status": "PUBLISHED",
+        "updated_last": "2026-06-23T13:37:13.894Z",
+        "is_sharing": false,
+        "builder_direction": null,
+        "report_builder_direction": null,
+        "updated_at": "2026-06-23T13:37:13.895Z",
+        "flowConfigs": [
+          {
+            "_id": "6a3a8bd0da6cd8001281cbd4",
+            "name": "Gửi Email xác nhận",
+            "flow_id": "6a3a8bd0da6cd8001281cbd2",
+            "type": "EMAIL",
+            "config_type": "EMAIL",
+            "ordering": 0,
+            "timer": {},
+            "message_tag": null,
+            "messages": [
+              {
+                "_id": "6a3a8c04da6cd8001281cdb7",
+                "type": "QUICK_REPLY",
+                "delay_time": 0,
+                "custom_field_id": "",
+                "conditions": [],
+                "template_data": [],
+                "additional_data": [],
+                "sms_data": [],
+                "actions": [],
+                "act_after_success_msg": false,
+                "title": "",
+                "recurring_topic_id": "",
+                "auto_re_opt_in": false,
+                "frequency": "",
+                "topic_name": "",
+                "sending_type": "",
+                "pipeline_id": "",
+                "related_activity_source": "",
+                "model": "",
+                "buttons": [],
+                "files": []
+              },
+              {
+                "_id": "6a3a8c04da6cd8001281cdb8",
+                "type": "TEXT",
+                "text": "",
+                "html": "",
+                "delay_time": 0,
+                "custom_field_id": "",
+                "conditions": [],
+                "template_data": [],
+                "additional_data": [],
+                "sms_data": [],
+                "actions": [],
+                "act_after_success_msg": false,
+                "content": {
+                  "message": {
+                    "text": ""
+                  }
+                },
+                "title": "",
+                "recurring_topic_id": "",
+                "auto_re_opt_in": false,
+                "frequency": "",
+                "topic_name": "",
+                "sending_type": "",
+                "pipeline_id": "",
+                "related_activity_source": "",
+                "model": "",
+                "buttons": [],
+                "files": []
+              },
+              {
+                "_id": "6a3a8c04da6cd8001281cdb9",
+                "type": "NEXT_STEP",
+                "delay_time": 0,
+                "custom_field_id": "",
+                "next_step_code": "0896114648",
+                "conditions": [],
+                "template_data": [],
+                "additional_data": [],
+                "sms_data": [],
+                "actions": [],
+                "act_after_success_msg": false,
+                "title": "",
+                "recurring_topic_id": "",
+                "auto_re_opt_in": false,
+                "frequency": "",
+                "topic_name": "",
+                "sending_type": "",
+                "pipeline_id": "",
+                "related_activity_source": "",
+                "model": "",
+                "buttons": [],
+                "files": []
+              }
+            ],
+            "show_editor": true,
+            "editor": {
+              "subject": "Xác nhận đăng ký thành công trên {page_url}",
+              "subject_html": "Xác nhận đăng ký thành công trên {page_url}",
+              "last_updated_at": "2024-05-07T08:01:57.789Z",
+              "version": "V2",
+              "json_content": {
+                "counters": {
+                  "u_row": 12,
+                  "u_column": 13,
+                  "u_content_text": 4,
+                  "u_content_image": 5,
+                  "u_content_button": 1,
+                  "u_content_social": 1,
+                  "u_content_divider": 8,
+                  "u_content_heading": 4
+                },
+                "body": {
+                  "id": "IdA-7qzKVL",
+                  "rows": [
+                    {
+                      "id": "oE9FMYAYUJ",
+                      "cells": [
+                        1
+                      ],
+                      "columns": [
+                        {
+                          "id": "k4o9aSCCYR",
+                          "contents": [
+                            {
+                              "id": "rrfnM89Cm1",
+                              "type": "image",
+                              "values": {
+                                "containerPadding": "20px 10px",
+                                "anchor": "",
+                                "src": {
+                                  "url": "https://cdn.templates.unlayer.com/assets/1639409043831-1.png",
+                                  "width": 1111,
+                                  "height": 222,
+                                  "maxWidth": "30%",
+                                  "autoWidth": false
+                                },
+                                "textAlign": "center",
+                                "altText": "Logo",
+                                "action": {
+                                  "name": "web",
+                                  "values": {
+                                    "href": "",
+                                    "target": "_blank"
+                                  }
+                                },
+                                "hideDesktop": false,
+                                "displayCondition": null,
+                                "_meta": {
+                                  "htmlID": "u_content_image_4",
+                                  "htmlClassNames": "u_content_image"
+                                },
+                                "selectable": true,
+                                "draggable": true,
+                                "duplicatable": true,
+                                "deletable": true,
+                                "hideable": true,
+                                "_override": {
+                                  "mobile": {
+                                    "src": {
+                                      "maxWidth": "43%",
+                                      "autoWidth": false
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "values": {
+                            "_meta": {
+                              "htmlID": "u_column_1",
+                              "htmlClassNames": "u_column"
+                            },
+                            "padding": "0px",
+                            "backgroundColor": "",
+                            "border": {
+                              "borderTopWidth": "0px",
+                              "borderTopStyle": "solid",
+                              "borderTopColor": "#8215ee",
+                              "borderLeftWidth": "0px",
+                              "borderLeftStyle": "solid",
+                              "borderLeftColor": "#8215ee",
+                              "borderRightWidth": "0px",
+                              "borderRightStyle": "solid",
+                              "borderRightColor": "#8215ee",
+                              "borderBottomWidth": "0px",
+                              "borderBottomStyle": "solid",
+                              "borderBottomColor": "#8215ee"
+                            }
+                          }
+                        }
+                      ],
+                      "values": {
+                        "displayCondition": null,
+                        "columns": false,
+                        "backgroundColor": "",
+                        "columnsBackgroundColor": "#ffffff",
+                        "backgroundImage": {
+                          "url": "",
+                          "fullWidth": true,
+                          "repeat": "no-repeat",
+                          "size": "custom",
+                          "position": "top-center",
+                          "customPosition": [
+                            "50%",
+                            "0%"
+                          ]
+                        },
+                        "padding": "0px",
+                        "anchor": "",
+                        "hideDesktop": false,
+                        "_meta": {
+                          "htmlID": "u_row_1",
+                          "htmlClassNames": "u_row"
+                        },
+                        "selectable": true,
+                        "draggable": true,
+                        "duplicatable": true,
+                        "deletable": true,
+                        "hideable": true
+                      }
+                    },
+                    {
+                      "id": "R8V6X7j23-",
+                      "cells": [
+                        1
+                      ],
+                      "columns": [
+                        {
+                          "id": "I7Gp_e00Oi",
+                          "contents": [
+                            {
+                              "id": "itxWp6ANMJ",
+                              "type": "heading",
+                              "values": {
+                                "containerPadding": "9px 30px 40px 31px",
+                                "anchor": "",
+                                "headingType": "h1",
+                                "fontFamily": {
+                                  "url": "https://fonts.googleapis.com/css?family=Open+Sans:400,700",
+                                  "label": "Open Sans",
+                                  "value": "'Open Sans',sans-serif",
+                                  "defaultFont": true
+                                },
+                                "fontSize": "26px",
+                                "color": "#023047",
+                                "textAlign": "center",
+                                "lineHeight": "170%",
+                                "linkStyle": {
+                                  "inherit": true,
+                                  "linkColor": "#0000ee",
+                                  "linkHoverColor": "#0000ee",
+                                  "linkUnderline": true,
+                                  "linkHoverUnderline": true
+                                },
+                                "hideDesktop": false,
+                                "displayCondition": null,
+                                "_meta": {
+                                  "htmlID": "u_content_heading_1",
+                                  "htmlClassNames": "u_content_heading"
+                                },
+                                "selectable": true,
+                                "draggable": true,
+                                "duplicatable": true,
+                                "deletable": true,
+                                "hideable": true,
+                                "text": "<span><strong>XÁC NHẬN ĐĂNG KÝ THÀNH CÔNG</strong></span>",
+                                "_override": {
+                                  "mobile": {
+                                    "fontSize": "21px",
+                                    "textAlign": "center",
+                                    "containerPadding": "8px 20px 0px"
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "values": {
+                            "_meta": {
+                              "htmlID": "u_column_2",
+                              "htmlClassNames": "u_column"
+                            },
+                            "padding": "0px",
+                            "borderRadius": "0px",
+                            "backgroundColor": ""
+                          }
+                        }
+                      ],
+                      "values": {
+                        "displayCondition": null,
+                        "columns": false,
+                        "backgroundColor": "",
+                        "columnsBackgroundColor": "#ffffff",
+                        "backgroundImage": {
+                          "url": "",
+                          "fullWidth": false,
+                          "repeat": "no-repeat",
+                          "size": "custom",
+                          "position": "top-center",
+                          "customPosition": [
+                            "50%",
+                            "0%"
+                          ]
+                        },
+                        "padding": "0px",
+                        "anchor": "",
+                        "hideDesktop": false,
+                        "_meta": {
+                          "htmlID": "u_row_2",
+                          "htmlClassNames": "u_row"
+                        },
+                        "selectable": true,
+                        "draggable": true,
+                        "duplicatable": true,
+                        "deletable": true,
+                        "hideable": true
+                      }
+                    },
+                    {
+                      "id": "36gxVUgFgu",
+                      "cells": [
+                        1
+                      ],
+                      "columns": [
+                        {
+                          "id": "HLq7vOsrvV",
+                          "contents": [
+                            {
+                              "id": "NVLNiKU3T3",
+                              "type": "text",
+                              "values": {
+                                "containerPadding": "35px 55px 10px",
+                                "anchor": "",
+                                "fontSize": "14px",
+                                "color": "#333333",
+                                "textAlign": "left",
+                                "lineHeight": "180%",
+                                "linkStyle": {
+                                  "inherit": true,
+                                  "linkColor": "#0000ee",
+                                  "linkHoverColor": "#0000ee",
+                                  "linkUnderline": true,
+                                  "linkHoverUnderline": true
+                                },
+                                "hideDesktop": false,
+                                "displayCondition": null,
+                                "_meta": {
+                                  "htmlID": "u_content_text_2",
+                                  "htmlClassNames": "u_content_text"
+                                },
+                                "selectable": true,
+                                "draggable": true,
+                                "duplicatable": true,
+                                "deletable": true,
+                                "hideable": true,
+                                "text": "<p style=\"font-size: 14px; line-height: 180%;\"><span style=\"font-size: 18px; line-height: 32.4px; font-family: Lato, sans-serif;\"><strong><span style=\"line-height: 32.4px; font-size: 18px;\">Chào {{full_name}}, </span></strong></span></p>\n<p style=\"font-size: 14px; line-height: 180%;\"> </p>\n<p style=\"font-size: 14px; line-height: 180%;\"><span style=\"font-family: Lato, sans-serif; font-size: 16px; line-height: 28.8px;\">Chúc mừng bạn đã đăng ký thành công trên website của chúng tôi tại {{page_url}}.</span></p>\n<p style=\"font-size: 14px; line-height: 180%;\"><span style=\"font-family: Lato, sans-serif; font-size: 16px; line-height: 28.8px;\">Dưới đây là thông tin đăng ký của bạn:</span></p>\n<p style=\"font-size: 14px; line-height: 180%;\"><span style=\"font-family: Lato, sans-serif; font-size: 16px; line-height: 28.8px;\"><strong>Họ tên</strong>: {{full_name}}</span></p>\n<p style=\"font-size: 14px; line-height: 180%;\"><span style=\"font-family: Lato, sans-serif; font-size: 16px; line-height: 28.8px;\"><strong>Email</strong>: {{email}}</span></p>\n<p style=\"font-size: 14px; line-height: 180%;\"><span style=\"font-family: Lato, sans-serif; font-size: 16px; line-height: 28.8px;\"><strong>Phone</strong>: {{phone}}</span></p>\n<p style=\"font-size: 14px; line-height: 180%;\"><span style=\"font-family: Lato, sans-serif; font-size: 16px; line-height: 28.8px;\"><strong>Địa chỉ</strong>: {{address}}</span></p>",
+                                "_override": {
+                                  "mobile": {
+                                    "containerPadding": "35px 15px 10px"
+                                  }
+                                }
+                              },
+                              "hasDeprecatedFontControls": true
+                            },
+                            {
+                              "id": "HG0BkwsTTK",
+                              "type": "text",
+                              "values": {
+                                "containerPadding": "10px 55px 40px",
+                                "anchor": "",
+                                "fontSize": "14px",
+                                "textAlign": "left",
+                                "lineHeight": "170%",
+                                "linkStyle": {
+                                  "inherit": true,
+                                  "linkColor": "#0000ee",
+                                  "linkHoverColor": "#0000ee",
+                                  "linkUnderline": true,
+                                  "linkHoverUnderline": true
+                                },
+                                "hideDesktop": false,
+                                "displayCondition": null,
+                                "_meta": {
+                                  "htmlID": "u_content_text_3",
+                                  "htmlClassNames": "u_content_text"
+                                },
+                                "selectable": true,
+                                "draggable": true,
+                                "duplicatable": true,
+                                "deletable": true,
+                                "hideable": true,
+                                "text": "<p style=\"font-size: 14px; line-height: 170%;\"><span style=\"font-family: Lato, sans-serif; font-size: 16px; line-height: 27.2px;\">Cảm ơn bạn. Chúc bạn một ngày tốt lành </span></p>\n<p style=\"font-size: 14px; line-height: 170%;\"> </p>\n<p style=\"font-size: 14px; line-height: 170%;\"><span style=\"font-family: Lato, sans-serif; font-size: 16px; line-height: 27.2px;\">Nếu bạn có bất kỳ thắc mắc nào, đừng ngại liên hệ với chúng tôi. </span></p>",
+                                "_override": {
+                                  "mobile": {
+                                    "containerPadding": "10px 15px 40px"
+                                  }
+                                }
+                              },
+                              "hasDeprecatedFontControls": true
+                            }
+                          ],
+                          "values": {
+                            "_meta": {
+                              "htmlID": "u_column_6",
+                              "htmlClassNames": "u_column"
+                            },
+                            "padding": "0px",
+                            "borderRadius": "0px",
+                            "backgroundColor": ""
+                          }
+                        }
+                      ],
+                      "values": {
+                        "displayCondition": null,
+                        "columns": false,
+                        "backgroundColor": "",
+                        "columnsBackgroundColor": "#ffffff",
+                        "backgroundImage": {
+                          "url": "",
+                          "fullWidth": false,
+                          "repeat": "no-repeat",
+                          "size": "custom",
+                          "position": "top-center",
+                          "customPosition": [
+                            "50%",
+                            "0%"
+                          ]
+                        },
+                        "padding": "0px",
+                        "anchor": "",
+                        "hideDesktop": false,
+                        "_meta": {
+                          "htmlID": "u_row_6",
+                          "htmlClassNames": "u_row"
+                        },
+                        "selectable": true,
+                        "draggable": true,
+                        "duplicatable": true,
+                        "deletable": true,
+                        "hideable": true
+                      }
+                    },
+                    {
+                      "id": "SF3YISfEPv",
+                      "cells": [
+                        1
+                      ],
+                      "columns": [
+                        {
+                          "id": "YKT06_MRFO",
+                          "contents": [
+                            {
+                              "id": "j0BrOqeMzX",
+                              "type": "heading",
+                              "values": {
+                                "containerPadding": "5px 10px 40px",
+                                "anchor": "",
+                                "headingType": "h1",
+                                "fontFamily": {
+                                  "url": "https://fonts.googleapis.com/css?family=Lato:400,700",
+                                  "label": "Lato",
+                                  "value": "'Lato',sans-serif",
+                                  "defaultFont": true
+                                },
+                                "fontSize": "26px",
+                                "color": "#000000",
+                                "textAlign": "center",
+                                "lineHeight": "140%",
+                                "linkStyle": {
+                                  "inherit": true,
+                                  "linkColor": "#0000ee",
+                                  "linkHoverColor": "#0000ee",
+                                  "linkUnderline": true,
+                                  "linkHoverUnderline": true
+                                },
+                                "hideDesktop": false,
+                                "displayCondition": null,
+                                "_meta": {
+                                  "htmlID": "u_content_heading_3",
+                                  "htmlClassNames": "u_content_heading"
+                                },
+                                "selectable": true,
+                                "draggable": true,
+                                "duplicatable": true,
+                                "deletable": true,
+                                "hideable": true,
+                                "text": "Call: <strong>123-456-7890</strong>"
+                              }
+                            }
+                          ],
+                          "values": {
+                            "_meta": {
+                              "htmlID": "u_column_9",
+                              "htmlClassNames": "u_column"
+                            },
+                            "padding": "0px",
+                            "borderRadius": "0px",
+                            "backgroundColor": ""
+                          }
+                        }
+                      ],
+                      "values": {
+                        "displayCondition": null,
+                        "columns": false,
+                        "backgroundColor": "",
+                        "columnsBackgroundColor": "#ffffff",
+                        "backgroundImage": {
+                          "url": "",
+                          "fullWidth": true,
+                          "repeat": "no-repeat",
+                          "size": "custom",
+                          "position": "top-center",
+                          "customPosition": [
+                            "50%",
+                            "0%"
+                          ]
+                        },
+                        "padding": "0px",
+                        "anchor": "",
+                        "hideDesktop": false,
+                        "_meta": {
+                          "htmlID": "u_row_9",
+                          "htmlClassNames": "u_row"
+                        },
+                        "selectable": true,
+                        "draggable": true,
+                        "duplicatable": true,
+                        "deletable": true,
+                        "hideable": true
+                      }
+                    },
+                    {
+                      "id": "BD245DTbCU",
+                      "cells": [
+                        1
+                      ],
+                      "columns": [
+                        {
+                          "id": "FrtmZsetG6",
+                          "contents": [
+                            {
+                              "id": "y1l7rd4IfE",
+                              "type": "social",
+                              "values": {
+                                "containerPadding": "42px 10px 15px",
+                                "anchor": "",
+                                "icons": {
+                                  "iconType": "circle-white",
+                                  "icons": [
+                                    {
+                                      "url": "https://linkedin.com/",
+                                      "name": "LinkedIn"
+                                    },
+                                    {
+                                      "url": "https://instagram.com/",
+                                      "name": "Instagram"
+                                    },
+                                    {
+                                      "url": "https://twitter.com/",
+                                      "name": "Twitter"
+                                    },
+                                    {
+                                      "url": "https://pinterest.com/",
+                                      "name": "Pinterest"
+                                    }
+                                  ],
+                                  "editor": {
+                                    "data": {
+                                      "showDefaultIcons": true,
+                                      "showDefaultOptions": true,
+                                      "customIcons": [],
+                                      "customOptions": []
+                                    }
+                                  }
+                                },
+                                "align": "center",
+                                "spacing": 13,
+                                "hideDesktop": false,
+                                "displayCondition": null,
+                                "_meta": {
+                                  "htmlID": "u_content_social_1",
+                                  "htmlClassNames": "u_content_social"
+                                },
+                                "selectable": true,
+                                "draggable": true,
+                                "duplicatable": true,
+                                "deletable": true,
+                                "hideable": true
+                              }
+                            },
+                            {
+                              "id": "-qTqEDXRoF",
+                              "type": "text",
+                              "values": {
+                                "containerPadding": "10px 10px 35px",
+                                "anchor": "",
+                                "fontSize": "14px",
+                                "color": "#ffffff",
+                                "textAlign": "center",
+                                "lineHeight": "210%",
+                                "linkStyle": {
+                                  "inherit": true,
+                                  "linkColor": "#0000ee",
+                                  "linkHoverColor": "#0000ee",
+                                  "linkUnderline": true,
+                                  "linkHoverUnderline": true
+                                },
+                                "hideDesktop": false,
+                                "displayCondition": null,
+                                "_meta": {
+                                  "htmlID": "u_content_text_4",
+                                  "htmlClassNames": "u_content_text"
+                                },
+                                "selectable": true,
+                                "draggable": true,
+                                "duplicatable": true,
+                                "deletable": true,
+                                "hideable": true,
+                                "text": "<p style=\"font-size: 14px; line-height: 210%;\"><span style=\"font-family: Lato, sans-serif; font-size: 14px; line-height: 29.4px;\">You're receiving this email because you asked us about regular newsletter.</span></p>\n<p style=\"font-size: 14px; line-height: 210%;\"><span style=\"font-family: Lato, sans-serif; font-size: 14px; line-height: 29.4px;\">&copy;20XX your Company | 123 San Francisco, CA. United States</span></p>"
+                              },
+                              "hasDeprecatedFontControls": true
+                            }
+                          ],
+                          "values": {
+                            "_meta": {
+                              "htmlID": "u_column_8",
+                              "htmlClassNames": "u_column"
+                            },
+                            "padding": "0px",
+                            "borderRadius": "0px",
+                            "backgroundColor": ""
+                          }
+                        }
+                      ],
+                      "values": {
+                        "displayCondition": null,
+                        "columns": false,
+                        "backgroundColor": "",
+                        "columnsBackgroundColor": "#8215ee",
+                        "backgroundImage": {
+                          "url": "",
+                          "fullWidth": true,
+                          "repeat": "no-repeat",
+                          "size": "custom",
+                          "position": "top-center",
+                          "customPosition": [
+                            "50%",
+                            "0%"
+                          ]
+                        },
+                        "padding": "0px",
+                        "anchor": "",
+                        "hideDesktop": false,
+                        "_meta": {
+                          "htmlID": "u_row_8",
+                          "htmlClassNames": "u_row"
+                        },
+                        "selectable": true,
+                        "draggable": true,
+                        "duplicatable": true,
+                        "deletable": true,
+                        "hideable": true
+                      }
+                    }
+                  ],
+                  "headers": [],
+                  "footers": [],
+                  "values": {
+                    "popupPosition": "center",
+                    "popupWidth": "600px",
+                    "popupHeight": "auto",
+                    "borderRadius": "10px",
+                    "contentAlign": "center",
+                    "contentVerticalAlign": "center",
+                    "contentWidth": "600px",
+                    "fontFamily": {
+                      "label": "Arial",
+                      "value": "arial,helvetica,sans-serif"
+                    },
+                    "textColor": "#000000",
+                    "popupBackgroundColor": "#FFFFFF",
+                    "popupBackgroundImage": {
+                      "url": "",
+                      "fullWidth": true,
+                      "repeat": "no-repeat",
+                      "size": "cover",
+                      "position": "center"
+                    },
+                    "popupOverlay_backgroundColor": "rgba(0, 0, 0, 0.1)",
+                    "popupCloseButton_position": "top-right",
+                    "popupCloseButton_backgroundColor": "#DDDDDD",
+                    "popupCloseButton_iconColor": "#000000",
+                    "popupCloseButton_borderRadius": "0px",
+                    "popupCloseButton_margin": "0px",
+                    "popupCloseButton_action": {
+                      "name": "close_popup",
+                      "attrs": {
+                        "onClick": "document.querySelector('.u-popup-container').style.display = 'none';"
+                      }
+                    },
+                    "backgroundColor": "#ffffff",
+                    "preheaderText": "",
+                    "linkStyle": {
+                      "body": true,
+                      "linkColor": "#0000ee",
+                      "linkHoverColor": "#0000ee",
+                      "linkUnderline": true,
+                      "linkHoverUnderline": true
+                    },
+                    "backgroundImage": {
+                      "url": "",
+                      "fullWidth": true,
+                      "repeat": "no-repeat",
+                      "size": "custom",
+                      "position": "top-center",
+                      "customPosition": [
+                        "50%",
+                        "0%"
+                      ]
+                    },
+                    "_meta": {
+                      "htmlID": "u_body",
+                      "htmlClassNames": "u_body"
+                    }
+                  }
+                },
+                "schemaVersion": 16
+              },
+              "content": "<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\"><head> <!--[if gte mso 9]>\n<xml>\n  <o:OfficeDocumentSettings>\n    <o:AllowPNG/>\n    <o:PixelsPerInch>96</o:PixelsPerInch>\n  </o:OfficeDocumentSettings>\n</xml>\n<![endif]--> <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"> <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"> <meta name=\"x-apple-disable-message-reformatting\"> <!--[if !mso]><!--><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"><!--<![endif]--> <title></title> <style type=\"text/css\">@media only screen and (min-width:620px){.u-row{width:600px!important}.u-row .u-col{vertical-align:top}.u-row .u-col-100{width:600px!important}}@media (max-width:620px){.u-row-container{max-width:100%!important;padding-left:0!important;padding-right:0!important}.u-row .u-col{min-width:320px!important;max-width:100%!important;display:block!important}.u-row{width:100%!important}.u-col{width:100%!important}.u-col>div{margin:0 auto}}body{margin:0;padding:0}table,td,tr{vertical-align:top;border-collapse:collapse}p{margin:0}.ie-container table,.mso-container table{table-layout:fixed}*{line-height:inherit}a[x-apple-data-detectors=true]{color:inherit!important;text-decoration:none!important}table,td{color:#000}#u_body a{color:#00e;text-decoration:underline}@media (max-width:480px){#u_content_image_4 .v-src-width{width:auto!important}#u_content_image_4 .v-src-max-width{max-width:43%!important}#u_content_heading_1 .v-container-padding-padding{padding:8px 20px 0!important}#u_content_heading_1 .v-font-size{font-size:21px!important}#u_content_heading_1 .v-text-align{text-align:center!important}#u_content_text_2 .v-container-padding-padding{padding:35px 15px 10px!important}#u_content_text_3 .v-container-padding-padding{padding:10px 15px 40px!important}}</style> <!--[if !mso]><!--><link href=\"https://fonts.googleapis.com/css?family=Lato:400,700\" rel=\"stylesheet\" type=\"text/css\"><link href=\"https://fonts.googleapis.com/css?family=Open+Sans:400,700\" rel=\"stylesheet\" type=\"text/css\"><link href=\"https://fonts.googleapis.com/css?family=Lato:400,700\" rel=\"stylesheet\" type=\"text/css\"><!--<![endif]--> </head> <body class=\"clean-body u_body\" style=\"margin:0;padding:0;-webkit-text-size-adjust:100%;background-color:#fff;color:#000\"> <!--[if IE]><div class=\"ie-container\"><![endif]--> <!--[if mso]><div class=\"mso-container\"><![endif]--> <table id=\"u_body\" style=\"border-collapse:collapse;table-layout:fixed;border-spacing:0;mso-table-lspace:0;mso-table-rspace:0;vertical-align:top;min-width:320px;Margin:0 auto;background-color:#fff;width:100%\" cellpadding=\"0\" cellspacing=\"0\"> <tbody> <tr style=\"vertical-align:top\"> <td style=\"word-break:break-word;border-collapse:collapse!important;vertical-align:top\"> <!--[if (mso)|(IE)]><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td align=\"center\" style=\"background-color: #ffffff;\"><![endif]--> <div class=\"u-row-container\" style=\"padding:0;background-color:transparent\"> <div class=\"u-row\" style=\"margin:0 auto;min-width:320px;max-width:600px;overflow-wrap:break-word;word-wrap:break-word;word-break:break-word;background-color:#fff\"> <div style=\"border-collapse:collapse;display:table;width:100%;height:100%;background-color:transparent\"> <!--[if (mso)|(IE)]><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"padding: 0px;background-color: transparent;\" align=\"center\"><table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"width:600px;\"><tr style=\"background-color: #ffffff;\"><![endif]--> <!--[if (mso)|(IE)]><td align=\"center\" width=\"600\" style=\"width: 600px;padding: 0px;border-top: 0px solid transparent;border-left: 0px solid transparent;border-right: 0px solid transparent;border-bottom: 0px solid transparent;\" valign=\"top\"><![endif]--> <div class=\"u-col u-col-100\" style=\"max-width:320px;min-width:600px;display:table-cell;vertical-align:top\"> <div style=\"height:100%;width:100%!important\"> <!--[if (!mso)&(!IE)]><!--><div style=\"box-sizing:border-box;height:100%;padding:0;border-top:0 solid transparent;border-left:0 solid transparent;border-right:0 solid transparent;border-bottom:0 solid transparent\"><!--<![endif]--> <table id=\"u_content_image_4\" style=\"font-family:arial,helvetica,sans-serif\" role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" border=\"0\"> <tbody> <tr> <td class=\"v-container-padding-padding\" style=\"overflow-wrap:break-word;word-break:break-word;padding:20px 10px;font-family:arial,helvetica,sans-serif\" align=\"left\"> <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"> <tbody><tr> <td class=\"v-text-align\" style=\"padding-right:0;padding-left:0\" align=\"center\"> <img align=\"center\" border=\"0\" src=\"https://cdn.templates.unlayer.com/assets/1639409043831-1.png\" alt=\"Logo\" title=\"Logo\" style=\"outline:0;text-decoration:none;-ms-interpolation-mode:bicubic;clear:both;display:inline-block!important;border:none;height:auto;float:none;width:30%;max-width:174px\" width=\"174\" class=\"v-src-width v-src-max-width\"> </td> </tr> </tbody></table> </td> </tr> </tbody> </table> <!--[if (!mso)&(!IE)]><!--></div><!--<![endif]--> </div> </div> <!--[if (mso)|(IE)]></td><![endif]--> <!--[if (mso)|(IE)]></tr></table></td></tr></table><![endif]--> </div> </div> </div> <div class=\"u-row-container\" style=\"padding:0;background-color:transparent\"> <div class=\"u-row\" style=\"margin:0 auto;min-width:320px;max-width:600px;overflow-wrap:break-word;word-wrap:break-word;word-break:break-word;background-color:#fff\"> <div style=\"border-collapse:collapse;display:table;width:100%;height:100%;background-color:transparent\"> <!--[if (mso)|(IE)]><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"padding: 0px;background-color: transparent;\" align=\"center\"><table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"width:600px;\"><tr style=\"background-color: #ffffff;\"><![endif]--> <!--[if (mso)|(IE)]><td align=\"center\" width=\"600\" style=\"width: 600px;padding: 0px;border-top: 0px solid transparent;border-left: 0px solid transparent;border-right: 0px solid transparent;border-bottom: 0px solid transparent;border-radius: 0px;-webkit-border-radius: 0px; -moz-border-radius: 0px;\" valign=\"top\"><![endif]--> <div class=\"u-col u-col-100\" style=\"max-width:320px;min-width:600px;display:table-cell;vertical-align:top\"> <div style=\"height:100%;width:100%!important;border-radius:0;-webkit-border-radius:0;-moz-border-radius:0\"> <!--[if (!mso)&(!IE)]><!--><div style=\"box-sizing:border-box;height:100%;padding:0;border-top:0 solid transparent;border-left:0 solid transparent;border-right:0 solid transparent;border-bottom:0 solid transparent;border-radius:0;-webkit-border-radius:0;-moz-border-radius:0\"><!--<![endif]--> <table id=\"u_content_heading_1\" style=\"font-family:arial,helvetica,sans-serif\" role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" border=\"0\"> <tbody> <tr> <td class=\"v-container-padding-padding\" style=\"overflow-wrap:break-word;word-break:break-word;padding:9px 30px 40px 31px;font-family:arial,helvetica,sans-serif\" align=\"left\"> <!--[if mso]><table width=\"100%\"><tr><td><![endif]--> <h1 class=\"v-text-align v-font-size\" style=\"margin:0;color:#023047;line-height:170%;text-align:center;word-wrap:break-word;font-family:'Open Sans',sans-serif;font-size:26px;font-weight:400\"><span><strong>XÁC NHẬN ĐĂNG KÝ THÀNH CÔNG</strong></span></h1> <!--[if mso]></td></tr></table><![endif]--> </td> </tr> </tbody> </table> <!--[if (!mso)&(!IE)]><!--></div><!--<![endif]--> </div> </div> <!--[if (mso)|(IE)]></td><![endif]--> <!--[if (mso)|(IE)]></tr></table></td></tr></table><![endif]--> </div> </div> </div> <div class=\"u-row-container\" style=\"padding:0;background-color:transparent\"> <div class=\"u-row\" style=\"margin:0 auto;min-width:320px;max-width:600px;overflow-wrap:break-word;word-wrap:break-word;word-break:break-word;background-color:#fff\"> <div style=\"border-collapse:collapse;display:table;width:100%;height:100%;background-color:transparent\"> <!--[if (mso)|(IE)]><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"padding: 0px;background-color: transparent;\" align=\"center\"><table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"width:600px;\"><tr style=\"background-color: #ffffff;\"><![endif]--> <!--[if (mso)|(IE)]><td align=\"center\" width=\"600\" style=\"width: 600px;padding: 0px;border-top: 0px solid transparent;border-left: 0px solid transparent;border-right: 0px solid transparent;border-bottom: 0px solid transparent;border-radius: 0px;-webkit-border-radius: 0px; -moz-border-radius: 0px;\" valign=\"top\"><![endif]--> <div class=\"u-col u-col-100\" style=\"max-width:320px;min-width:600px;display:table-cell;vertical-align:top\"> <div style=\"height:100%;width:100%!important;border-radius:0;-webkit-border-radius:0;-moz-border-radius:0\"> <!--[if (!mso)&(!IE)]><!--><div style=\"box-sizing:border-box;height:100%;padding:0;border-top:0 solid transparent;border-left:0 solid transparent;border-right:0 solid transparent;border-bottom:0 solid transparent;border-radius:0;-webkit-border-radius:0;-moz-border-radius:0\"><!--<![endif]--> <table id=\"u_content_text_2\" style=\"font-family:arial,helvetica,sans-serif\" role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" border=\"0\"> <tbody> <tr> <td class=\"v-container-padding-padding\" style=\"overflow-wrap:break-word;word-break:break-word;padding:35px 55px 10px;font-family:arial,helvetica,sans-serif\" align=\"left\"> <div class=\"v-text-align v-font-size\" style=\"font-size:14px;color:#333;line-height:180%;text-align:left;word-wrap:break-word\"> <p style=\"font-size:14px;line-height:180%\"><span style=\"font-size:18px;line-height:32.4px;font-family:Lato,sans-serif\"><strong><span style=\"line-height:32.4px;font-size:18px\">Chào {{full_name}},&nbsp;</span></strong></span></p> <p style=\"font-size:14px;line-height:180%\">&nbsp;</p> <p style=\"font-size:14px;line-height:180%\"><span style=\"font-family:Lato,sans-serif;font-size:16px;line-height:28.8px\">Chúc mừng bạn đã đăng ký thành công trên website của chúng tôi tại {{page_url}}.</span></p> <p style=\"font-size:14px;line-height:180%\"><span style=\"font-family:Lato,sans-serif;font-size:16px;line-height:28.8px\">Dưới đây là thông tin đăng ký của bạn:</span></p> <p style=\"font-size:14px;line-height:180%\"><span style=\"font-family:Lato,sans-serif;font-size:16px;line-height:28.8px\"><strong>Họ tên</strong>: {{full_name}}</span></p> <p style=\"font-size:14px;line-height:180%\"><span style=\"font-family:Lato,sans-serif;font-size:16px;line-height:28.8px\"><strong>Email</strong>: {{email}}</span></p> <p style=\"font-size:14px;line-height:180%\"><span style=\"font-family:Lato,sans-serif;font-size:16px;line-height:28.8px\"><strong>Phone</strong>: {{phone}}</span></p> <p style=\"font-size:14px;line-height:180%\"><span style=\"font-family:Lato,sans-serif;font-size:16px;line-height:28.8px\"><strong>Địa chỉ</strong>: {{address}}</span></p> </div> </td> </tr> </tbody> </table> <table id=\"u_content_text_3\" style=\"font-family:arial,helvetica,sans-serif\" role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" border=\"0\"> <tbody> <tr> <td class=\"v-container-padding-padding\" style=\"overflow-wrap:break-word;word-break:break-word;padding:10px 55px 40px;font-family:arial,helvetica,sans-serif\" align=\"left\"> <div class=\"v-text-align v-font-size\" style=\"font-size:14px;line-height:170%;text-align:left;word-wrap:break-word\"> <p style=\"font-size:14px;line-height:170%\"><span style=\"font-family:Lato,sans-serif;font-size:16px;line-height:27.2px\">Cảm ơn bạn. Chúc bạn một ngày tốt lành&nbsp;</span></p> <p style=\"font-size:14px;line-height:170%\">&nbsp;</p> <p style=\"font-size:14px;line-height:170%\"><span style=\"font-family:Lato,sans-serif;font-size:16px;line-height:27.2px\">Nếu bạn có bất kỳ thắc mắc nào, đừng ngại liên hệ với chúng tôi.&nbsp;</span></p> </div> </td> </tr> </tbody> </table> <!--[if (!mso)&(!IE)]><!--></div><!--<![endif]--> </div> </div> <!--[if (mso)|(IE)]></td><![endif]--> <!--[if (mso)|(IE)]></tr></table></td></tr></table><![endif]--> </div> </div> </div> <div class=\"u-row-container\" style=\"padding:0;background-color:transparent\"> <div class=\"u-row\" style=\"margin:0 auto;min-width:320px;max-width:600px;overflow-wrap:break-word;word-wrap:break-word;word-break:break-word;background-color:#fff\"> <div style=\"border-collapse:collapse;display:table;width:100%;height:100%;background-color:transparent\"> <!--[if (mso)|(IE)]><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"padding: 0px;background-color: transparent;\" align=\"center\"><table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"width:600px;\"><tr style=\"background-color: #ffffff;\"><![endif]--> <!--[if (mso)|(IE)]><td align=\"center\" width=\"600\" style=\"width: 600px;padding: 0px;border-top: 0px solid transparent;border-left: 0px solid transparent;border-right: 0px solid transparent;border-bottom: 0px solid transparent;border-radius: 0px;-webkit-border-radius: 0px; -moz-border-radius: 0px;\" valign=\"top\"><![endif]--> <div class=\"u-col u-col-100\" style=\"max-width:320px;min-width:600px;display:table-cell;vertical-align:top\"> <div style=\"height:100%;width:100%!important;border-radius:0;-webkit-border-radius:0;-moz-border-radius:0\"> <!--[if (!mso)&(!IE)]><!--><div style=\"box-sizing:border-box;height:100%;padding:0;border-top:0 solid transparent;border-left:0 solid transparent;border-right:0 solid transparent;border-bottom:0 solid transparent;border-radius:0;-webkit-border-radius:0;-moz-border-radius:0\"><!--<![endif]--> <table style=\"font-family:arial,helvetica,sans-serif\" role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" border=\"0\"> <tbody> <tr> <td class=\"v-container-padding-padding\" style=\"overflow-wrap:break-word;word-break:break-word;padding:5px 10px 40px;font-family:arial,helvetica,sans-serif\" align=\"left\"> <!--[if mso]><table width=\"100%\"><tr><td><![endif]--> <h1 class=\"v-text-align v-font-size\" style=\"margin:0;color:#000;line-height:140%;text-align:center;word-wrap:break-word;font-family:Lato,sans-serif;font-size:26px;font-weight:400\">Call: <strong>123-456-7890</strong></h1> <!--[if mso]></td></tr></table><![endif]--> </td> </tr> </tbody> </table> <!--[if (!mso)&(!IE)]><!--></div><!--<![endif]--> </div> </div> <!--[if (mso)|(IE)]></td><![endif]--> <!--[if (mso)|(IE)]></tr></table></td></tr></table><![endif]--> </div> </div> </div> <div class=\"u-row-container\" style=\"padding:0;background-color:transparent\"> <div class=\"u-row\" style=\"margin:0 auto;min-width:320px;max-width:600px;overflow-wrap:break-word;word-wrap:break-word;word-break:break-word;background-color:#8215ee\"> <div style=\"border-collapse:collapse;display:table;width:100%;height:100%;background-color:transparent\"> <!--[if (mso)|(IE)]><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"padding: 0px;background-color: transparent;\" align=\"center\"><table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"width:600px;\"><tr style=\"background-color: #8215ee;\"><![endif]--> <!--[if (mso)|(IE)]><td align=\"center\" width=\"600\" style=\"width: 600px;padding: 0px;border-top: 0px solid transparent;border-left: 0px solid transparent;border-right: 0px solid transparent;border-bottom: 0px solid transparent;border-radius: 0px;-webkit-border-radius: 0px; -moz-border-radius: 0px;\" valign=\"top\"><![endif]--> <div class=\"u-col u-col-100\" style=\"max-width:320px;min-width:600px;display:table-cell;vertical-align:top\"> <div style=\"height:100%;width:100%!important;border-radius:0;-webkit-border-radius:0;-moz-border-radius:0\"> <!--[if (!mso)&(!IE)]><!--><div style=\"box-sizing:border-box;height:100%;padding:0;border-top:0 solid transparent;border-left:0 solid transparent;border-right:0 solid transparent;border-bottom:0 solid transparent;border-radius:0;-webkit-border-radius:0;-moz-border-radius:0\"><!--<![endif]--> <table style=\"font-family:arial,helvetica,sans-serif\" role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" border=\"0\"> <tbody> <tr> <td class=\"v-container-padding-padding\" style=\"overflow-wrap:break-word;word-break:break-word;padding:42px 10px 15px;font-family:arial,helvetica,sans-serif\" align=\"left\"> <div align=\"center\"> <div style=\"display:table;max-width:179px\"> <!--[if (mso)|(IE)]><table width=\"179\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"border-collapse:collapse;\" align=\"center\"><table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border-collapse:collapse; mso-table-lspace: 0pt;mso-table-rspace: 0pt; width:179px;\"><tr><![endif]--> <!--[if (mso)|(IE)]><td width=\"32\" style=\"width:32px; padding-right: 13px;\" valign=\"top\"><![endif]--> <table align=\"left\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"32\" height=\"32\" style=\"width:32px!important;height:32px!important;display:inline-block;border-collapse:collapse;table-layout:fixed;border-spacing:0;mso-table-lspace:0;mso-table-rspace:0;vertical-align:top;margin-right:13px\"> <tbody><tr style=\"vertical-align:top\"><td align=\"left\" valign=\"middle\" style=\"word-break:break-word;border-collapse:collapse!important;vertical-align:top\"> <a href=\"https://linkedin.com/\" title=\"LinkedIn\" target=\"_blank\"> <img src=\"https://cdn.tools.unlayer.com/social/icons/circle-white/linkedin.png\" alt=\"LinkedIn\" title=\"LinkedIn\" width=\"32\" style=\"outline:0;text-decoration:none;-ms-interpolation-mode:bicubic;clear:both;display:block!important;border:none;height:auto;float:none;max-width:32px!important\"> </a> </td></tr> </tbody></table> <!--[if (mso)|(IE)]></td><![endif]--> <!--[if (mso)|(IE)]><td width=\"32\" style=\"width:32px; padding-right: 13px;\" valign=\"top\"><![endif]--> <table align=\"left\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"32\" height=\"32\" style=\"width:32px!important;height:32px!important;display:inline-block;border-collapse:collapse;table-layout:fixed;border-spacing:0;mso-table-lspace:0;mso-table-rspace:0;vertical-align:top;margin-right:13px\"> <tbody><tr style=\"vertical-align:top\"><td align=\"left\" valign=\"middle\" style=\"word-break:break-word;border-collapse:collapse!important;vertical-align:top\"> <a href=\"https://instagram.com/\" title=\"Instagram\" target=\"_blank\"> <img src=\"https://cdn.tools.unlayer.com/social/icons/circle-white/instagram.png\" alt=\"Instagram\" title=\"Instagram\" width=\"32\" style=\"outline:0;text-decoration:none;-ms-interpolation-mode:bicubic;clear:both;display:block!important;border:none;height:auto;float:none;max-width:32px!important\"> </a> </td></tr> </tbody></table> <!--[if (mso)|(IE)]></td><![endif]--> <!--[if (mso)|(IE)]><td width=\"32\" style=\"width:32px; padding-right: 13px;\" valign=\"top\"><![endif]--> <table align=\"left\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"32\" height=\"32\" style=\"width:32px!important;height:32px!important;display:inline-block;border-collapse:collapse;table-layout:fixed;border-spacing:0;mso-table-lspace:0;mso-table-rspace:0;vertical-align:top;margin-right:13px\"> <tbody><tr style=\"vertical-align:top\"><td align=\"left\" valign=\"middle\" style=\"word-break:break-word;border-collapse:collapse!important;vertical-align:top\"> <a href=\"https://twitter.com/\" title=\"Twitter\" target=\"_blank\"> <img src=\"https://cdn.tools.unlayer.com/social/icons/circle-white/twitter.png\" alt=\"Twitter\" title=\"Twitter\" width=\"32\" style=\"outline:0;text-decoration:none;-ms-interpolation-mode:bicubic;clear:both;display:block!important;border:none;height:auto;float:none;max-width:32px!important\"> </a> </td></tr> </tbody></table> <!--[if (mso)|(IE)]></td><![endif]--> <!--[if (mso)|(IE)]><td width=\"32\" style=\"width:32px; padding-right: 0px;\" valign=\"top\"><![endif]--> <table align=\"left\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"32\" height=\"32\" style=\"width:32px!important;height:32px!important;display:inline-block;border-collapse:collapse;table-layout:fixed;border-spacing:0;mso-table-lspace:0;mso-table-rspace:0;vertical-align:top;margin-right:0\"> <tbody><tr style=\"vertical-align:top\"><td align=\"left\" valign=\"middle\" style=\"word-break:break-word;border-collapse:collapse!important;vertical-align:top\"> <a href=\"https://pinterest.com/\" title=\"Pinterest\" target=\"_blank\"> <img src=\"https://cdn.tools.unlayer.com/social/icons/circle-white/pinterest.png\" alt=\"Pinterest\" title=\"Pinterest\" width=\"32\" style=\"outline:0;text-decoration:none;-ms-interpolation-mode:bicubic;clear:both;display:block!important;border:none;height:auto;float:none;max-width:32px!important\"> </a> </td></tr> </tbody></table> <!--[if (mso)|(IE)]></td><![endif]--> <!--[if (mso)|(IE)]></tr></table></td></tr></table><![endif]--> </div> </div> </td> </tr> </tbody> </table> <table style=\"font-family:arial,helvetica,sans-serif\" role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" border=\"0\"> <tbody> <tr> <td class=\"v-container-padding-padding\" style=\"overflow-wrap:break-word;word-break:break-word;padding:10px 10px 35px;font-family:arial,helvetica,sans-serif\" align=\"left\"> <div class=\"v-text-align v-font-size\" style=\"font-size:14px;color:#fff;line-height:210%;text-align:center;word-wrap:break-word\"> <p style=\"font-size:14px;line-height:210%\"><span style=\"font-family:Lato,sans-serif;font-size:14px;line-height:29.4px\">You're receiving this email because you asked us about regular newsletter.</span></p> <p style=\"font-size:14px;line-height:210%\"><span style=\"font-family:Lato,sans-serif;font-size:14px;line-height:29.4px\">©20XX your Company | 123 San Francisco, CA. United States</span></p> </div> </td> </tr> </tbody> </table> <!--[if (!mso)&(!IE)]><!--></div><!--<![endif]--> </div> </div> <!--[if (mso)|(IE)]></td><![endif]--> <!--[if (mso)|(IE)]></tr></table></td></tr></table><![endif]--> </div> </div> </div> <!--[if (mso)|(IE)]></td></tr></table><![endif]--> </td> </tr> </tbody> </table> <!--[if mso]></div><![endif]--> <!--[if IE]></div><![endif]-->  \n</body></html>"
+            },
+            "code": "3394745214",
+            "position": null,
+            "integration_configs": {
+              "email": {
+                "integration_id": "DEFAULT_SES"
+              }
+            },
+            "message_tracking_type": null,
+            "message_type": null,
+            "recipient_type": null,
+            "recipient_email": null
+          }
+        ]
+      }
+    },
+    "message": "Thành công",
+    "code": 200
+  },
+  "requestHeaders": {
+    "owner-id": "6a2c26c92d543800211b5157",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "c588de441f49361e9d88ec98cd4fdb9fa54690d1f05542b5a56f838ad558e5f218b17b07e8392dc5e342ae73784ef985729e75ea72e53c0f39091e216bdf353b1128a5060c690b0d50cedf379770bcc2ec81bf87c4c7f1cd5d103d81d1a16a033413473606bcdeb600af92be385b77832c67a69ad7573d986bc2983feb1f722223e3509e0e03391a51180eca76a4bc8f7b9cb189c60bcfc8b181ccfb9a0128704a06a8e64cbadfb97f7dfd79c31e39024e68db40b342515f85f4e945e7457420fc491dfee74c452797ec680b69cb300132556cdf33c26f6a4d4e0509dc8bd611e0f1ab2cec87167e8b6117ea7b85aa15d2d10a11d949806d74c77b2583af6e2e4317910780f4d102c3081667f93970ffd4e66d156582c5266e6930b0332a6080",
+    "Referer": "https://appv5.ladipage.com/",
+    "sec-ch-ua": "\"HeadlessChrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+    "sec-ch-ua-mobile": "?0",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LioraCDP/1.0",
+    "Accept": "application/json, text/plain, */*",
+    "Content-Type": "application/json"
+  },
+  "capturedAt": "2026-06-23T15:49:49.000Z"
+}

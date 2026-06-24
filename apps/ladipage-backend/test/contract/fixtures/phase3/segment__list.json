@@ -1,0 +1,266 @@
+{
+  "route": "segment/list",
+  "host": "api.ladiflow.com",
+  "path": "/1.0/segment/list",
+  "status": 200,
+  "request": {
+    "lang": "vi",
+    "search": {
+      "name": ""
+    },
+    "page": 1,
+    "limit": 20,
+    "not_count": false,
+    "use_by_flow": false,
+    "is_delete": false
+  },
+  "response": {
+    "data": {
+      "total": 6,
+      "limit": 20,
+      "items": [
+        {
+          "_id": "6a2c27471a3dc40012414d32",
+          "use_by_flow": false,
+          "total": 1,
+          "name": "New Subscribers",
+          "alias": "new-subscribers",
+          "multi_conditions": [
+            {
+              "conditions": [
+                {
+                  "condition": {
+                    "name": "SEGMENTS.CREATED_AT",
+                    "code": "CREATED_AT"
+                  },
+                  "operator": {
+                    "code": "GREATER_THAN",
+                    "name": "SEGMENTS.OPERATOR_GREATER_THAN"
+                  },
+                  "value": {
+                    "name": "14",
+                    "value": "14"
+                  }
+                }
+              ],
+              "operator": "AND"
+            }
+          ],
+          "store_id": "6a2c26cc1a3dc4001241341d",
+          "owner_id": "6a2c26c92d543800211b5157",
+          "creator_id": "6a2c26c92d543800211b5157",
+          "operator": "OR",
+          "is_delete": false,
+          "type": "DEFAULT",
+          "created_at": "2026-06-12T15:35:35.412Z",
+          "updated_at": "2026-06-12T15:35:35.412Z",
+          "last_count_at": "2026-06-22T14:23:30.798Z",
+          "update": true
+        },
+        {
+          "_id": "6a2c27471a3dc40012414d31",
+          "use_by_flow": false,
+          "total": 1,
+          "name": "SMS Subscribers",
+          "alias": "sms-subscribers",
+          "multi_conditions": [
+            {
+              "conditions": [
+                {
+                  "condition": {
+                    "code": "PHONE",
+                    "name": "SEGMENTS.PHONE"
+                  },
+                  "operator": {
+                    "code": "HAS_ANY_VALUE",
+                    "name": "SEGMENTS.HAS_ANY_VALUE"
+                  }
+                }
+              ],
+              "operator": "AND"
+            }
+          ],
+          "store_id": "6a2c26cc1a3dc4001241341d",
+          "owner_id": "6a2c26c92d543800211b5157",
+          "creator_id": "6a2c26c92d543800211b5157",
+          "operator": "OR",
+          "is_delete": false,
+          "type": "DEFAULT",
+          "created_at": "2026-06-12T15:35:35.412Z",
+          "updated_at": "2026-06-12T15:35:35.412Z",
+          "last_count_at": "2026-06-22T14:23:30.799Z",
+          "update": true
+        },
+        {
+          "_id": "6a2c27471a3dc40012414d30",
+          "use_by_flow": false,
+          "total": 0,
+          "name": "Email Subscribers",
+          "alias": "email-subscribers",
+          "multi_conditions": [
+            {
+              "conditions": [
+                {
+                  "condition": {
+                    "code": "IS_EMAIL_VERIFIED",
+                    "name": "SEGMENTS.IS_EMAIL_VERIFIED"
+                  },
+                  "operator": {
+                    "code": "EQUAL",
+                    "name": "SEGMENTS.OPERATOR_EQUAL"
+                  },
+                  "value": {
+                    "name": true,
+                    "value": true
+                  }
+                },
+                {
+                  "condition": {
+                    "code": "EMAIL",
+                    "name": "SEGMENTS.EMAIL"
+                  },
+                  "operator": {
+                    "code": "HAS_ANY_VALUE",
+                    "name": "SEGMENTS.HAS_ANY_VALUE"
+                  }
+                }
+              ],
+              "operator": "AND"
+            }
+          ],
+          "store_id": "6a2c26cc1a3dc4001241341d",
+          "owner_id": "6a2c26c92d543800211b5157",
+          "creator_id": "6a2c26c92d543800211b5157",
+          "operator": "OR",
+          "is_delete": false,
+          "type": "DEFAULT",
+          "created_at": "2026-06-12T15:35:35.412Z",
+          "updated_at": "2026-06-12T15:35:35.412Z",
+          "last_count_at": "2026-06-22T14:23:30.799Z",
+          "update": true
+        },
+        {
+          "_id": "6a2c27471a3dc40012414d2f",
+          "use_by_flow": false,
+          "total": 0,
+          "name": "Zalo Subscribers",
+          "alias": "zalo-subscribers",
+          "multi_conditions": [
+            {
+              "conditions": [
+                {
+                  "condition": {
+                    "code": "ZALO_UIDS",
+                    "name": "SEGMENTS.ZALO_UIDS"
+                  },
+                  "operator": {
+                    "code": "HAS_ANY_VALUE",
+                    "name": "SEGMENTS.HAS_ANY_VALUE"
+                  }
+                }
+              ],
+              "operator": "AND"
+            }
+          ],
+          "store_id": "6a2c26cc1a3dc4001241341d",
+          "owner_id": "6a2c26c92d543800211b5157",
+          "creator_id": "6a2c26c92d543800211b5157",
+          "operator": "OR",
+          "is_delete": false,
+          "type": "DEFAULT",
+          "created_at": "2026-06-12T15:35:35.412Z",
+          "updated_at": "2026-06-12T15:35:35.412Z",
+          "last_count_at": "2026-06-22T14:23:30.799Z",
+          "update": true
+        },
+        {
+          "_id": "6a2c27471a3dc40012414d2e",
+          "use_by_flow": false,
+          "total": 0,
+          "name": "Facebook Subscribers",
+          "alias": "facebook-subscribers",
+          "multi_conditions": [
+            {
+              "conditions": [
+                {
+                  "condition": {
+                    "code": "FB_UIDS",
+                    "name": "SEGMENTS.FB_UIDS"
+                  },
+                  "operator": {
+                    "code": "HAS_ANY_VALUE",
+                    "name": "SEGMENTS.HAS_ANY_VALUE"
+                  }
+                }
+              ],
+              "operator": "AND"
+            }
+          ],
+          "store_id": "6a2c26cc1a3dc4001241341d",
+          "owner_id": "6a2c26c92d543800211b5157",
+          "creator_id": "6a2c26c92d543800211b5157",
+          "operator": "OR",
+          "is_delete": false,
+          "type": "DEFAULT",
+          "created_at": "2026-06-12T15:35:35.412Z",
+          "updated_at": "2026-06-12T15:35:35.412Z",
+          "last_count_at": "2026-06-22T14:23:30.799Z",
+          "update": true
+        },
+        {
+          "_id": "6a2c27471a3dc40012414d2d",
+          "use_by_flow": false,
+          "total": 0,
+          "name": "Email Complaint Subscribers",
+          "alias": "email-complaint-subscribers",
+          "multi_conditions": [
+            {
+              "conditions": [
+                {
+                  "condition": {
+                    "code": "COMPLAINT",
+                    "name": "Complaint"
+                  },
+                  "operator": {
+                    "code": "GREATER_THAN",
+                    "name": "SEGMENTS.OPERATOR_GREATER_THAN"
+                  },
+                  "value": {
+                    "name": "0",
+                    "value": "0"
+                  }
+                }
+              ],
+              "operator": "AND"
+            }
+          ],
+          "store_id": "6a2c26cc1a3dc4001241341d",
+          "owner_id": "6a2c26c92d543800211b5157",
+          "creator_id": "6a2c26c92d543800211b5157",
+          "operator": "OR",
+          "is_delete": false,
+          "type": "DEFAULT",
+          "created_at": "2026-06-12T15:35:35.412Z",
+          "updated_at": "2026-06-12T15:35:35.412Z",
+          "last_count_at": "2026-06-22T14:23:30.800Z",
+          "update": true
+        }
+      ],
+      "item_default": []
+    },
+    "message": "Thành công",
+    "code": 200
+  },
+  "requestHeaders": {
+    "owner-id": "6a2c26c92d543800211b5157",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "c588de441f49361e9d88ec98cd4fdb9fa54690d1f05542b5a56f838ad558e5f218b17b07e8392dc5e342ae73784ef985729e75ea72e53c0f39091e216bdf353b1128a5060c690b0d50cedf379770bcc2ec81bf87c4c7f1cd5d103d81d1a16a033413473606bcdeb600af92be385b77832c67a69ad7573d986bc2983feb1f722223e3509e0e03391a51180eca76a4bc8f7b9cb189c60bcfc8b181ccfb9a0128704a06a8e64cbadfb97f7dfd79c31e39024e68db40b342515f85f4e945e7457420fc491dfee74c452797ec680b69cb300132556cdf33c26f6a4d4e0509dc8bd611e0f1ab2cec87167e8b6117ea7b85aa15d2d10a11d949806d74c77b2583af6e2e4317910780f4d102c3081667f93970ffd4e66d156582c5266e6930b0332a6080",
+    "Referer": "https://appv6.ladipage.com/",
+    "sec-ch-ua": "\"HeadlessChrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+    "sec-ch-ua-mobile": "?0",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LioraCDP/1.0",
+    "accept": "application/json, text/plain, */*",
+    "content-type": "application/json;charset=UTF-8"
+  },
+  "capturedAt": "2026-06-23T10:15:30.331Z"
+}

@@ -59,6 +59,9 @@ import { AnalyticsModule } from '../modules/analytics/analytics.module';
 import { DashboardModule } from '../modules/dashboard/dashboard.module';
 import { LadipageRpcModule } from '../modules/ladipage-rpc/ladipage-rpc.module';
 import { LadiflowRpcModule } from '../modules/ladiflow-rpc/ladiflow-rpc.module';
+import { LadiflowV5RpcModule } from '../modules/ladiflow-v5-rpc/ladiflow-v5-rpc.module';
+import { LadiworkModule } from '../modules/ladiwork/ladiwork.module';
+import { AutomationModule } from '../modules/automation/automation.module';
 
 @Module({
   imports: [
@@ -117,8 +120,11 @@ import { LadiflowRpcModule } from '../modules/ladiflow-rpc/ladiflow-rpc.module';
     SettingsModule,
     AnalyticsModule,
     DashboardModule,
+    LadiworkModule,
+    AutomationModule,
     LadipageRpcModule,
     LadiflowRpcModule,
+    LadiflowV5RpcModule,
   ],
   controllers: [AppController],
   providers: [

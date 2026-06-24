@@ -1,0 +1,169 @@
+{
+  "route": "product/show",
+  "host": "apiv5.sales.ldpform.net",
+  "path": "/2.0/product/show",
+  "status": 200,
+  "request": {
+    "lang": "vi",
+    "product_id": "118752"
+  },
+  "response": {
+    "data": {
+      "product": {
+        "product_id": 118752,
+        "name": "VPS",
+        "alias_name": "vps",
+        "domain": "checkout.ladi.sale",
+        "path": "vps-118752",
+        "url_published": "https://checkout.ladi.sale/vps-118752",
+        "description": "",
+        "interface_options": null,
+        "unit": null,
+        "start_date": null,
+        "end_date": null,
+        "timezone": "Asia/Bangkok",
+        "location": null,
+        "content": null,
+        "host_name": null,
+        "contact_phone": null,
+        "checkout_config_id": 323953,
+        "status": "Active",
+        "type": "Digital",
+        "display_type": 0,
+        "payment_redirect_url": null,
+        "payment_redirect_after": 5,
+        "select_many_service": 0,
+        "ticket_creation_form": 0,
+        "external_link": "",
+        "external_link_btn": null,
+        "cta": 0,
+        "seo": {
+          "title": "",
+          "description": "",
+          "keywords": "",
+          "image": "",
+          "favicon": ""
+        },
+        "event_type": null,
+        "course_benefits": null,
+        "outstanding_features": null,
+        "is_one_time": 0,
+        "hosted_by": "",
+        "short_description": "VPS server",
+        "total_student": null,
+        "quantity_sold": 0,
+        "highlight_display": {
+          "type": "NOT_USE",
+          "title": "",
+          "config": {
+            "type": "Daily",
+            "start": "00:00",
+            "end": "00:00",
+            "end_date_time": "2026-06-14T06:00:04.123Z",
+            "minute": "",
+            "is_show_day": true,
+            "is_show_hour": true,
+            "is_show_minute": true,
+            "is_show_second": true
+          }
+        },
+        "is_free_ship": 0,
+        "is_selling_product": 0,
+        "is_show_all_store": 0,
+        "is_show_coupon": 1,
+        "custom_fields": [],
+        "images": [],
+        "variants": [
+          {
+            "product_name": "VPS",
+            "product_type": "Digital",
+            "product_id": 118752,
+            "product_variant_id": 463984,
+            "price": 0,
+            "price_compare": 0,
+            "cost_per_item": 0,
+            "sku": "",
+            "quantity": -1,
+            "package_price": 0,
+            "package_quantity_unit": null,
+            "package_quantity": 0,
+            "package_addition_quantity": 0,
+            "inventory_checked": 0,
+            "allow_sold_out": 0,
+            "weight": 0,
+            "weight_unit": "g",
+            "src": null,
+            "start_date": null,
+            "end_date": null,
+            "timezone": "Asia/Bangkok",
+            "max_buy": null,
+            "min_buy": 1,
+            "total_sold": 1,
+            "total_quantity": null,
+            "description": "Phiên bản mẫu",
+            "position": 0,
+            "status": "Normal",
+            "file": "",
+            "download_count": 1,
+            "is_download_redirect": 0,
+            "option_ids": "88053",
+            "text_quantity": "",
+            "name": "VPS-Phiên bản mẫu",
+            "rest_quantity": -1,
+            "title": "Phiên bản mẫu",
+            "option_name": "Phiên bản mẫu",
+            "option1": "Phiên bản mẫu",
+            "options": [
+              {
+                "variant_value_id": "761895",
+                "option_id": "88053",
+                "option_name": "Version",
+                "option_value_id": "269099",
+                "option_value_value": {
+                  "name": "Phiên bản mẫu"
+                }
+              }
+            ]
+          }
+        ],
+        "options": [
+          {
+            "option_id": 88053,
+            "name": "Version",
+            "position": 1,
+            "type": 1,
+            "values": [
+              {
+                "option_value_id": "269099",
+                "name": "Phiên bản mẫu"
+              }
+            ]
+          }
+        ],
+        "tags": [],
+        "product_category_ids": [],
+        "page_checkout_ids": [],
+        "product_up_sells": [],
+        "page_checkout": {
+          "page_checkout_id": 152572,
+          "name": "VPS"
+        }
+      }
+    },
+    "message": "Thành công",
+    "code": 200
+  },
+  "requestHeaders": {
+    "owner-id": "6a2c26c92d543800211b5157",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "c588de441f49361e9d88ec98cd4fdb9fa54690d1f05542b5a56f838ad558e5f218b17b07e8392dc5e342ae73784ef985729e75ea72e53c0f39091e216bdf353b1128a5060c690b0d50cedf379770bcc2ec81bf87c4c7f1cd5d103d81d1a16a033413473606bcdeb600af92be385b77832c67a69ad7573d986bc2983feb1f722223e3509e0e03391a51180eca76a4bc8f7b9cb189c60bcfc8b181ccfb9a0128704a06a8e64cbadfb97f7dfd79c31e39024e68db40b342515f85f4e945e7457420fc491dfee74c452797ec680b69cb300132556cdf33c26f6a4d4e0509dc8bd611e0f1ab2cec87167e8b6117ea7b85aa15d2d10a11d949806d74c77b2583af6e2e4317910780f4d102c3081667f93970ffd4e66d156582c5266e6930b0332a6080",
+    "Referer": "https://appv6.ladipage.com/",
+    "sec-ch-ua": "\"HeadlessChrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+    "sec-ch-ua-mobile": "?0",
+    "store-id": "110263",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LioraCDP/1.0",
+    "accept": "application/json, text/plain, */*",
+    "content-type": "application/json;charset=UTF-8"
+  },
+  "capturedAt": "2026-06-23T05:32:22.415Z"
+}
