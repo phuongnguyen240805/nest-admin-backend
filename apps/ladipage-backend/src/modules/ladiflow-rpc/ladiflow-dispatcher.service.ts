@@ -2,6 +2,7 @@ import { Injectable, NotImplementedException } from '@nestjs/common';
 
 export interface LadiflowRpcContext {
   ownerId?: string;
+  tenantId?: number;
   authorization?: string;
   host?: string;
   path?: string;

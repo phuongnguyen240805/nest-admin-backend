@@ -4,7 +4,7 @@ import { map } from 'rxjs/operators';
 
 import type { LadipageRpcResponse } from '@liora/ladipage-types';
 
-const SUCCESS_MESSAGE = 'Thành công';
+const SUCCESS_MESSAGE = 'Th\u00e0nh c\u00f4ng';
 
 function isRpcResponse(value: unknown): value is LadipageRpcResponse<unknown> {
   if (!value || typeof value !== 'object') return false;

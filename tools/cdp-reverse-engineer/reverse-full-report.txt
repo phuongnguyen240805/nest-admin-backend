@@ -1,0 +1,84 @@
+REVERSE ENGINEERING RESULTS - appv6.ladipage.com
+Generated: 06/27/2026 23:34:58
+Source: tools/cdp-reverse-engineer (merged data from phases A/B/C/4/1)
+reverse-skill: cloned to D:\Tools\reverse-skill-ladipage-re (external, removable)
+
+Total unique routes in merge: 81
+
+=== 1. KHO UNG DUNG (App Store) ===
+- POST api.ladipage.com/2.0/application/list
+- POST api.ladipage.com/2.0/application/update
+
+
+=== 2. LADIWORK ===
+- POST api.ladiflow.com/1.0/crm-deal-custom-field/list
+- POST api.ladiflow.com/1.0/crm-deal/get-summary
+- POST api.ladiflow.com/1.0/crm-deal/list
+- POST api.ladiflow.com/1.0/crm-pipeline-category/list
+- POST api.ladiflow.com/1.0/crm-pipeline/list
+- POST api.ladiflow.com/1.0/crm-pipeline/search
+- POST api.ladiflow.com/1.0/ladiwork-dashboard/attention-stats
+- POST api.ladiflow.com/1.0/ladiwork-dashboard/config
+- POST api.ladiflow.com/1.0/ladiwork-dashboard/job-status-stats
+- POST api.ladiflow.com/1.0/ladiwork-dashboard/list-pipelines
+- POST api.ladiflow.com/1.0/ladiwork-dashboard/member-performance
+- POST api.ladiflow.com/1.0/ladiwork-dashboard/pipeline-by-stage
+
+
+=== 3. AUTOMATION (LadiFlow) ===
+- POST api.ladiflow.com/1.0/broadcast/list
+- POST api.ladiflow.com/1.0/call-center/list-integrations
+- POST api.ladiflow.com/1.0/crm-deal-custom-field/list
+- POST api.ladiflow.com/1.0/crm-deal/get-summary
+- POST api.ladiflow.com/1.0/crm-deal/list
+- POST api.ladiflow.com/1.0/crm-filter/get-system-filters
+- POST api.ladiflow.com/1.0/crm-insight-folder/list
+- POST api.ladiflow.com/1.0/crm-label/list-all
+- POST api.ladiflow.com/1.0/crm-organization/list
+- POST api.ladiflow.com/1.0/crm-pipeline-category/list
+- POST api.ladiflow.com/1.0/crm-pipeline/list
+- POST api.ladiflow.com/1.0/crm-pipeline/search
+- POST api.ladiflow.com/1.0/crm-staff-configuration/get-list-staff-configuration
+- POST api.ladiflow.com/1.0/custom-field/list-all
+- POST api.ladiflow.com/1.0/customer-tag/list
+- POST api.ladiflow.com/1.0/customer-tag/list-all
+- POST api.ladiflow.com/1.0/customer/activity
+- POST api.ladiflow.com/1.0/customer/customer-detail
+- POST api.ladiflow.com/1.0/customer/list
+- POST api.ladiflow.com/1.0/customer/list-customer-merge
+- POST api.ladiflow.com/1.0/customer/show
+- POST api.ladiflow.com/1.0/dash-board/list-subscriber-by-time
+- POST api.ladiflow.com/1.0/flow-tag/list-all
+- POST api.ladiflow.com/1.0/flow/list
+- POST api.ladiflow.com/1.0/integration/list-all
+- POST api.ladiflow.com/1.0/ladipage-notification/list
+- POST api.ladiflow.com/1.0/ladiwork-dashboard/attention-stats
+- POST api.ladiflow.com/1.0/ladiwork-dashboard/config
+- POST api.ladiflow.com/1.0/ladiwork-dashboard/job-status-stats
+- POST api.ladiflow.com/1.0/ladiwork-dashboard/list-pipelines
+- POST api.ladiflow.com/1.0/ladiwork-dashboard/member-performance
+- POST api.ladiflow.com/1.0/ladiwork-dashboard/pipeline-by-stage
+- POST api.ladiflow.com/1.0/progress-bar/list-sections-latest
+- POST api.ladiflow.com/1.0/segment/list
+- POST apiv5.ladiflow.com/1.0/customer-tag/list-all
+- POST apiv5.ladiflow.com/1.0/flow/show
+- POST apiv5.ladiflow.com/1.0/integration/list-all
+- POST apiv5.ladiflow.com/1.0/recurring-topic/list
+- POST apiv5.ladiflow.com/1.0/segment/list-all
+
+
+=== 4. BAO CAO (Reports) ===
+- POST apiv5.sales.ldpform.net/2.0/report/overview
+- POST apiv5.sales.ldpform.net/2.0/report/top-product
+
+
+=== 5. LANDING PAGES ===
+- POST api.ladiflow.com/1.0/crm-staff-configuration/get-list-staff-configuration
+- POST api.ladipage.com/2.0/domain/list
+- POST api.ladipage.com/2.0/form-config/list
+- POST api.ladipage.com/2.0/ladi-page-tag/list
+- POST api.ladipage.com/2.0/ladi-page/list
+- POST api.ladipage.com/2.0/staff/list
+- POST apiv5.ladipage.com/2.0/domain/list
+- POST apiv5.ladipage.com/2.0/ladi-page/show
+

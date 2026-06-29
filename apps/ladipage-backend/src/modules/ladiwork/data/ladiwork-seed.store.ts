@@ -15,6 +15,9 @@ const PHASE_B_FIXTURES = {
   dealList: 'crm-deal__list.json',
   dealSummary: 'crm-deal__get-summary.json',
   dashboardConfig: 'ladiwork-dashboard__config.json',
+  dashboardAttentionStats: 'ladiwork-dashboard__attention-stats.json',
+  dashboardListPipelines: 'ladiwork-dashboard__list-pipelines.json',
+  dashboardPipelineByStage: 'ladiwork-dashboard__pipeline-by-stage.json',
   pipelineList: 'crm-pipeline__list.json',
   pipelineSearch: 'crm-pipeline__search.json',
   systemFilters: 'crm-filter__get-system-filters.json',
@@ -48,6 +51,18 @@ export class LadiworkSeedStore {
 
   getDashboardConfig(): JsonRecord {
     return this.readFixtureData<JsonRecord>(PHASE_B_FIXTURES.dashboardConfig);
+  }
+
+  getDashboardAttentionStats(): JsonRecord {
+    return this.readFixtureData<JsonRecord>(PHASE_B_FIXTURES.dashboardAttentionStats);
+  }
+
+  getDashboardListPipelines(): JsonRecord {
+    return this.readFixtureData<JsonRecord>(PHASE_B_FIXTURES.dashboardListPipelines);
+  }
+
+  getDashboardPipelineByStage(): JsonRecord {
+    return this.readFixtureData<JsonRecord>(PHASE_B_FIXTURES.dashboardPipelineByStage);
   }
 
   getSystemFilters(): unknown {

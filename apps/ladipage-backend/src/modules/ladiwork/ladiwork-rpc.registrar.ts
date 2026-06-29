@@ -25,9 +25,15 @@ export class LadiworkRpcRegistrar implements OnModuleInit {
       this.dealService.listByStage(body, ctx));
     this.dispatcher.registerHandler('crm-deal/get-summary', (body, ctx) =>
       this.dealService.getSummary(body, ctx));
-    this.dispatcher.registerHandler('ladiwork-dashboard/config', () =>
-      this.dashboardService.config());
-    this.dispatcher.registerHandler('crm-filter/get-system-filters', () =>
-      this.filterService.getSystemFilters());
+    this.dispatcher.registerHandler('ladiwork-dashboard/config', (_body, ctx) =>
+      this.dashboardService.config(ctx));
+    this.dispatcher.registerHandler('ladiwork-dashboard/attention-stats', (_body, ctx) =>
+      this.dashboardService.attentionStats(ctx));
+    this.dispatcher.registerHandler('ladiwork-dashboard/list-pipelines', (_body, ctx) =>
+      this.dashboardService.listPipelines(ctx));
+    this.dispatcher.registerHandler('ladiwork-dashboard/pipeline-by-stage', (body, ctx) =>
+      this.dashboardService.pipelineByStage(body, ctx));
+    this.dispatcher.registerHandler('crm-filter/get-system-filters', (_body, ctx) =>
+      this.filterService.getSystemFilters(ctx));
   }
 }

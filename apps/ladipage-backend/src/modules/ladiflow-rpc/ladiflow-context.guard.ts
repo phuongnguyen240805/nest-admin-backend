@@ -3,6 +3,7 @@ import type { FastifyRequest } from 'fastify';
 
 export interface LadiflowContext {
   ownerId?: string;
+  tenantId?: number;
   authorization?: string;
 }
 
@@ -16,6 +17,7 @@ export class LadiflowContextGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<LadiflowRequest>();
     request.ladiflowContext = {
       ownerId: this.headerValue(request, 'owner-id'),
+      tenantId: this.optionalNumber(this.headerValue(request, 'x-tenant-id')),
       authorization: this.headerValue(request, 'authorization'),
     };
     // TODO(PR-P34-03): validate owner-id against tenant external mapping once that table exists.
@@ -25,5 +27,10 @@ export class LadiflowContextGuard implements CanActivate {
   private headerValue(request: FastifyRequest, key: string): string | undefined {
     const value = request.headers[key];
     return Array.isArray(value) ? value[0] : value;
+  }
+
+  private optionalNumber(value: string | undefined): number | undefined {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
   }
 }

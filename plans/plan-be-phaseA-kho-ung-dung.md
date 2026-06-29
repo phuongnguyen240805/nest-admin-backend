@@ -375,3 +375,51 @@ DoD: nx build + test pass; curl list trả 8 apps; update Automation status_acti
 | `libs/ladipage-types/src/landing/application.types.ts` | `LpApplication` |
 | `plans/plan-w2-1-ladiwork-board-pilot.md` | Pattern seed store pilot |
 | `src/modules/ladiwork/` | Reference registrar + seed |
+
+Luồng hoạt động Kho ứng dụng
+
+                          ┌─────────────────┐
+                          │ Đăng nhập appv6 │
+                          └────────┬────────┘
+                                   │
+                                   ▼
+                       ┌──────────────────────┐
+                       │ /apps — Kho ứng dụng │
+                       └───────────┬──────────┘
+                                   │
+                                   ▼
+                       ┌───────────────────────┐
+                       │ POST application/list │
+                       └───────────┬───────────┘
+                                   │
+                                   ▼
+                       ┌───────────────────────┐
+                       │ Render catalog: code, │
+                       │  price, active, pin   │
+                       └───────────┬───────────┘
+                     ┌─────────────┴────────────┐
+                     ▼                          ▼
+           ┌───────────────────┐   ┌─────────────────────────┐
+           │ Tìm kiếm — filter │   │ /apps/{slug} — chi tiết │
+           │    client-side    │   └────────────┬────────────┘
+           └───────────────────┘                │
+                                                │
+                                                ▼
+                                   ┌─────────────────────────┐
+                                   │ POST application/update │
+                                   └────────────┬────────────┘
+                                       ┌────────┴─────────┐
+                                       ▼status_active=true▼status_pin=true
+                               ┌───────────────┐  ┌──────────────┐
+                               │ App có thể Mở │  │ Ghim sidebar │
+                               └───────┬───────┘  └──────────────┘
+                                       │
+                                       ▼
+                               ┌───────────────┐
+                               │ Mở / Truy cập │
+                               └───────┬───────┘
+            ┌──────────────────────────┼──────────────────────────┐
+            ▼                          ▼                          ▼
+ ┌─────────────────────┐   ┌───────────────────────┐   ┌─────────────────────┐
+ │ /ladiwork → Phase B │   │ /automation → Phase C │   │ Ecommerce → Phase 2 │
+ └─────────────────────┘   └───────────────────────┘   └─────────────────────┘

@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 // import { SseModule, BillingModule } from '@liora/nest-core';
+import { PageEntity } from './entities';
 import { PublishController } from './publish.controller';
 import { PublishService } from './publish.service';
+import { PageService } from './services/page.service';
 
 /**
  * PublishModule
@@ -18,9 +21,9 @@ import { PublishService } from './publish.service';
  *   FileManagerModule (assets)
  */
 @Module({
-  // imports: [BillingModule, SseModule, FileManagerModule],
+  imports: [TypeOrmModule.forFeature([PageEntity])],
   controllers: [PublishController],
-  providers: [PublishService],
-  exports: [PublishService],
+  providers: [PageService, PublishService],
+  exports: [TypeOrmModule, PageService, PublishService],
 })
 export class PublishModule {}

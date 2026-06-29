@@ -3,6 +3,9 @@ import { Injectable, NotImplementedException } from '@nestjs/common';
 export interface RpcContext {
   host?: string;
   path?: string;
+  storeId?: string;
+  tenantId?: number;
+  authorization?: string;
 }
 
 export type RpcHandler = (
@@ -55,6 +58,10 @@ const TODO_ROUTES = new Set([
 @Injectable()
 export class RpcDispatcherService {
   private readonly handlers: Record<string, RpcHandler> = {};
+
+  registerHandler(routeKey: string, handler: RpcHandler): void {
+    this.handlers[routeKey] = handler;
+  }
 
   async dispatch(
     resource: string,

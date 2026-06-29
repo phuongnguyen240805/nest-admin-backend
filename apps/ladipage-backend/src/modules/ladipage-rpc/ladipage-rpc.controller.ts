@@ -6,6 +6,15 @@ import { Bypass, Public } from '@liora/nest-core';
 import { LadipageRpcResponseInterceptor } from './rpc-response.interceptor';
 import { RpcDispatcherService } from './rpc-dispatcher.service';
 
+function firstHeaderValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function optionalNumber(value: string | undefined): number | undefined {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 @Public()
 @Bypass()
 @Controller('ladipage')
@@ -23,6 +32,9 @@ export class LadipageRpcController {
     return this.dispatcher.dispatch(resource, action, body ?? {}, {
       host: request.hostname,
       path: request.url,
+      storeId: firstHeaderValue(request.headers['store-id']),
+      tenantId: optionalNumber(firstHeaderValue(request.headers['x-tenant-id'])),
+      authorization: firstHeaderValue(request.headers.authorization),
     });
   }
 
@@ -35,6 +47,9 @@ export class LadipageRpcController {
     return this.dispatcher.dispatch(resource, undefined, body ?? {}, {
       host: request.hostname,
       path: request.url,
+      storeId: firstHeaderValue(request.headers['store-id']),
+      tenantId: optionalNumber(firstHeaderValue(request.headers['x-tenant-id'])),
+      authorization: firstHeaderValue(request.headers.authorization),
     });
   }
 }

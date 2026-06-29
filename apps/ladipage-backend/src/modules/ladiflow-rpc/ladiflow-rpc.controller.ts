@@ -17,7 +17,7 @@ import { LadiflowResponseInterceptor } from './ladiflow-response.interceptor';
 
 @Public()
 @Bypass()
-@Controller('ladiflow/1.0')
+@Controller('ladiflow')
 @UseGuards(LadiflowContextGuard)
 @UseInterceptors(LadiflowResponseInterceptor)
 export class LadiflowRpcController {
@@ -32,6 +32,7 @@ export class LadiflowRpcController {
   ): Promise<unknown> {
     return this.dispatcher.dispatch(resource, action, body ?? {}, {
       ownerId: this.headerValue(request, 'owner-id'),
+      tenantId: this.optionalNumber(this.headerValue(request, 'x-tenant-id')),
       authorization: this.headerValue(request, 'authorization'),
       host: request.hostname,
       path: request.url,
@@ -41,5 +42,10 @@ export class LadiflowRpcController {
   private headerValue(request: FastifyRequest, key: string): string | undefined {
     const value = request.headers[key];
     return Array.isArray(value) ? value[0] : value;
+  }
+
+  private optionalNumber(value: string | undefined): number | undefined {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
   }
 }
