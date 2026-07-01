@@ -45,4 +45,10 @@ export class ApplicationEntity extends TenantScopedEntity {
 
   @Column({ name: 'is_delete', type: 'boolean', default: false })
   isDelete: boolean
+
+  @Column({ name: 'views_count', type: 'int', default: 0 })
+  viewsCount: number
+
+  @Column({ name: 'installs_count', type: 'int', default: 0 })
+  installsCount: number
 }

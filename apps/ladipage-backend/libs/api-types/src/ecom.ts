@@ -30,6 +30,10 @@ export interface OrderItem {
   createdAt: string | Date
   orderId?: number
   customerId?: number | null
+  personId?: string | null
+  source?: string
+  assigneeId?: string
+  assigneeName?: string
   isIncomplete?: boolean
 }
 

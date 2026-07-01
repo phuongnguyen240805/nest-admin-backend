@@ -1,5 +1,6 @@
 import { ApplicationSeedStore } from '../data/application-seed.store';
 import { ApplicationCatalogService } from './application-catalog.service';
+import { ApplicationAccessService } from './application-access.service';
 import { ApplicationLifecycleService } from './application-lifecycle.service';
 
 const STORE_ID = '6a2c26caef58950011646639';
@@ -10,29 +11,33 @@ describe('ApplicationCatalogService', () => {
 
   beforeEach(() => {
     const seedStore = new ApplicationSeedStore();
-    catalogService = new ApplicationCatalogService(seedStore);
-    lifecycleService = new ApplicationLifecycleService(seedStore);
+    const accessService = {
+      enrichList: jest.fn(async (items: unknown[]) => items),
+      assertCanUpdate: jest.fn(async () => undefined),
+    } as unknown as ApplicationAccessService;
+    catalogService = new ApplicationCatalogService(seedStore, accessService);
+    lifecycleService = new ApplicationLifecycleService(seedStore, accessService);
   });
 
-  it('lists application catalog from the phaseA fixture', () => {
-    const result = catalogService.list({ lang: 'vi' }, { storeId: STORE_ID });
+  it('lists application catalog from the phaseA fixture and seed catalog', async () => {
+    const result = await catalogService.list({ lang: 'vi' }, { storeId: STORE_ID });
 
-    expect(result.length).toBe(7);
     expect(result.map((item) => item.code)).toEqual(expect.arrayContaining([
       'WebsiteBuilder',
       'Automation',
       'Ecommerce',
       'LadiWork',
+      'AiSeo',
     ]));
   });
 
-  it('activates Automation in the in-memory catalog', () => {
-    const updated = lifecycleService.update({
+  it('activates Automation in the in-memory catalog', async () => {
+    const updated = await lifecycleService.update({
       lang: 'vi',
       code: 'Automation',
       status_active: true,
     }, { storeId: STORE_ID });
-    const list = catalogService.list({ lang: 'vi' }, { storeId: STORE_ID });
+    const list = await catalogService.list({ lang: 'vi' }, { storeId: STORE_ID });
     const automation = list.find((item) => item.code === 'Automation');
 
     expect(updated.status_active).toBe(true);
@@ -40,8 +45,8 @@ describe('ApplicationCatalogService', () => {
     expect(automation?.status_active).toBe(true);
   });
 
-  it('upserts Affiliate from the captured update fixture template', () => {
-    const updated = lifecycleService.update({
+  it('upserts Affiliate from the captured update fixture template', async () => {
+    const updated = await lifecycleService.update({
       lang: 'vi',
       code: 'Affiliate',
       status_pin: true,

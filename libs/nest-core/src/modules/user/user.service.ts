@@ -113,12 +113,21 @@ export class UserService {
       throw new BusinessException(ErrorEnum.USER_NOT_FOUND)
 
     const data = {
-      ...(info.nickname ? { nickname: info.nickname } : null),
-      ...(info.avatar ? { avatar: info.avatar } : null),
-      ...(info.email ? { email: info.email } : null),
-      ...(info.phone ? { phone: info.phone } : null),
-      ...(info.qq ? { qq: info.qq } : null),
-      ...(info.remark ? { remark: info.remark } : null),
+      ...(info.nickname !== undefined ? { nickname: info.nickname } : null),
+      ...(info.avatar !== undefined ? { avatar: info.avatar } : null),
+      ...(info.email !== undefined ? { email: info.email } : null),
+      ...(info.phone !== undefined ? { phone: info.phone } : null),
+      ...(info.qq !== undefined ? { qq: info.qq } : null),
+      ...(info.remark !== undefined ? { remark: info.remark } : null),
+      ...(info.bio !== undefined ? { bio: info.bio } : null),
+      ...(info.socialFacebook !== undefined ? { socialFacebook: info.socialFacebook } : null),
+      ...(info.socialX !== undefined ? { socialX: info.socialX } : null),
+      ...(info.socialLinkedin !== undefined ? { socialLinkedin: info.socialLinkedin } : null),
+      ...(info.socialInstagram !== undefined ? { socialInstagram: info.socialInstagram } : null),
+      ...(info.addressCountry !== undefined ? { addressCountry: info.addressCountry } : null),
+      ...(info.addressCityState !== undefined ? { addressCityState: info.addressCityState } : null),
+      ...(info.postalCode !== undefined ? { postalCode: info.postalCode } : null),
+      ...(info.taxId !== undefined ? { taxId: info.taxId } : null),
     }
 
     if (!info.avatar && info.qq) {

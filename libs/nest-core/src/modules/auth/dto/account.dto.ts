@@ -43,6 +43,60 @@ export class AccountUpdateDto {
   @IsOptional()
   @IsString()
   remark: string
+
+  @ApiProperty({ description: '个人简介' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  bio: string
+
+  @ApiProperty({ description: 'Facebook 链接' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  socialFacebook: string
+
+  @ApiProperty({ description: 'X 链接' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  socialX: string
+
+  @ApiProperty({ description: 'LinkedIn 链接' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  socialLinkedin: string
+
+  @ApiProperty({ description: 'Instagram 链接' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  socialInstagram: string
+
+  @ApiProperty({ description: '国家' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  addressCountry: string
+
+  @ApiProperty({ description: '城市/州' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  addressCityState: string
+
+  @ApiProperty({ description: '邮政编码' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  postalCode: string
+
+  @ApiProperty({ description: '税号' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  taxId: string
 }
 
 export class ResetPasswordDto {

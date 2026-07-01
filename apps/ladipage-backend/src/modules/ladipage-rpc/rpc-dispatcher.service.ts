@@ -1,4 +1,5 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
+import type { Organization } from '@liora/nest-core/modules/billing/entities/organization.entity';
 
 export interface RpcContext {
   host?: string;
@@ -6,6 +7,14 @@ export interface RpcContext {
   storeId?: string;
   tenantId?: number;
   authorization?: string;
+  user?: {
+    uid?: number;
+    roles?: string[];
+    tenantId?: number;
+    activeTenantId?: number;
+    organizationId?: string;
+  };
+  org?: Organization;
 }
 
 export type RpcHandler = (

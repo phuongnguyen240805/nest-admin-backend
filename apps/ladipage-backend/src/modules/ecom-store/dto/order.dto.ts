@@ -71,6 +71,24 @@ export class CreateOrderDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(100)
+  source?: string
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(36)
+  assigneeId?: string
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  assigneeName?: string
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   notes?: string
 
   @ApiPropertyOptional()

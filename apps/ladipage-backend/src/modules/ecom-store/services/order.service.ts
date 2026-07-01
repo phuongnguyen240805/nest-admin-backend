@@ -129,6 +129,9 @@ export class OrderService extends TenantScopedService {
         status: dto.status ?? OrderStatus.PENDING,
         total,
         paymentMethod: dto.paymentMethod ?? null,
+        source: dto.source ?? null,
+        assigneeId: dto.assigneeId ?? null,
+        assigneeName: dto.assigneeName ?? null,
         customerName: dto.customerName,
         customerPhone: dto.customerPhone,
         customerEmail: dto.customerEmail ?? null,
@@ -193,6 +196,9 @@ export class OrderService extends TenantScopedService {
       orderId: order.id,
       customerId: order.customerId,
       personId: order.personId,
+      source: order.source ?? undefined,
+      assigneeId: order.assigneeId ?? undefined,
+      assigneeName: order.assigneeName ?? undefined,
       isIncomplete: order.isIncomplete,
     }
   }

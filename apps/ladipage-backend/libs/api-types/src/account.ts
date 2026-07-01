@@ -5,6 +5,15 @@ export interface AccountInfo {
   phone: string;
   remark: string;
   avatar: string;
+  bio: string;
+  socialFacebook: string;
+  socialX: string;
+  socialLinkedin: string;
+  socialInstagram: string;
+  addressCountry: string;
+  addressCityState: string;
+  postalCode: string;
+  taxId: string;
 }
 
 export interface AccountMenuMeta {
@@ -31,6 +40,15 @@ export interface AccountUpdatePayload {
   phone?: string;
   avatar?: string;
   remark?: string;
+  bio?: string;
+  socialFacebook?: string;
+  socialX?: string;
+  socialLinkedin?: string;
+  socialInstagram?: string;
+  addressCountry?: string;
+  addressCityState?: string;
+  postalCode?: string;
+  taxId?: string;
 }
 
 export interface PasswordUpdatePayload {

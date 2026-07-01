@@ -4,7 +4,7 @@ import type { FastifyRequest } from 'fastify';
 import { Bypass, Public } from '@liora/nest-core';
 
 import { LadipageRpcResponseInterceptor } from './rpc-response.interceptor';
-import { RpcDispatcherService } from './rpc-dispatcher.service';
+import { RpcContext, RpcDispatcherService } from './rpc-dispatcher.service';
 
 function firstHeaderValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -13,6 +13,25 @@ function firstHeaderValue(value: string | string[] | undefined): string | undefi
 function optionalNumber(value: string | undefined): number | undefined {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function buildRpcContext(request: FastifyRequest): RpcContext {
+  const req = request as FastifyRequest & {
+    user?: RpcContext['user'];
+    org?: RpcContext['org'];
+    tenantId?: number;
+  };
+
+  return {
+    host: request.hostname,
+    path: request.url,
+    storeId: firstHeaderValue(request.headers['store-id']),
+    tenantId: req.tenantId ?? req.user?.activeTenantId ?? req.user?.tenantId
+      ?? optionalNumber(firstHeaderValue(request.headers['x-tenant-id'])),
+    authorization: firstHeaderValue(request.headers.authorization),
+    user: req.user,
+    org: req.org,
+  };
 }
 
 @Public()
@@ -29,13 +48,7 @@ export class LadipageRpcController {
     @Body() body: Record<string, unknown>,
     @Req() request: FastifyRequest,
   ): Promise<unknown> {
-    return this.dispatcher.dispatch(resource, action, body ?? {}, {
-      host: request.hostname,
-      path: request.url,
-      storeId: firstHeaderValue(request.headers['store-id']),
-      tenantId: optionalNumber(firstHeaderValue(request.headers['x-tenant-id'])),
-      authorization: firstHeaderValue(request.headers.authorization),
-    });
+    return this.dispatcher.dispatch(resource, action, body ?? {}, buildRpcContext(request));
   }
 
   @Post(':resource')
@@ -44,12 +57,6 @@ export class LadipageRpcController {
     @Body() body: Record<string, unknown>,
     @Req() request: FastifyRequest,
   ): Promise<unknown> {
-    return this.dispatcher.dispatch(resource, undefined, body ?? {}, {
-      host: request.hostname,
-      path: request.url,
-      storeId: firstHeaderValue(request.headers['store-id']),
-      tenantId: optionalNumber(firstHeaderValue(request.headers['x-tenant-id'])),
-      authorization: firstHeaderValue(request.headers.authorization),
-    });
+    return this.dispatcher.dispatch(resource, undefined, body ?? {}, buildRpcContext(request));
   }
 }

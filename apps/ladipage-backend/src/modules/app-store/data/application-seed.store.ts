@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { APPLICATION_SEED_CATALOG } from './application-seed-catalog';
 
 interface ContractFixture<TData = unknown> {
   capturedAt?: string;
@@ -71,10 +72,67 @@ export class ApplicationSeedStore {
 
   private stateApplications(): JsonRecord[] {
     if (!this.applications) {
-      this.applications = this.readFixtureData<JsonRecord[]>(PHASE_A_FIXTURES.applicationList);
+      this.applications = this.mergeCatalogTemplates(
+        this.readFixtureData<JsonRecord[]>(PHASE_A_FIXTURES.applicationList),
+      );
     }
 
     return this.applications;
+  }
+
+  private mergeCatalogTemplates(applications: JsonRecord[]): JsonRecord[] {
+    const base = applications.map((application) => this.withMetricDefaults(application));
+    const byCode = new Set(base.map((application) => String(application.code ?? '')));
+    const defaults = this.defaultTemplateContext(base);
+    const timestamp = this.getUpdateTimestamp() ?? new Date().toISOString();
+
+    for (const item of APPLICATION_SEED_CATALOG) {
+      if (byCode.has(item.code)) continue;
+
+      base.push({
+        _id: `seed-${item.code}`,
+        store_id: defaults.storeId,
+        owner_id: defaults.ownerId,
+        ladi_uid: defaults.ladiUid,
+        name: item.name,
+        code: item.code,
+        logo: '',
+        thumb: '',
+        price: item.price,
+        status_active: item.statusActive === true,
+        status_actived_at: item.statusActive === true ? timestamp : null,
+        status_pin: item.statusPin === true,
+        is_delete: false,
+        installs_count: item.installsCount ?? 0,
+        views_count: 0,
+        created_at: timestamp,
+        updated_at: timestamp,
+      });
+    }
+
+    return base;
+  }
+
+  private withMetricDefaults(application: JsonRecord): JsonRecord {
+    return {
+      installs_count: 0,
+      views_count: 0,
+      ...application,
+    };
+  }
+
+  private defaultTemplateContext(applications: JsonRecord[]): {
+    storeId: string;
+    ownerId: string;
+    ladiUid: string;
+  } {
+    const first = applications[0] ?? {};
+
+    return {
+      storeId: String(first.store_id ?? this.getStoreId() ?? 'default-store'),
+      ownerId: String(first.owner_id ?? 'system'),
+      ladiUid: String(first.ladi_uid ?? first.owner_id ?? 'system'),
+    };
   }
 
   private matchesStore(item: JsonRecord, storeId?: string): boolean {

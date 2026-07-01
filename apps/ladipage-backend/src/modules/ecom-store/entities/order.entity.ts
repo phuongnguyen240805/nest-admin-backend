@@ -25,6 +25,15 @@ export class OrderEntity extends TenantScopedEntity {
   @Column({ type: 'varchar', length: 50, nullable: true })
   paymentMethod: string | null
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  source: string | null
+
+  @Column({ name: 'assignee_id', type: 'varchar', length: 36, nullable: true })
+  assigneeId: string | null
+
+  @Column({ name: 'assignee_name', type: 'varchar', length: 255, nullable: true })
+  assigneeName: string | null
+
   @Column({ type: 'varchar', length: 255 })
   customerName: string
 

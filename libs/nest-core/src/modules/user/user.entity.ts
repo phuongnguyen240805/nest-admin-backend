@@ -67,6 +67,33 @@ export class UserEntity extends CommonEntity {
   @Column({ nullable: true })
   remark: string
 
+  @Column({ nullable: true, length: 500 })
+  bio: string
+
+  @Column({ name: 'social_facebook', nullable: true, length: 500 })
+  socialFacebook: string
+
+  @Column({ name: 'social_x', nullable: true, length: 500 })
+  socialX: string
+
+  @Column({ name: 'social_linkedin', nullable: true, length: 500 })
+  socialLinkedin: string
+
+  @Column({ name: 'social_instagram', nullable: true, length: 500 })
+  socialInstagram: string
+
+  @Column({ name: 'address_country', nullable: true, length: 200 })
+  addressCountry: string
+
+  @Column({ name: 'address_city_state', nullable: true, length: 500 })
+  addressCityState: string
+
+  @Column({ name: 'postal_code', nullable: true, length: 50 })
+  postalCode: string
+
+  @Column({ name: 'tax_id', nullable: true, length: 100 })
+  taxId: string
+
   @Column({ type: 'smallint', nullable: true, default: 1 })
   status: number
 

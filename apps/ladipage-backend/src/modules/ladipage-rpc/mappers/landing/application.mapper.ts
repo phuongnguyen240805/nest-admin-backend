@@ -17,6 +17,8 @@ export function mapApplicationRpcItem(value: Record<string, unknown>): LpApplica
     status_actived_at: dateValue(value.statusActivedAt),
     status_pin: booleanValue(value.statusPin),
     is_delete: booleanValue(value.isDelete),
+    views_count: numberValue(value.viewsCount),
+    installs_count: numberValue(value.installsCount),
     created_at: dateValue(value.createdAt),
     updated_at: dateValue(value.updatedAt),
   };

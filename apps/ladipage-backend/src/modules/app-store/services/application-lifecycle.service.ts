@@ -8,6 +8,7 @@ import type { RpcContext } from '../../ladipage-rpc/rpc-dispatcher.service';
 import { mapApplicationRpcItem } from '../../ladipage-rpc/mappers/landing/application.mapper';
 import { ApplicationSeedStore } from '../data/application-seed.store';
 import { ApplicationEntity } from '../entities';
+import { ApplicationAccessService } from './application-access.service';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -15,14 +16,15 @@ type JsonRecord = Record<string, unknown>;
 export class ApplicationLifecycleService {
   constructor(
     private readonly seedStore: ApplicationSeedStore,
+    private readonly accessService: ApplicationAccessService,
     @Optional()
     @InjectRepository(ApplicationEntity)
     private readonly applicationRepository?: Repository<ApplicationEntity>,
   ) {}
 
-  update(body: JsonRecord, ctx: RpcContext): LpApplication {
+  async update(body: JsonRecord, ctx: RpcContext): Promise<LpApplication> {
     if (this.applicationRepository) {
-      return this.updateRepository(body, ctx) as unknown as LpApplication;
+      return this.updateRepository(body, ctx);
     }
 
     const code = String(body.code ?? '').trim();
@@ -36,12 +38,19 @@ export class ApplicationLifecycleService {
       store_id: storeId ?? current.store_id,
     };
 
+    await this.accessService.assertCanUpdate(
+      mapApplicationRpcItem(next),
+      body,
+      ctx,
+    );
     this.patchBoolean(next, body, 'status_active');
     this.patchBoolean(next, body, 'status_pin');
+    this.patchInstallCounter(next, current, body);
     this.patchActivationTimestamp(next);
     this.patchUpdatedTimestamp(next);
 
-    return mapApplicationRpcItem(this.seedStore.saveApplication(next));
+    const saved = mapApplicationRpcItem(this.seedStore.saveApplication(next));
+    return (await this.accessService.enrichList([saved], ctx))[0];
   }
 
   private async updateRepository(body: JsonRecord, ctx: RpcContext): Promise<LpApplication> {
@@ -71,15 +80,22 @@ export class ApplicationLifecycleService {
       current = this.applicationRepository!.create(this.entityFromRpc(template, ctx.tenantId));
     }
 
+    await this.accessService.assertCanUpdate(
+      mapApplicationRpcItem(current as unknown as Record<string, unknown>),
+      body,
+      ctx,
+    );
+    this.patchEntityInstallCounter(current, body);
     this.patchEntityBoolean(current, body, 'status_active', 'statusActive');
     this.patchEntityBoolean(current, body, 'status_pin', 'statusPin');
     this.patchEntityActivationTimestamp(current);
 
     const saved = await this.applicationRepository!.save(current);
-    return mapApplicationRpcItem(saved as unknown as Record<string, unknown>);
+    const mapped = mapApplicationRpcItem(saved as unknown as Record<string, unknown>);
+    return (await this.accessService.enrichList([mapped], ctx))[0];
   }
 
-  private updateSeed(body: JsonRecord, ctx: RpcContext): LpApplication {
+  private async updateSeed(body: JsonRecord, ctx: RpcContext): Promise<LpApplication> {
     const code = String(body.code ?? '').trim();
     const storeId = ctx.storeId ?? this.seedStore.getStoreId();
     const current = this.seedStore.findApplicationByCode(code, storeId)
@@ -89,12 +105,19 @@ export class ApplicationLifecycleService {
       store_id: storeId ?? current.store_id,
     };
 
+    await this.accessService.assertCanUpdate(
+      mapApplicationRpcItem(next),
+      body,
+      ctx,
+    );
     this.patchBoolean(next, body, 'status_active');
     this.patchBoolean(next, body, 'status_pin');
+    this.patchInstallCounter(next, current, body);
     this.patchActivationTimestamp(next);
     this.patchUpdatedTimestamp(next);
 
-    return mapApplicationRpcItem(this.seedStore.saveApplication(next));
+    const saved = mapApplicationRpcItem(this.seedStore.saveApplication(next));
+    return (await this.accessService.enrichList([saved], ctx))[0];
   }
 
   private newApplicationFromTemplate(code: string, storeId?: string): JsonRecord {
@@ -144,6 +167,23 @@ export class ApplicationLifecycleService {
     if (timestamp) target.updated_at = timestamp;
   }
 
+  private patchInstallCounter(
+    target: JsonRecord,
+    current: JsonRecord,
+    source: JsonRecord,
+  ): void {
+    if (source.status_active !== true || current.status_actived_at) return;
+    target.installs_count = Number(current.installs_count ?? 0) + 1;
+  }
+
+  private patchEntityInstallCounter(
+    target: ApplicationEntity,
+    source: JsonRecord,
+  ): void {
+    if (source.status_active !== true || target.statusActivedAt) return;
+    target.installsCount = Number(target.installsCount ?? 0) + 1;
+  }
+
   private patchEntityActivationTimestamp(target: ApplicationEntity): void {
     if (target.statusActive !== true || target.statusActivedAt) return;
     const timestamp = this.seedStore.getUpdateTimestamp();
@@ -166,6 +206,8 @@ export class ApplicationLifecycleService {
       statusActivedAt: value.status_actived_at ? new Date(String(value.status_actived_at)) : null,
       statusPin: value.status_pin === true,
       isDelete: value.is_delete === true,
+      viewsCount: Number(value.views_count ?? 0),
+      installsCount: Number(value.installs_count ?? 0),
     };
   }
 }

@@ -8,27 +8,31 @@ import type { RpcContext } from '../../ladipage-rpc/rpc-dispatcher.service';
 import { mapApplicationRpcItem } from '../../ladipage-rpc/mappers/landing/application.mapper';
 import { ApplicationSeedStore } from '../data/application-seed.store';
 import { ApplicationEntity } from '../entities';
+import { ApplicationAccessService } from './application-access.service';
 
 @Injectable()
 export class ApplicationCatalogService {
   constructor(
     private readonly seedStore: ApplicationSeedStore,
+    private readonly accessService: ApplicationAccessService,
     @Optional()
     @InjectRepository(ApplicationEntity)
     private readonly applicationRepository?: Repository<ApplicationEntity>,
   ) {}
 
-  list(_body: Record<string, unknown>, ctx: RpcContext): LpApplication[] {
+  async list(_body: Record<string, unknown>, ctx: RpcContext): Promise<LpApplication[]> {
     if (this.applicationRepository) {
-      return this.listFromRepository(ctx) as unknown as LpApplication[];
+      return this.accessService.enrichList(await this.listFromRepository(ctx), ctx);
     }
 
     const storeId = ctx.storeId ?? this.seedStore.getStoreId();
 
-    return this.seedStore.listApplications()
+    const applications = this.seedStore.listApplications()
       .filter((application) => !storeId || application.store_id === storeId)
       .filter((application) => application.is_delete !== true)
       .map((application) => mapApplicationRpcItem(application));
+
+    return this.accessService.enrichList(applications, ctx);
   }
 
   private async listFromRepository(ctx: RpcContext): Promise<LpApplication[]> {
@@ -49,13 +53,16 @@ export class ApplicationCatalogService {
       .addOrderBy('application.name', 'ASC')
       .getMany();
 
-    if (applications.length === 0 && ctx.tenantId == null) {
-      return this.seedStore.listApplications()
-        .filter((application) => !storeId || application.store_id === storeId)
-        .filter((application) => application.is_delete !== true)
-        .map((application) => mapApplicationRpcItem(application));
-    }
+    const mappedApplications = applications.map((application) =>
+      mapApplicationRpcItem(application as unknown as Record<string, unknown>),
+    );
+    const existingCodes = new Set(mappedApplications.map((application) => application.code));
+    const seededApplications = this.seedStore.listApplications()
+      .filter((application) => !storeId || application.store_id === storeId)
+      .filter((application) => application.is_delete !== true)
+      .map((application) => mapApplicationRpcItem(application))
+      .filter((application) => !existingCodes.has(application.code));
 
-    return applications.map((application) => mapApplicationRpcItem(application as unknown as Record<string, unknown>));
+    return [...mappedApplications, ...seededApplications];
   }
 }

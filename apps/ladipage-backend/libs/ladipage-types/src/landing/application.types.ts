@@ -17,11 +17,18 @@ export interface LpApplication {
   'logo'?: string;
   'name'?: string;
   'owner_id'?: string;
+  'permission'?: string;
   'price'?: number;
+  'required_tier'?: 'free' | 'pro' | 'enterprise';
   'status_active'?: boolean;
   'status_actived_at'?: string;
   'status_pin'?: boolean;
   'store_id'?: string;
   'thumb'?: string;
   'updated_at'?: string;
+  'views_count'?: number;
+  'installs_count'?: number;
+  'can_install'?: boolean;
+  'can_open'?: boolean;
+  'upgrade_required'?: boolean;
 }
