@@ -47,6 +47,7 @@ import { CrmModule } from '../modules/crm/crm.module';
 import { EcomStoreModule } from '../modules/ecom-store/ecom-store.module';
 import { DomainModule } from '../modules/domain/domain.module';
 import { PublishModule } from '../modules/publish/publish.module';
+import { AiSeoModule } from '../modules/ai-seo/ai-seo.module';
 import { CreditModule } from '../modules/credit/credit.module';
 import { PlanModule } from '../modules/plan/plan.module';
 import { PaymentModule } from '../modules/payment/payment.module';
@@ -109,6 +110,7 @@ import { AutomationModule } from '../modules/automation/automation.module';
     EcomStoreModule,
     DomainModule,
     PublishModule,
+    AiSeoModule,
     CreditModule,
     PlanModule,
     PaymentModule,

@@ -8,3 +8,4 @@ export * from "./billing";
 export * from "./settings";
 export * from "./analytics";
 export * from "./dashboard";
+export * from "./ai-seo";

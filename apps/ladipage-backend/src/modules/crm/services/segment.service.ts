@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 
@@ -7,6 +7,7 @@ import { Pagination } from '@liora/nest-core/helper/paginate/pagination'
 import { TenantContextService } from '@liora/nest-core'
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 
+import { DEFAULT_SEGMENT_DEFINITIONS } from '../constants/default-segments'
 import {
   CreateSegmentDto,
   SegmentQueryDto,
@@ -34,6 +35,8 @@ export class SegmentService extends TenantScopedService {
 
   async list(dto: SegmentQueryDto) {
     const tenantId = this.requireTenantId()
+    await this.ensureDefaultSegments(tenantId)
+
     const qb = this.segmentRepository
       .createQueryBuilder('segment')
       .where('segment.tenantId = :tenantId', { tenantId })
@@ -42,7 +45,7 @@ export class SegmentService extends TenantScopedService {
       qb.andWhere('segment.name ILIKE :search', { search: `%${dto.search}%` })
     }
 
-    qb.orderBy('segment.createdAt', 'DESC')
+    qb.orderBy('segment.isDefault', 'DESC').addOrderBy('segment.createdAt', 'DESC')
     const result = await paginate(qb, { page: dto.page, pageSize: dto.pageSize })
 
     const items = await Promise.all(
@@ -90,9 +93,35 @@ export class SegmentService extends TenantScopedService {
       { id },
       'Segment not found',
     )
+    if (segment.isDefault) {
+      throw new BadRequestException('Cannot delete default segment')
+    }
     await this.customerSegmentRepository.delete({ segmentId: id })
     await this.personSegmentMapRepository.delete({ segmentId: id })
     await this.segmentRepository.remove(segment)
+  }
+
+  private async ensureDefaultSegments(tenantId: number): Promise<void> {
+    const existing = await this.segmentRepository.find({
+      where: { tenantId, isDefault: true },
+      select: ['name'],
+    })
+    const existingNames = new Set(existing.map((segment) => segment.name))
+    const missing = DEFAULT_SEGMENT_DEFINITIONS.filter(
+      (definition) => !existingNames.has(definition.name),
+    )
+    if (missing.length === 0) {
+      return
+    }
+
+    await this.segmentRepository.save(
+      missing.map((definition) => ({
+        tenantId,
+        name: definition.name,
+        isDefault: true,
+        rules: { alias: definition.alias },
+      })),
+    )
   }
 
   private async countCustomersForSegment(segmentId: number): Promise<number> {

@@ -75,6 +75,23 @@ services:
     networks:
       - liora-network
 
+  # ================== OPENSEO MICROSERVICE ==================
+  openseo:
+    image: ${OPEN_SEO_IMAGE:-ghcr.io/every-app/open-seo:latest}
+    container_name: liora-openseo-dev
+    restart: unless-stopped
+    env_file:
+      - ../.env.openseo
+    environment:
+      PORT: "7003"
+      AUTH_MODE: local_noauth
+    ports:
+      - "7003:7003"
+    networks:
+      liora-network:
+        aliases:
+          - openseo
+
   # ================== NEST-ADMIN BACKEND (Liora control plane) ==================
   liora-nest-admin:
     build:
@@ -147,6 +164,8 @@ services:
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
       S3_ENDPOINT: http://minio:9000
+      OPENSEO_BASE_URL: http://openseo:7003
+      OPENSEO_MCP_URL: http://openseo:7003/mcp
       LIBREFANG_API_URL: ${LIBREFANG_API_URL:-http://host.docker.internal:4545}
       LIBREFANG_API_KEY: ${LIBREFANG_API_KEY:-}
       # Supabase / anti-spam: lấy từ env_file + mount ../.env (không override rỗng ở đây)
@@ -163,6 +182,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      openseo:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:7002/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 15s

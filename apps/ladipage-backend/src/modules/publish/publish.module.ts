@@ -1,5 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { AiSeoModule } from '../ai-seo/ai-seo.module';
 // import { SseModule, BillingModule } from '@liora/nest-core';
 import { PageEntity } from './entities';
 import { PublishController } from './publish.controller';
@@ -21,7 +23,10 @@ import { PageService } from './services/page.service';
  *   FileManagerModule (assets)
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([PageEntity])],
+  imports: [
+    TypeOrmModule.forFeature([PageEntity]),
+    forwardRef(() => AiSeoModule),
+  ],
   controllers: [PublishController],
   providers: [PageService, PublishService],
   exports: [TypeOrmModule, PageService, PublishService],

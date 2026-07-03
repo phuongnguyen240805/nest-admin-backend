@@ -1,15 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional, forwardRef } from '@nestjs/common'
 
-// Nơi chứa business logic publish.
-// Nên inject:
-// - SubscriptionService (để updateCredit)
-// - SseService (realtime)
-// - Storage / Netdisk services (assets)
+import { AiSeoProjectService } from '../ai-seo/services/ai-seo-project.service'
 
 @Injectable()
 export class PublishService {
+  constructor(
+    @Optional()
+    @Inject(forwardRef(() => AiSeoProjectService))
+    private readonly aiSeoProjectService?: AiSeoProjectService,
+  ) {}
+
   async startPublish(funnelId: string, userId: number) {
-    // TODO: integrate real logic + credit deduction
-    return { jobId: 'demo-' + Date.now(), status: 'queued' };
+    return { jobId: 'demo-' + Date.now(), status: 'queued' }
+  }
+
+  async onLandingPagePublished(pageId: string, storeId?: string) {
+    if (!this.aiSeoProjectService) return null
+    return this.aiSeoProjectService.ensureForLandingPage(pageId, storeId)
   }
 }
