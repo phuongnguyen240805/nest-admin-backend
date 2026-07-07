@@ -169,6 +169,7 @@ export class AuthService {
       organizationId: workspace.organizationId,
       tenantId: workspace.tenantId,
       activeTenantId: workspace.tenantId,
+      appCode: workspace.appCode,
     }
 
     const token = await this.tokenService.generateAccessToken(user.id, roles, tenantContext)

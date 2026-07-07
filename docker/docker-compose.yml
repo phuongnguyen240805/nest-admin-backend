@@ -107,6 +107,8 @@ services:
     environment:
       # Chỉ override hostname/service trong mạng Docker (không lấy từ .env host)
       PORT: "7001"
+      APP_CODE: nest-admin
+      APP_SCOPED_AUTH: "false"
       DB_HOST: db
       DB_PORT: "5432"
       DB_TYPE: postgres
@@ -158,6 +160,8 @@ services:
     environment:
       PORT: "7002"
       LADIPAGE_PORT: "7002"
+      APP_CODE: ladipage
+      APP_SCOPED_AUTH: "false"
       DB_TYPE: postgres
       DB_SSL: ${DB_SSL:-true}
       REDIS_HOST: redis

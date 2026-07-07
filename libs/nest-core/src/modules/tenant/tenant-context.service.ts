@@ -5,10 +5,12 @@ import { Organization } from '~/modules/billing/entities/organization.entity'
 
 export const TENANT_CONTEXT_KEY = 'tenantId' as const
 export const ORGANIZATION_ID_CONTEXT_KEY = 'organizationId' as const
+export const APP_CODE_CONTEXT_KEY = 'appCode' as const
 
 export interface TenantRequestContext {
   tenantId: number
   organizationId: string
+  appCode?: string
   organization?: Organization
 }
 
@@ -19,6 +21,17 @@ export class TenantContextService {
   setContext(ctx: TenantRequestContext): void {
     this.cls.set(TENANT_CONTEXT_KEY, ctx.tenantId)
     this.cls.set(ORGANIZATION_ID_CONTEXT_KEY, ctx.organizationId)
+    if (ctx.appCode) {
+      this.cls.set(APP_CODE_CONTEXT_KEY, ctx.appCode)
+    }
+  }
+
+  setAppCode(appCode: string): void {
+    this.cls.set(APP_CODE_CONTEXT_KEY, appCode)
+  }
+
+  getAppCode(): string | undefined {
+    return this.cls.get(APP_CODE_CONTEXT_KEY)
   }
 
   setTenantId(tenantId: number): void {
@@ -52,5 +65,6 @@ export class TenantContextService {
   clear(): void {
     this.cls.set(TENANT_CONTEXT_KEY, undefined)
     this.cls.set(ORGANIZATION_ID_CONTEXT_KEY, undefined)
+    this.cls.set(APP_CODE_CONTEXT_KEY, undefined)
   }
 }

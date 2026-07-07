@@ -64,6 +64,12 @@ export { TenantGuard } from './modules/tenant/tenant.guard';
 /** @deprecated Use TenantGuard — alias kept for existing ladipage imports */
 export { TenantGuard as TenantContextGuard } from './modules/tenant/tenant.guard';
 export { OrganizationProvisioningService } from './modules/tenant/organization-provisioning.service';
+export { AppMembershipService } from './modules/tenant/app-membership.service';
+export {
+  APP_CODE_LADIPAGE,
+  APP_CODE_NEST_ADMIN,
+  LEGACY_DEFAULT_APP_CODE,
+} from './modules/tenant/constants/app-scope.constant';
 export { GetOrgFromRequest } from './common/decorators/get-org-from-request.decorator';
 export * from './modules/public-api/public-api.module';
 export * from './modules/health/health.module';

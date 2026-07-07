@@ -11,6 +11,10 @@ export class Tenant extends CompleteEntity {
   @Column({ type: 'uuid', nullable: true, unique: true })
   organizationId?: string;
 
+  /** Product app that owns this workspace (ladipage, nest-admin, …) */
+  @Column({ length: 50, default: 'ladipage' })
+  appCode?: string;
+
   @Column({ length: 255 })
   name?: string;
 

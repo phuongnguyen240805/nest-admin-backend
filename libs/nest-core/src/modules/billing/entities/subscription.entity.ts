@@ -67,6 +67,12 @@ export class Subscription {
   @Column({ default: false })
   isLifetime: boolean
 
+  @Column({ type: 'varchar', length: 20, default: 'stripe', nullable: true })
+  paymentProvider?: string
+
+  @Column({ type: 'uuid', nullable: true })
+  lastOrderId?: string
+
   @CreateDateColumn()
   createdAt: Date
 

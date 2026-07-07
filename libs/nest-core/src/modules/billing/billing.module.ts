@@ -8,12 +8,17 @@ import { TenantModule } from '../tenant/tenant.module'
 // import { NotificationService } from '../sse/sse.service'
 import { BillingController } from './billing.controller'
 import { CreditWallet } from './entities/credit-wallet.entity'
+import { BillingOrder } from './entities/billing-order.entity'
 import { Subscription } from './entities/subscription.entity'
 import { Organization } from './entities/organization.entity'
 import { PlanConfigService } from './config/plan.config'
 import { BillingService } from './services/billing.service'
+import { BillingOrderService } from './services/billing-order.service'
 import { SubscriptionService } from './services/subscription.service'
 import { BillingWebhookHandlers } from './services/billing-webhook.handlers'
+import { PayOsModule } from './payos/payos.module'
+import { PayOsWebhookModule } from './payos/modules/payos-webhook.module'
+import { PayOsWebhookHandlers } from './payos/services/payos-webhook.handlers'
 
 // NEW clean Stripe integration (colocated inside billing/ as per plan)
 // Ported & adapted from https://github.com/reyco1/nestjs-stripe
@@ -23,7 +28,7 @@ import { StripeWebhookModule } from './stripe/modules/stripe-webhook.module'
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Subscription, CreditWallet, Organization]),
+    TypeOrmModule.forFeature([Subscription, CreditWallet, Organization, BillingOrder]),
     AuthModule,
     TenantModule,
     // Clean Stripe foundation (ported from reyco1/nestjs-stripe)
@@ -36,9 +41,19 @@ import { StripeWebhookModule } from './stripe/modules/stripe-webhook.module'
       }),
     }),
     StripeWebhookModule.forRoot(),
+    PayOsModule.forRootFromConfig(),
+    PayOsWebhookModule.forRoot(),
   ],
   controllers: [BillingController],
-  providers: [BillingService, SubscriptionService, PlanConfigService, Nowpayments, BillingWebhookHandlers],
+  providers: [
+    BillingService,
+    BillingOrderService,
+    SubscriptionService,
+    PlanConfigService,
+    Nowpayments,
+    BillingWebhookHandlers,
+    PayOsWebhookHandlers,
+  ],
   exports: [BillingService, SubscriptionService, PlanConfigService],
 })
 export class BillingModule {}

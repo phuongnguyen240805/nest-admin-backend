@@ -110,4 +110,22 @@ export class PlanConfigService {
   getLimitsForTier(tier: PlanTier): PlanLimitsDto {
     return PLAN_LIMITS[tier] ?? PLAN_LIMITS.free
   }
+
+  getVndPrice(tier: PlanTier, period: 'monthly' | 'yearly'): number {
+    const envKey = `PLAN_${tier.toUpperCase()}_${period.toUpperCase()}_VND`
+    const configured = this.configService.get<string>(envKey)
+    const parsed = configured ? Number.parseInt(configured, 10) : Number.NaN
+
+    if (!Number.isNaN(parsed) && parsed > 0)
+      return parsed
+
+    const defaults: Record<string, number> = {
+      'pro-monthly': 299_000,
+      'pro-yearly': 2_990_000,
+      'enterprise-monthly': 999_000,
+      'enterprise-yearly': 9_990_000,
+    }
+
+    return defaults[`${tier}-${period}`] ?? 0
+  }
 }

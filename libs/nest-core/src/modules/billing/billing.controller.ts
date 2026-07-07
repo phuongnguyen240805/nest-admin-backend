@@ -58,6 +58,14 @@ export class BillingController {
     return this.billingService.subscribe(org, user, body, uniqueId)
   }
 
+  @Get('/orders/:orderCode/status')
+  getOrderStatus(
+    @GetOrgFromRequest() org: Organization,
+    @Param('orderCode') orderCode: string,
+  ) {
+    return this.billingService.getOrderStatus(org, orderCode)
+  }
+
   @Get('/portal')
   modifyPayment(@GetOrgFromRequest() org: Organization) {
     return this.billingService.getPortalLink(org)

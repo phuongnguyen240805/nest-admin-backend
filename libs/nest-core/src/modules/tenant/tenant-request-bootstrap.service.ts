@@ -6,6 +6,7 @@ import { Repository } from 'typeorm'
 import { IAuthUser } from '~/modules/auth/interfaces/auth.interface'
 import { Organization } from '~/modules/billing/entities/organization.entity'
 
+import { AppMembershipService } from './app-membership.service'
 import { OrganizationProvisioningService } from './organization-provisioning.service'
 import { TenantContextService } from './tenant-context.service'
 
@@ -17,6 +18,7 @@ import { TenantContextService } from './tenant-context.service'
 export class TenantRequestBootstrapService {
   constructor(
     private readonly organizationProvisioningService: OrganizationProvisioningService,
+    private readonly appMembershipService: AppMembershipService,
     @InjectRepository(Organization)
     private readonly organizationRepository: Repository<Organization>,
     private readonly tenantContext: TenantContextService,
@@ -32,17 +34,26 @@ export class TenantRequestBootstrapService {
       return false
     }
 
+    this.appMembershipService.assertTokenAppMatchesRuntime(user.appCode)
+
+    const runtimeAppCode = this.appMembershipService.getRuntimeAppCode()
     let organizationId = user.organizationId
     let tenantId = user.activeTenantId ?? user.tenantId
+    let appCode = user.appCode ?? runtimeAppCode
 
     if (!organizationId || tenantId == null) {
-      const workspace =
-        await this.organizationProvisioningService.ensureWorkspaceForUser(user.uid)
+      const workspace = await this.organizationProvisioningService.ensureWorkspaceForUser(
+        user.uid,
+        undefined,
+        runtimeAppCode,
+      )
       organizationId = workspace.organizationId
       tenantId = workspace.tenantId
+      appCode = workspace.appCode ?? runtimeAppCode
       user.organizationId = organizationId
       user.tenantId = tenantId
       user.activeTenantId = tenantId
+      user.appCode = appCode
     }
 
     const org =
@@ -57,10 +68,12 @@ export class TenantRequestBootstrapService {
     request.org = org
     request.organization = organizationId
     request.tenantId = tenantId
+    request.appCode = appCode
 
     this.tenantContext.setContext({
       tenantId,
       organizationId,
+      appCode,
       organization: org,
     })
 

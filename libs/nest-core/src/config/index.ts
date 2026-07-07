@@ -1,5 +1,6 @@
 import { LogLevel } from 'fastify'
 import { AppConfig, appRegToken, IAppConfig } from './app.config'
+import { AppScopeConfig, appScopeRegToken, IAppScopeConfig } from './app-scope.config'
 import { DatabaseConfig, dbRegToken, IDatabaseConfig } from './database.config'
 import { IMailerConfig, MailerConfig, mailerRegToken } from './mailer.config'
 import { IOssConfig, OssConfig, ossRegToken } from './oss.config'
@@ -8,6 +9,7 @@ import { ISecurityConfig, SecurityConfig, securityRegToken } from './security.co
 import { ISwaggerConfig, SwaggerConfig, swaggerRegToken } from './swagger.config'
 
 export * from './app.config'
+export * from './app-scope.config'
 export * from './database.config'
 export * from './mailer.config'
 export * from './oss.config'
@@ -17,6 +19,7 @@ export * from './swagger.config'
 
 export interface AllConfigType {
   [appRegToken]: IAppConfig
+  [appScopeRegToken]: IAppScopeConfig
   [dbRegToken]: IDatabaseConfig
   [mailerRegToken]: IMailerConfig
   [redisRegToken]: IRedisConfig
@@ -39,6 +42,7 @@ export type ConfigKeyPaths = RecordNamePaths<AllConfigType>
 
 export default {
   AppConfig,
+  AppScopeConfig,
   DatabaseConfig,
   MailerConfig,
   OssConfig,

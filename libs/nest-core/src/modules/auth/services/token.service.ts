@@ -20,6 +20,7 @@ export interface TokenTenantContext {
   organizationId?: string
   tenantId?: number
   activeTenantId?: number
+  appCode?: string
 }
 
 /**
@@ -79,6 +80,7 @@ export class TokenService {
       ...(tenantContext?.organizationId && { organizationId: tenantContext.organizationId }),
       ...(tenantContext?.tenantId != null && { tenantId: tenantContext.tenantId }),
       ...(tenantContext?.activeTenantId != null && { activeTenantId: tenantContext.activeTenantId }),
+      ...(tenantContext?.appCode && { appCode: tenantContext.appCode }),
     }
 
     const jwtSign = await this.jwtService.signAsync(payload)
@@ -199,6 +201,7 @@ export class TokenService {
       organizationId: workspace.organizationId,
       tenantId: workspace.tenantId,
       activeTenantId: workspace.tenantId,
+      appCode: workspace.appCode,
     }
   }
 }

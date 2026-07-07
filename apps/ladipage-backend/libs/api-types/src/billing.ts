@@ -2,6 +2,8 @@ export type PlanTier = 'free' | 'pro' | 'enterprise';
 
 export type SubscriptionPeriod = 'monthly' | 'yearly' | 'lifetime';
 
+export type PaymentProvider = 'stripe' | 'payos';
+
 export interface PlanPriceIdsDto {
   monthly?: string;
   yearly?: string;
@@ -58,4 +60,25 @@ export interface CheckoutSessionStatusDto {
   paymentStatus?: string;
   subscriptionId?: string;
   customerId?: string;
+}
+
+export interface PayOsCheckoutDto {
+  provider: 'payos';
+  orderCode: number;
+  amount: number;
+  currency: 'VND';
+  checkoutUrl: string;
+  qrCode: string;
+  paymentLinkId: string;
+  expiresAt: string;
+  returnUrl: string;
+  cancelUrl: string;
+}
+
+export interface BillingOrderStatusDto {
+  orderCode: number;
+  status: 'pending' | 'paid' | 'cancelled' | 'expired' | 'failed';
+  planTier: PlanTier;
+  period: SubscriptionPeriod;
+  paidAt?: string;
 }

@@ -12,6 +12,7 @@ declare module 'fastify' {
     /** Organization UUID string for TenantGuard */
     organization?: string;
     tenantId?: number;
+    appCode?: string;
     tenantContext?: TenantContextService;
   }
 }

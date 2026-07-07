@@ -4,6 +4,7 @@ import { Repository } from 'typeorm'
 
 import { Organization } from '~/modules/billing/entities/organization.entity'
 
+import { LEGACY_DEFAULT_APP_CODE } from './constants/app-scope.constant'
 import { Tenant } from './entities/tenant.entity'
 
 @Injectable()
@@ -22,12 +23,17 @@ export class TenantResolutionService {
   async resolveTenantForOrganization(
     organizationId: string,
     orgName?: string,
+    appCode: string = LEGACY_DEFAULT_APP_CODE,
   ): Promise<Tenant> {
     const existing = await this.tenantRepository.findOne({
       where: { organizationId },
     })
 
     if (existing) {
+      if (appCode && (!existing.appCode || existing.appCode === LEGACY_DEFAULT_APP_CODE)) {
+        existing.appCode = appCode
+        await this.tenantRepository.save(existing)
+      }
       return existing
     }
 
@@ -43,6 +49,7 @@ export class TenantResolutionService {
 
     const tenant = this.tenantRepository.create({
       organizationId,
+      appCode,
       name,
       handle,
       status: 'active',

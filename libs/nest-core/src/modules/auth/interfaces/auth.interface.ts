@@ -7,6 +7,8 @@ export interface IAuthUser {
     tenantId?: number
     /** Active tenant for multi-tenant switching */
     activeTenantId?: number
+    /** Application that issued this session (ladipage, nest-admin, …) */
+    appCode?: string
     /** 过期时间 */
     exp?: number
     /** 签发时间 */
