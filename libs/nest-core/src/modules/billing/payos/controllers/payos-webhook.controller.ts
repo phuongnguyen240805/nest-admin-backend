@@ -41,7 +41,7 @@ export class PayOsWebhookController {
       }
 
       const valid = verifyPayOsSignature(
-        payload.data as Record<string, unknown>,
+        payload.data,
         payload.signature,
         this.payOsConfig.checksumKey,
       )

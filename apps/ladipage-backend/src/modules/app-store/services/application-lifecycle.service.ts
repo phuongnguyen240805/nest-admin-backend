@@ -6,6 +6,11 @@ import type { LpApplication } from '@liora/ladipage-types';
 
 import type { RpcContext } from '../../ladipage-rpc/rpc-dispatcher.service';
 import { mapApplicationRpcItem } from '../../ladipage-rpc/mappers/landing/application.mapper';
+import {
+  buildAppStoreScopeKey,
+  resolveAppStoreOwnerId,
+  resolveAppStoreTenantId,
+} from '../app-store-context.util';
 import { ApplicationSeedStore } from '../data/application-seed.store';
 import { ApplicationEntity } from '../entities';
 import { ApplicationAccessService } from './application-access.service';
@@ -27,15 +32,20 @@ export class ApplicationLifecycleService {
       return this.updateRepository(body, ctx);
     }
 
+    const tenantId = resolveAppStoreTenantId(ctx);
+    const ownerId = resolveAppStoreOwnerId(ctx);
     const code = String(body.code ?? '').trim();
     if (!code) throw new BadRequestException('Application code is required.');
 
     const storeId = ctx.storeId ?? this.seedStore.getStoreId();
-    const current = this.seedStore.findApplicationByCode(code, storeId)
-      ?? this.newApplicationFromTemplate(code, storeId);
+    const scopeKey = buildAppStoreScopeKey(tenantId, ownerId, storeId);
+    const current = this.seedStore.findApplicationByCode(code, scopeKey, storeId)
+      ?? this.newApplicationFromTemplate(code, storeId, ownerId);
     const next = {
       ...current,
       store_id: storeId ?? current.store_id,
+      owner_id: ownerId,
+      ladi_uid: ownerId,
     };
 
     await this.accessService.assertCanUpdate(
@@ -49,21 +59,21 @@ export class ApplicationLifecycleService {
     this.patchActivationTimestamp(next);
     this.patchUpdatedTimestamp(next);
 
-    const saved = mapApplicationRpcItem(this.seedStore.saveApplication(next));
+    const saved = mapApplicationRpcItem(this.seedStore.saveApplication(next, scopeKey));
     return (await this.accessService.enrichList([saved], ctx))[0];
   }
 
   private async updateRepository(body: JsonRecord, ctx: RpcContext): Promise<LpApplication> {
+    const tenantId = resolveAppStoreTenantId(ctx);
+    const ownerId = resolveAppStoreOwnerId(ctx);
     const code = String(body.code ?? '').trim();
     if (!code) throw new BadRequestException('Application code is required.');
 
     const storeId = ctx.storeId ?? this.seedStore.getStoreId();
     const query = this.applicationRepository!.createQueryBuilder('application')
-      .where('application.code = :code', { code });
-
-    if (ctx.tenantId != null) {
-      query.andWhere('application.tenantId = :tenantId', { tenantId: ctx.tenantId });
-    }
+      .where('application.code = :code', { code })
+      .andWhere('application.tenantId = :tenantId', { tenantId })
+      .andWhere('application.ownerId = :ownerId', { ownerId });
 
     if (storeId) {
       query.andWhere('application.store_id = :storeId', { storeId });
@@ -72,12 +82,8 @@ export class ApplicationLifecycleService {
     let current = await query.getOne();
 
     if (!current) {
-      if (ctx.tenantId == null) {
-        return this.updateSeed(body, ctx);
-      }
-
-      const template = this.newApplicationFromTemplate(code, storeId);
-      current = this.applicationRepository!.create(this.entityFromRpc(template, ctx.tenantId));
+      const template = this.newApplicationFromTemplate(code, storeId, ownerId);
+      current = this.applicationRepository!.create(this.entityFromRpc(template, tenantId, ownerId));
     }
 
     await this.accessService.assertCanUpdate(
@@ -96,13 +102,18 @@ export class ApplicationLifecycleService {
   }
 
   private async updateSeed(body: JsonRecord, ctx: RpcContext): Promise<LpApplication> {
+    const tenantId = resolveAppStoreTenantId(ctx);
+    const ownerId = resolveAppStoreOwnerId(ctx);
     const code = String(body.code ?? '').trim();
     const storeId = ctx.storeId ?? this.seedStore.getStoreId();
-    const current = this.seedStore.findApplicationByCode(code, storeId)
-      ?? this.newApplicationFromTemplate(code, storeId);
+    const scopeKey = buildAppStoreScopeKey(tenantId, ownerId, storeId);
+    const current = this.seedStore.findApplicationByCode(code, scopeKey, storeId)
+      ?? this.newApplicationFromTemplate(code, storeId, ownerId);
     const next = {
       ...current,
       store_id: storeId ?? current.store_id,
+      owner_id: ownerId,
+      ladi_uid: ownerId,
     };
 
     await this.accessService.assertCanUpdate(
@@ -116,11 +127,11 @@ export class ApplicationLifecycleService {
     this.patchActivationTimestamp(next);
     this.patchUpdatedTimestamp(next);
 
-    const saved = mapApplicationRpcItem(this.seedStore.saveApplication(next));
+    const saved = mapApplicationRpcItem(this.seedStore.saveApplication(next, scopeKey));
     return (await this.accessService.enrichList([saved], ctx))[0];
   }
 
-  private newApplicationFromTemplate(code: string, storeId?: string): JsonRecord {
+  private newApplicationFromTemplate(code: string, storeId?: string, ownerId?: string): JsonRecord {
     const template = this.seedStore.getApplicationTemplate(code);
     if (!template) {
       throw new NotImplementedException(
@@ -131,6 +142,8 @@ export class ApplicationLifecycleService {
     return {
       ...template,
       store_id: storeId ?? template.store_id ?? this.seedStore.getStoreId(),
+      owner_id: ownerId ?? template.owner_id ?? 'system',
+      ladi_uid: ownerId ?? template.ladi_uid ?? template.owner_id ?? 'system',
     };
   }
 
@@ -190,13 +203,17 @@ export class ApplicationLifecycleService {
     target.statusActivedAt = timestamp ? new Date(timestamp) : new Date();
   }
 
-  private entityFromRpc(value: JsonRecord, tenantId: number): Partial<ApplicationEntity> {
+  private entityFromRpc(
+    value: JsonRecord,
+    tenantId: number,
+    ownerId: string,
+  ): Partial<ApplicationEntity> {
     return {
       tenantId,
-      externalId: String(value._id ?? `${value.store_id ?? 'store'}:${value.code}`),
+      externalId: String(value._id ?? `${value.store_id ?? 'store'}:${ownerId}:${value.code}`),
       storeId: String(value.store_id ?? ''),
-      ownerId: String(value.owner_id ?? ''),
-      ladiUid: String(value.ladi_uid ?? value.owner_id ?? ''),
+      ownerId,
+      ladiUid: ownerId,
       name: String(value.name ?? value.code ?? ''),
       code: String(value.code ?? ''),
       logo: value.logo == null ? null : String(value.logo),

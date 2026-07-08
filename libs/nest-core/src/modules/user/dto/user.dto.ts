@@ -89,10 +89,10 @@ export class UserQueryDto extends IntersectionType(PagerDto<UserDto>, PartialTyp
   @ApiProperty({ description: '归属大区', example: 1, required: false })
   @IsInt()
   @IsOptional()
-  override deptId?: number
+  deptId?: number
 
   @ApiProperty({ description: '状态', example: 0, required: false })
   @IsInt()
   @IsOptional()
-  override status?: number
+  status?: number
 }

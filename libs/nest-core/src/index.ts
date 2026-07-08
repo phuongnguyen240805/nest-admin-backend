@@ -44,6 +44,8 @@ export * from './modules/auth/guards/jwt-auth.guard';
 export * from './modules/auth/guards/rbac.guard';
 export * from './modules/system/system.module';
 export * from './modules/user/user.module';
+export { UserEntity } from './modules/user/user.entity';
+export { UserService } from './modules/user/user.service';
 export * from './modules/tools/tools.module';
 // Re-export các sub-modules hữu ích để app khác (như ladipage-backend) import trực tiếp
 export * from './modules/tools/upload/upload.module';
@@ -57,6 +59,10 @@ export * from './modules/sse/sse.module';
 export * from './modules/agent/agent.module';
 export * from './modules/billing/billing.module';
 export { PlanConfigService } from './modules/billing/config/plan.config';
+export {
+  LANDING_PAGES_QUOTA,
+  type LandingPagesQuotaPort,
+} from './modules/billing/ports/landing-pages-quota.port';
 export * from './modules/tenant/tenant.module';
 export { Tenant } from './modules/tenant/entities/tenant.entity';
 export { TenantContextService } from './modules/tenant/tenant-context.service';
@@ -73,6 +79,14 @@ export {
 export { GetOrgFromRequest } from './common/decorators/get-org-from-request.decorator';
 export * from './modules/public-api/public-api.module';
 export * from './modules/health/health.module';
+export * from './modules/bullmq/bullmq.module';
+export * from './modules/bullmq/bullmq.constants';
+export * from './modules/bullmq/bullmq.types';
+export * from './modules/bullmq/bullmq-connection.factory';
+export * from './modules/bullmq/services/bullmq-enqueue.service';
+export * from './modules/bullmq/base/base-queue.processor';
+export * from './modules/bullmq/decorators/bullmq-processor.decorator';
+export * from './modules/bullmq/decorators/inject-queue.decorator';
 
 // Một số entity hay dùng trực tiếp
 export * from './modules/system/menu/menu.entity';

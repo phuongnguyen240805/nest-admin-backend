@@ -75,6 +75,35 @@ services:
     networks:
       - liora-network
 
+  # ================== SCREENSHOT-TO-CODE (Landing AI) ==================
+  # Profile tùy chọn — build nặng (Playwright + Poetry)
+  # docker compose --profile s2c up -d screenshot-to-code
+  screenshot-to-code:
+    profiles: ["s2c"]
+    build:
+      context: ../../screenshot-to-code/backend
+      dockerfile: Dockerfile
+    container_name: liora-s2c-dev
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      BACKEND_PORT: "7010"
+      LOCAL_ASSET_BASE_URL: http://screenshot-to-code:7010
+    ports:
+      - "7010:7010"
+    command: poetry run uvicorn main:app --host 0.0.0.0 --port 7010
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:7010/api/capabilities')\""]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 120s
+    networks:
+      liora-network:
+        aliases:
+          - screenshot-to-code
+
   # ================== OPENSEO MICROSERVICE ==================
   openseo:
     image: ${OPEN_SEO_IMAGE:-ghcr.io/every-app/open-seo:latest}
@@ -162,26 +191,39 @@ services:
       LADIPAGE_PORT: "7002"
       APP_CODE: ladipage
       APP_SCOPED_AUTH: "false"
+      # Dev: API cũng chạy processor khi worker container lỗi (production: false)
+      BULLMQ_RUN_WORKERS: ${LADIPAGE_BULLMQ_RUN_WORKERS_IN_API:-true}
       DB_TYPE: postgres
-      DB_SSL: ${DB_SSL:-true}
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_SSL: "false"
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
+      LANDING_AI_MOCK_GENERATE: ${LANDING_AI_MOCK_GENERATE:-false}
       S3_ENDPOINT: http://minio:9000
       OPENSEO_BASE_URL: http://openseo:7003
       OPENSEO_MCP_URL: http://openseo:7003/mcp
+      SCREENSHOT_TO_CODE_HTTP_URL: http://screenshot-to-code:7010
+      SCREENSHOT_TO_CODE_WS_URL: ws://screenshot-to-code:7010
       LIBREFANG_API_URL: ${LIBREFANG_API_URL:-http://host.docker.internal:4545}
       LIBREFANG_API_KEY: ${LIBREFANG_API_KEY:-}
       # Supabase / anti-spam: lấy từ env_file + mount ../.env (không override rỗng ở đây)
     volumes:
       - ../apps:/app/apps
       - ../libs:/app/libs
+      - ../scripts:/app/scripts
+      - ../package.json:/app/package.json:ro
+      - ../pnpm-lock.yaml:/app/pnpm-lock.yaml:ro
+      - ../pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro
       - ../nx.json:/app/nx.json
       - ../tsconfig.base.json:/app/tsconfig.base.json
       - ../tsconfig.json:/app/tsconfig.json
       - /app/node_modules
       - ../.env:/app/.env:ro
     depends_on:
+      db:
+        condition: service_healthy
       redis:
         condition: service_healthy
       minio:
@@ -198,6 +240,66 @@ services:
       liora-network:
         aliases:
           - ladipage
+
+  # ================== LADIPAGE AI WORKER (BullMQ processors) ==================
+  liora-ladipage-ai-worker:
+    build:
+      context: ..
+      dockerfile: apps/ladipage-ai-worker/Dockerfile
+      target: development
+    container_name: liora-ladipage-ai-worker-dev
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      APP_CODE: ladipage
+      APP_SCOPED_AUTH: "false"
+      BULLMQ_ENABLED: "true"
+      BULLMQ_RUN_WORKERS: "true"
+      BULLMQ_PREFIX: ${BULLMQ_PREFIX:-liora:ladipage}
+      DB_TYPE: postgres
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_SSL: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_URL: redis://redis:6379/0
+      SCREENSHOT_TO_CODE_HTTP_URL: http://screenshot-to-code:7010
+      SCREENSHOT_TO_CODE_WS_URL: ws://screenshot-to-code:7010
+      LANDING_AI_MOCK_GENERATE: ${LANDING_AI_MOCK_GENERATE:-false}
+    volumes:
+      - ../apps:/app/apps
+      - ../libs:/app/libs
+      - ../scripts:/app/scripts
+      - ../package.json:/app/package.json:ro
+      - ../pnpm-lock.yaml:/app/pnpm-lock.yaml:ro
+      - ../pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro
+      - ../nx.json:/app/nx.json
+      - ../tsconfig.base.json:/app/tsconfig.base.json
+      - ../tsconfig.json:/app/tsconfig.json
+      - /app/node_modules
+      - ../.env:/app/.env:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      liora-ladipage:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"const fs=require('fs');const p='/proc/1/cmdline';if(!fs.existsSync(p))process.exit(1);const c=fs.readFileSync(p,'utf8');process.exit(c.includes('ladipage-ai-worker')?0:1)\"",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
+    networks:
+      liora-network:
+        aliases:
+          - ladipage-ai-worker
 
   # ================== DONUT-SYNC BACKEND ==================
   donut-sync:

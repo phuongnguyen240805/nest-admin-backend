@@ -21,28 +21,29 @@ const PHASE_A_FIXTURES = {
 @Injectable()
 export class ApplicationSeedStore {
   private readonly fixtureDir = this.resolveFixtureDir();
-  private applications?: JsonRecord[];
+  private readonly applicationsByScope = new Map<string, JsonRecord[]>();
 
-  listApplications(): JsonRecord[] {
-    return this.clone(this.stateApplications());
+  listApplications(scopeKey: string): JsonRecord[] {
+    return this.clone(this.stateApplications(scopeKey));
   }
 
-  findApplicationByCode(code: string, storeId?: string): JsonRecord | undefined {
-    const application = this.stateApplications().find((item) =>
+  findApplicationByCode(code: string, scopeKey: string, storeId?: string): JsonRecord | undefined {
+    const application = this.stateApplications(scopeKey).find((item) =>
       item.code === code && this.matchesStore(item, storeId));
     return application ? this.clone(application) : undefined;
   }
 
   getApplicationTemplate(code: string): JsonRecord | undefined {
-    const fromCatalog = this.stateApplications().find((item) => item.code === code);
+    const fixtureApps = this.readFixtureData<JsonRecord[]>(PHASE_A_FIXTURES.applicationList);
+    const fromCatalog = fixtureApps.find((item) => item.code === code);
     if (fromCatalog) return this.clone(fromCatalog);
 
     const updateTemplate = this.getUpdateTemplate();
     return updateTemplate.code === code ? updateTemplate : undefined;
   }
 
-  saveApplication(application: JsonRecord): JsonRecord {
-    const applications = this.stateApplications();
+  saveApplication(application: JsonRecord, scopeKey: string): JsonRecord {
+    const applications = this.stateApplications(scopeKey);
     const index = applications.findIndex((item) =>
       item.code === application.code && item.store_id === application.store_id);
 
@@ -70,30 +71,39 @@ export class ApplicationSeedStore {
     return this.readFixtureData<JsonRecord>(PHASE_A_FIXTURES.applicationUpdate);
   }
 
-  private stateApplications(): JsonRecord[] {
-    if (!this.applications) {
-      this.applications = this.mergeCatalogTemplates(
-        this.readFixtureData<JsonRecord[]>(PHASE_A_FIXTURES.applicationList),
+  private stateApplications(scopeKey: string): JsonRecord[] {
+    if (!this.applicationsByScope.has(scopeKey)) {
+      this.applicationsByScope.set(
+        scopeKey,
+        this.mergeCatalogTemplates(
+          this.readFixtureData<JsonRecord[]>(PHASE_A_FIXTURES.applicationList),
+          scopeKey,
+        ),
       );
     }
 
-    return this.applications;
+    return this.applicationsByScope.get(scopeKey)!;
   }
 
-  private mergeCatalogTemplates(applications: JsonRecord[]): JsonRecord[] {
-    const base = applications.map((application) => this.withMetricDefaults(application));
+  private mergeCatalogTemplates(applications: JsonRecord[], scopeKey: string): JsonRecord[] {
+    const { ownerId, storeId } = this.parseScopeKey(scopeKey);
+    const base = applications.map((application) => this.withMetricDefaults({
+      ...application,
+      owner_id: ownerId,
+      ladi_uid: ownerId,
+      store_id: storeId ?? application.store_id,
+    }));
     const byCode = new Set(base.map((application) => String(application.code ?? '')));
-    const defaults = this.defaultTemplateContext(base);
     const timestamp = this.getUpdateTimestamp() ?? new Date().toISOString();
 
     for (const item of APPLICATION_SEED_CATALOG) {
       if (byCode.has(item.code)) continue;
 
       base.push({
-        _id: `seed-${item.code}`,
-        store_id: defaults.storeId,
-        owner_id: defaults.ownerId,
-        ladi_uid: defaults.ladiUid,
+        _id: `seed-${ownerId}-${item.code}`,
+        store_id: storeId ?? this.getStoreId() ?? 'default-store',
+        owner_id: ownerId,
+        ladi_uid: ownerId,
         name: item.name,
         code: item.code,
         logo: '',
@@ -113,25 +123,16 @@ export class ApplicationSeedStore {
     return base;
   }
 
+  private parseScopeKey(scopeKey: string): { tenantId: string; ownerId: string; storeId?: string } {
+    const [tenantId, ownerId, storeId] = scopeKey.split(':');
+    return { tenantId, ownerId, storeId: storeId === 'default' ? undefined : storeId };
+  }
+
   private withMetricDefaults(application: JsonRecord): JsonRecord {
     return {
       installs_count: 0,
       views_count: 0,
       ...application,
-    };
-  }
-
-  private defaultTemplateContext(applications: JsonRecord[]): {
-    storeId: string;
-    ownerId: string;
-    ladiUid: string;
-  } {
-    const first = applications[0] ?? {};
-
-    return {
-      storeId: String(first.store_id ?? this.getStoreId() ?? 'default-store'),
-      ownerId: String(first.owner_id ?? 'system'),
-      ladiUid: String(first.ladi_uid ?? first.owner_id ?? 'system'),
     };
   }
 

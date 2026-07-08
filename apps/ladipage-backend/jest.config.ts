@@ -1,9 +1,10 @@
 import type { Config } from 'jest';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { pathsToModuleNameMapper } from 'ts-jest';
 
-const require = createRequire(import.meta.url);
-const { compilerOptions } = require('./tsconfig.json') as {
+const nodeRequire = createRequire(fileURLToPath(import.meta.url));
+const { compilerOptions } = nodeRequire('./tsconfig.json') as {
   compilerOptions: { paths?: Record<string, string[]> };
 };
 

@@ -1,0 +1,1 @@
+export { Processor as BullMqProcessor } from '@nestjs/bullmq'

@@ -1,0 +1,33 @@
+---
+pid: 27316
+cwd: "D:\monorepo-project-workspace\liora-monorepo"
+command: "Set-Location D:\\monorepo-project-workspace\\liora-monorepo; docker compose -f docker/docker-compose.yml --env-file .env up -d liora-ladipage 2>&1"
+started_at: 2026-07-07T13:51:05.763Z
+running_for_ms: 80545006 
+---
+docker :  Container liora-openseo-dev Running 
+At line:1 char:60
++ ... a-monorepo; docker compose -f docker/docker-compose.yml --env-file .e ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Container liora-openseo-dev Running :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Container liora-redis-dev Running 
+ Container liora-postgres-dev Recreate 
+ Container docker-minio-1 Recreate 
+ Container docker-minio-1 Recreated 
+ Container liora-postgres-dev Recreated 
+ Container liora-ladipage-dev Recreate 
+ Container liora-ladipage-dev Recreated 
+ Container docker-minio-1 Starting 
+ Container liora-postgres-dev Starting 
+ Container docker-minio-1 Started 
+ Container liora-postgres-dev Started 
+ Container liora-postgres-dev Waiting 
+ Container liora-redis-dev Waiting 
+ Container docker-minio-1 Waiting 
+ Container liora-redis-dev Healthy 
+ Container liora-postgres-dev Healthy 
+ Container docker-minio-1 Healthy 
+ Container liora-ladipage-dev Starting 
+ Container liora-ladipage-dev Started 

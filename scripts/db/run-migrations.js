@@ -3,6 +3,7 @@
  * Usage: node scripts/db/run-migrations.js
  */
 require('dotenv').config()
+require('./resolve-migration-env').resolveMigrationEnv()
 require('ts-node').register({
   project: require('node:path').join(__dirname, '../../libs/database/tsconfig.cli.json'),
   transpileOnly: true,

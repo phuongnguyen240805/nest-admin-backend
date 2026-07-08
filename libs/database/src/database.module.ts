@@ -4,6 +4,7 @@ import { join } from 'path'
 
 import { ConfigService } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
+import { ClsModule } from 'nestjs-cls'
 
 import { DataSource, LoggerOptions } from 'typeorm'
 
@@ -15,6 +16,7 @@ import { IDatabaseConfig } from './config/database.config'
 const providers = [EntityExistConstraint, UniqueConstraint]
 @Module({
   imports: [
+    ClsModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {

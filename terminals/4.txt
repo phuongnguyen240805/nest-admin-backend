@@ -1,0 +1,77 @@
+---
+pid: 35368
+cwd: "D:\monorepo-project-workspace\liora-monorepo"
+command: "Set-Location D:\\monorepo-project-workspace\\liora-monorepo; npx nx run ladipage-backend:build 2>&1"
+started_at: 2026-07-07T06:57:00.050Z
+running_for_ms: 86400001 
+---
+(node:28092) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ NX   Running target build for project ladipage-backend and 8 tasks it depends on:
+
+
+
+> nx run shared:build  [local cache]
+
+
+> nx run dto:build  [local cache]
+
+
+> nx run supabase:build  [local cache]
+
+
+> nx run librefang-client:build  [local cache]
+
+
+> nx run ladipage-types:build  [local cache]
+
+
+> nx run database:build  [local cache]
+
+
+> nx run crm-core:build
+
+(node:36188) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Compiling with SWC for crm-core...
+
+
+> nx run nest-core:build
+
+(node:23100) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Compiling with SWC for nest-core...
+
+
+> nx run ladipage-backend:build  [local cache]
+
+> webpack-cli build --node-env=production --externals-presets-node
+
+(node:33472) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:32332) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6004) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+webpack compiled successfully (0f01e6ee825f9d34)
+
+
+
+ NX   Successfully ran target build for project ladipage-backend and 8 tasks it depends on
+
+Nx read the output from the cache instead of running the command for 7 out of 9 tasks.
+
+
+ NX   Nx detected a flaky task
+
+  ladipage-types:build
+
+Flaky tasks can disrupt your CI pipeline. Automatically retry them with Nx Cloud. Learn more at https://nx.dev/ci/features/flaky-tasks
+
+
+---
+exit_code: -1
+elapsed_ms: 86400001
+ended_at: 2026-07-08T06:57:15.152Z
+---

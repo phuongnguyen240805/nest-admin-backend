@@ -1,0 +1,1 @@
+export const BULLMQ_ROOT_OPTIONS = Symbol('BULLMQ_ROOT_OPTIONS')

@@ -5,6 +5,7 @@
  * Usage: node scripts/db/repair-migration-state.js [--dry-run]
  */
 require('dotenv').config()
+require('./resolve-migration-env').resolveMigrationEnv()
 const { Client } = require('pg')
 const { execSync } = require('node:child_process')
 

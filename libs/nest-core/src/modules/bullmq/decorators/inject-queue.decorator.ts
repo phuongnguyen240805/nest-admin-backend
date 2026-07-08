@@ -1,0 +1,1 @@
+export { InjectQueue as InjectBullQueue } from '@nestjs/bullmq'

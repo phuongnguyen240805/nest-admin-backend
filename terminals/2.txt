@@ -1,0 +1,92 @@
+---
+pid: 21764
+cwd: "D:\monorepo-project-workspace\liora-monorepo"
+command: "Set-Location D:\\monorepo-project-workspace\\liora-monorepo; npx nx run ladipage-backend:build"
+started_at: 2026-07-07T06:53:59.510Z
+running_for_ms: 86400011 
+---
+(node:7468) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+ NX   Running target build for project ladipage-backend and 8 tasks it depends on:
+
+
+
+> nx run shared:build  [local cache]
+
+
+> nx run dto:build  [local cache]
+
+
+> nx run supabase:build  [local cache]
+
+
+> nx run librefang-client:build  [local cache]
+
+
+> nx run ladipage-types:build  [local cache]
+
+
+> nx run database:build  [local cache]
+
+
+> nx run crm-core:build
+
+(node:36564) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Compiling with SWC for crm-core...
+
+
+> nx run nest-core:build
+
+(node:4832) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Compiling with SWC for nest-core...
+
+
+> nx run ladipage-backend:build
+
+> webpack-cli build --node-env=production --externals-presets-node
+
+(node:34048) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:4980) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:35876) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ERROR in ../../libs/nest-core/src/modules/billing/payos/controllers/payos-webhook.controller.ts:44:9
+TS2352: Conversion of type 'PayOsWebhookData' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'PayOsWebhookData'.
+    42 |
+    43 |       const valid = verifyPayOsSignature(
+  > 44 |         payload.data as Record<string, unknown>,
+       |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    45 |         payload.signature,
+    46 |         this.payOsConfig.checksumKey,
+    47 |       )
+
+webpack compiled with 1 error (c954f96095ecd986)
+
+Warning: command "webpack-cli build --node-env=production --externals-presets-node" exited with non-zero status code
+
+ NX   Running target build for project ladipage-backend and 8 tasks it depends on failed
+
+Failed tasks:
+
+- ladipage-backend:build
+
+Hint: run the command with --verbose for more details.
+
+
+ NX   Nx detected a flaky task
+
+  ladipage-types:build
+
+Flaky tasks can disrupt your CI pipeline. Automatically retry them with Nx Cloud. Learn more at https://nx.dev/ci/features/flaky-tasks
+
+
+---
+exit_code: -1
+elapsed_ms: 86400011
+ended_at: 2026-07-08T06:54:14.638Z
+---

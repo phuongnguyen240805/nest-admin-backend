@@ -1,0 +1,41 @@
+{
+  "name": "ladipage-ai-worker",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/ladipage-ai-worker/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/apps/ladipage-ai-worker"],
+      "options": {
+        "command": "webpack-cli build",
+        "args": ["--node-env=production", "--externals-presets-node"],
+        "cwd": "apps/ladipage-ai-worker"
+      },
+      "configurations": {
+        "development": {
+          "args": ["--node-env=development", "--externals-presets-node"]
+        }
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "ladipage-ai-worker:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "ladipage-ai-worker:build:development"
+        },
+        "production": {
+          "buildTarget": "ladipage-ai-worker:build:production"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,106 @@
+---
+pid: 36420
+cwd: "D:\monorepo-project-workspace\liora-monorepo"
+command: "Set-Location D:\\monorepo-project-workspace\\liora-monorepo; docker compose -f docker/docker-compose.yml build liora-ladipage 2>&1"
+started_at: 2026-07-07T10:15:33.687Z
+running_for_ms: 86400007 
+---
+docker :  Image docker-liora-ladipage Building 
+#1 [internal] load local bake definitions
+At line:1 char:60
++ ... a-monorepo; docker compose -f docker/docker-compose.yml build liora-l ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Image docker-liora-ladipage Building :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+#1 reading from stdin 630B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.50kB 0.0s done
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/node:20-alpine
+#3 DONE 1.3s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 433B done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 DONE 0.0s
+
+#6 [base 1/5] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+#6 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.1s done
+#6 DONE 0.1s
+
+#5 [internal] load build context
+#5 transferring context: 172.97kB 0.3s done
+#5 DONE 0.4s
+
+#7 [base 2/5] WORKDIR /app
+#7 CACHED
+
+#8 [base 3/5] RUN corepack enable && corepack prepare pnpm@latest --activate
+#8 CACHED
+
+#9 [base 4/5] COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+#9 CACHED
+
+#10 [base 5/5] RUN pnpm install --frozen-lockfile
+#10 CACHED
+
+#11 [development 1/5] WORKDIR /app
+#11 CACHED
+
+#12 [development 2/5] COPY . .
+#12 DONE 49.3s
+
+#13 [development 3/5] RUN pnpm install --frozen-lockfile
+#13 1.480 Scope: all 12 workspace projects
+#13 1.939 Lockfile is up to date, resolution step is skipped
+#13 2.527 Progress: resolved 1, reused 0, downloaded 0, added 0
+#13 3.022 Packages: +67
+#13 3.022 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#13 3.536 Progress: resolved 67, reused 12, downloaded 0, added 0
+#13 4.545 Progress: resolved 67, reused 12, downloaded 10, added 17
+#13 5.545 Progress: resolved 67, reused 12, downloaded 43, added 57
+#13 6.825 Progress: resolved 67, reused 12, downloaded 47, added 60
+#13 7.827 Progress: resolved 67, reused 12, downloaded 49, added 63
+#13 8.827 Progress: resolved 67, reused 12, downloaded 50, added 64
+#13 11.26 Progress: resolved 67, reused 12, downloaded 51, added 64
+#13 11.99 Progress: resolved 67, reused 12, downloaded 53, added 67, done
+#13 13.70 .../esbuild@0.28.1/node_modules/esbuild postinstall$ node install.js
+#13 13.77 .../esbuild@0.28.1/node_modules/esbuild postinstall: Done
+#13 14.15 
+#13 14.25 Done in 13.5s
+#13 DONE 15.1s
+
+#14 [development 4/5] COPY docker/scripts/nx-dev-entrypoint.sh /usr/local/bin/nx-dev-entrypoint.sh
+#14 DONE 0.1s
+
+#15 [development 5/5] RUN chmod +x /usr/local/bin/nx-dev-entrypoint.sh
+#15 DONE 0.3s
+
+#16 exporting to image
+#16 exporting layers
+#16 exporting layers 164.0s done
+#16 exporting manifest sha256:72e84fd1b9f9389517b812eb709de8e012ec1feb8bd5b277b9829ac5832338a4 0.0s done
+#16 exporting config sha256:da64944c11690b296f79a17accba069eadb7891231563e87e79314cc377e14a6 0.0s done
+#16 exporting attestation manifest sha256:c8cb189aafa5118b10a5c7895560c092d72c898e58e1d13e6d2717236fff6d04 0.1s done
+#16 exporting manifest list sha256:57846d54dd83e5ed71b9ffe52cca88897d3b4c76a559ab2bc667e5412246621d
+#16 exporting manifest list sha256:57846d54dd83e5ed71b9ffe52cca88897d3b4c76a559ab2bc667e5412246621d 0.0s done
+#16 naming to docker.io/library/docker-liora-ladipage:latest done
+#16 unpacking to docker.io/library/docker-liora-ladipage:latest
+#16 unpacking to docker.io/library/docker-liora-ladipage:latest 195.2s done
+#16 DONE 359.5s
+
+#17 resolving provenance for metadata file
+#17 DONE 0.2s
+ Image docker-liora-ladipage Built 
+
+---
+exit_code: -1
+elapsed_ms: 86400007
+ended_at: 2026-07-08T10:15:48.798Z
+---

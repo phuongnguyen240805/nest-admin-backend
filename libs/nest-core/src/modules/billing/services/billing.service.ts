@@ -1,4 +1,4 @@
-import { BadRequestException, forwardRef, Inject, Injectable } from '@nestjs/common'
+import { BadRequestException, forwardRef, Inject, Injectable, Optional } from '@nestjs/common'
 import { toString } from 'lodash'
 import type {
   BillingOrderStatusDto,
@@ -16,6 +16,10 @@ import { PayOsService } from '../payos/payos.service'
 import { Period, SubscriptionTier } from '../entities/subscription.entity'
 import { BillingOrderService } from './billing-order.service'
 import { SubscriptionService } from './subscription.service'
+import {
+  LANDING_PAGES_QUOTA,
+  type LandingPagesQuotaPort,
+} from '../ports/landing-pages-quota.port'
 
 @Injectable()
 export class BillingService {
@@ -28,6 +32,8 @@ export class BillingService {
     private readonly payOsService: PayOsService,
     private readonly billingOrderService: BillingOrderService,
     private readonly tenantContext: TenantContextService,
+    @Optional() @Inject(LANDING_PAGES_QUOTA)
+    private readonly landingPagesQuota?: LandingPagesQuotaPort,
   ) {}
 
   async checkSession(org: Organization, sessionId: string): Promise<CheckoutSessionStatusDto> {
@@ -231,8 +237,9 @@ export class BillingService {
     const creditBalance = await this.subscriptionService.getCreditBalance(org.id)
     const creditSpent = await this.subscriptionService.getCreditSpent(org.id)
 
-    // Page/domain tables are not yet available — return zero counts with plan limits.
-    const pagesUsed = 0
+    const pagesUsed = this.landingPagesQuota
+      ? await this.landingPagesQuota.countPagesForOrganization(org.id)
+      : 0
     const domainsUsed = 0
 
     return {

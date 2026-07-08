@@ -1,0 +1,271 @@
+---
+pid: 2888
+cwd: "D:\monorepo-project-workspace\liora-monorepo"
+command: "Set-Location D:\\monorepo-project-workspace\\liora-monorepo; pnpm install --force"
+started_at: 2026-07-07T06:50:56.611Z
+running_for_ms: 86400014 
+---
+ WARN  using --force I sure hope you know what you are doing
+Scope: all 12 workspace projects
+Recreating D:\monorepo-project-workspace\liora-monorepo\node_modules
+Progress: resolved 0, reused 1, downloaded 0, added 0
+ WARN  deprecated cache-manager-ioredis-yet@2.1.2: With cache-manager v6 we now are using Keyv
+Progress: resolved 81, reused 81, downloaded 0, added 0
+Progress: resolved 117, reused 117, downloaded 0, added 0
+Progress: resolved 119, reused 118, downloaded 0, added 0
+Progress: resolved 186, reused 172, downloaded 0, added 0
+Progress: resolved 496, reused 400, downloaded 0, added 0
+Progress: resolved 753, reused 634, downloaded 0, added 0
+Progress: resolved 987, reused 884, downloaded 1, added 0
+Progress: resolved 1337, reused 1309, downloaded 2, added 0
+Progress: resolved 1788, reused 1760, downloaded 2, added 0
+Progress: resolved 1809, reused 1781, downloaded 5, added 0
+Progress: resolved 1809, reused 1781, downloaded 6, added 0
+Progress: resolved 1809, reused 1781, downloaded 7, added 0
+ WARN  GET https://registry.npmjs.org/@esbuild/darwin-x64/-/darwin-x64-0.28.1.tgz error (ECONNRESET). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-mips64el/-/linux-mips64el-0.28.1.tgz error (ECONNRESET). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-ppc64/-/linux-ppc64-0.28.1.tgz error (ECONNRESET). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@turbo/windows-arm64/-/windows-arm64-2.9.16.tgz error (ECONNRESET). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-riscv64/-/linux-riscv64-0.28.1.tgz error (ECONNRESET). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-ia32/-/linux-ia32-0.28.1.tgz error (ECONNRESET). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-loong64/-/linux-loong64-0.28.1.tgz error (ECONNRESET). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-arm64/-/android-arm64-0.28.1.tgz error (ECONNRESET). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.28.1.tgz error (ECONNRESET). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-arm/-/android-arm-0.28.1.tgz error (ECONNRESET). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.28.1.tgz error (ECONNRESET). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/freebsd-arm64/-/freebsd-arm64-0.28.1.tgz error (ECONNRESET). Will retry in 10 seconds. 2 retries left.
+Progress: resolved 1809, reused 1781, downloaded 8, added 0
+Progress: resolved 1809, reused 1781, downloaded 9, added 0
+Progress: resolved 1809, reused 1781, downloaded 10, added 0
+Progress: resolved 1809, reused 1781, downloaded 11, added 0
+Progress: resolved 1809, reused 1781, downloaded 13, added 0
+Progress: resolved 1811, reused 1781, downloaded 14, added 0
+Progress: resolved 1834, reused 1801, downloaded 17, added 0
+Progress: resolved 1901, reused 1866, downloaded 21, added 0
+Progress: resolved 1933, reused 1900, downloaded 23, added 0
+Progress: resolved 1933, reused 1900, downloaded 26, added 0
+Progress: resolved 1935, reused 1900, downloaded 28, added 0
+Progress: resolved 1935, reused 1902, downloaded 29, added 0
+Progress: resolved 1936, reused 1903, downloaded 31, added 0
+ WARN  8 deprecated subdependencies found: glob@10.5.0, glob@11.1.0, glob@7.2.3, inflight@1.0.6, uuid@8.3.2, uuid@9.0.1, whatwg-encoding@2.0.0, whatwg-encoding@3.1.1
+Packages: +1953
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 1936, reused 1903, downloaded 31, added 1
+Progress: resolved 1936, reused 1903, downloaded 31, added 77
+Progress: resolved 1936, reused 1903, downloaded 31, added 112
+Progress: resolved 1936, reused 1903, downloaded 31, added 118
+Progress: resolved 1936, reused 1903, downloaded 31, added 172
+Progress: resolved 1936, reused 1903, downloaded 31, added 237
+Progress: resolved 1936, reused 1903, downloaded 31, added 239
+Progress: resolved 1936, reused 1903, downloaded 31, added 317
+Progress: resolved 1936, reused 1903, downloaded 31, added 395
+Progress: resolved 1936, reused 1903, downloaded 31, added 401
+Progress: resolved 1936, reused 1903, downloaded 31, added 483
+Progress: resolved 1936, reused 1903, downloaded 31, added 484
+Progress: resolved 1936, reused 1903, downloaded 31, added 508
+Progress: resolved 1936, reused 1903, downloaded 31, added 510
+Progress: resolved 1936, reused 1903, downloaded 31, added 545
+Progress: resolved 1936, reused 1903, downloaded 31, added 566
+Progress: resolved 1936, reused 1903, downloaded 31, added 615
+Progress: resolved 1936, reused 1903, downloaded 31, added 670
+Progress: resolved 1936, reused 1903, downloaded 31, added 674
+Progress: resolved 1936, reused 1903, downloaded 31, added 719
+Progress: resolved 1936, reused 1903, downloaded 31, added 793
+Progress: resolved 1936, reused 1903, downloaded 31, added 829
+Progress: resolved 1936, reused 1903, downloaded 31, added 896
+Progress: resolved 1936, reused 1903, downloaded 31, added 911
+Progress: resolved 1936, reused 1903, downloaded 31, added 928
+Progress: resolved 1936, reused 1903, downloaded 31, added 969
+Progress: resolved 1936, reused 1903, downloaded 31, added 970
+Progress: resolved 1936, reused 1903, downloaded 31, added 1115
+Progress: resolved 1936, reused 1903, downloaded 31, added 1116
+Progress: resolved 1936, reused 1903, downloaded 31, added 1182
+Progress: resolved 1936, reused 1903, downloaded 31, added 1222
+Progress: resolved 1936, reused 1903, downloaded 31, added 1252
+Progress: resolved 1936, reused 1903, downloaded 31, added 1290
+Progress: resolved 1936, reused 1903, downloaded 31, added 1322
+Progress: resolved 1936, reused 1903, downloaded 31, added 1324
+Progress: resolved 1936, reused 1903, downloaded 31, added 1374
+Progress: resolved 1936, reused 1903, downloaded 31, added 1377
+Progress: resolved 1936, reused 1903, downloaded 31, added 1492
+Progress: resolved 1936, reused 1903, downloaded 31, added 1493
+Progress: resolved 1936, reused 1903, downloaded 31, added 1543
+Progress: resolved 1936, reused 1903, downloaded 31, added 1545
+Progress: resolved 1936, reused 1903, downloaded 31, added 1593
+Progress: resolved 1936, reused 1903, downloaded 31, added 1621
+Progress: resolved 1936, reused 1903, downloaded 31, added 1636
+Progress: resolved 1936, reused 1903, downloaded 31, added 1638
+Progress: resolved 1936, reused 1903, downloaded 31, added 1662
+Progress: resolved 1936, reused 1903, downloaded 31, added 1701
+Progress: resolved 1936, reused 1903, downloaded 31, added 1702
+Progress: resolved 1936, reused 1903, downloaded 31, added 1802
+Progress: resolved 1936, reused 1903, downloaded 31, added 1838
+Progress: resolved 1936, reused 1903, downloaded 31, added 1865
+Progress: resolved 1936, reused 1903, downloaded 31, added 1908
+Progress: resolved 1936, reused 1903, downloaded 33, added 1948
+Progress: resolved 1936, reused 1903, downloaded 33, added 1949
+Progress: resolved 1936, reused 1903, downloaded 33, added 1950
+Progress: resolved 1936, reused 1903, downloaded 33, added 1952
+Progress: resolved 1936, reused 1903, downloaded 33, added 1953, done
+.../node_modules/@parcel/watcher install$ node scripts/build-from-source.js
+.../node_modules/@swc/core postinstall$ node postinstall.js
+.../node_modules/@nestjs/core postinstall$ opencollective || exit 0
+.../node_modules/msgpackr-extract install$ node-gyp-build-optional-packages
+.../node_modules/unrs-resolver postinstall$ node postinstall.js
+.../node_modules/@parcel/watcher install: Done
+.../node_modules/unrs-resolver postinstall: Done
+.../node_modules/@swc/core postinstall: Done
+.../node_modules/@nestjs/core postinstall:                            Thanks for installing nest 
+.../node_modules/@nestjs/core postinstall:                  Please consider donating to our open collective
+.../node_modules/@nestjs/core postinstall:                         to help us maintain this package.
+.../node_modules/@nestjs/core postinstall:                                          
+.../node_modules/@nestjs/core postinstall:                                          
+.../node_modules/@nestjs/core postinstall:              Become a partner: https://opencollective.com/nest/donate
+.../node_modules/@nestjs/core postinstall:                                          
+.../node_modules/@nestjs/core postinstall: Done
+.../node_modules/msgpackr-extract install: Done
+.../node_modules/nx postinstall$ node -e "try{require('./dist/bin/post-install')}catch(e){}"
+.../node_modules/nx postinstall$ node -e "try{require('./dist/bin/post-install')}catch(e){}"
+.../node_modules/nx postinstall: Done
+.../node_modules/nx postinstall: Done
+
+dependencies:
++ @aws-sdk/client-s3 3.1057.0
++ @aws-sdk/s3-request-presigner 3.1057.0
++ @fastify/cookie 11.0.2
++ @fastify/multipart 10.0.0
++ @fastify/static 9.1.3
++ @liaoliaots/nestjs-redis 10.0.0
++ @liora/api-types 0.1.0 <- apps\ladipage-backend\libs\api-types
++ @nestjs-modules/mailer 2.3.6
++ @nestjs/axios 4.0.1
++ @nestjs/bull 11.0.4
++ @nestjs/bullmq 11.0.4
++ @nestjs/cache-manager 3.1.2
++ @nestjs/common 11.1.24
++ @nestjs/config 4.0.4
++ @nestjs/core 11.1.24
++ @nestjs/event-emitter 3.1.0
++ @nestjs/jwt 11.0.2
++ @nestjs/passport 11.0.5
++ @nestjs/platform-express 11.1.24
++ @nestjs/platform-fastify 11.1.24
++ @nestjs/platform-socket.io 11.1.24 (11.1.25 is available)
++ @nestjs/schedule 6.1.3
++ @nestjs/swagger 11.4.4
++ @nestjs/terminus 11.1.1
++ @nestjs/throttler 6.5.0
++ @nestjs/typeorm 11.0.1
++ @nestjs/websockets 11.1.24 (11.1.25 is available)
++ @socket.io/redis-adapter 8.3.0
++ @socket.io/redis-emitter 5.1.0
++ @supabase/supabase-js 2.107.0
++ axios 1.16.1
++ bcrypt 6.0.0
++ bull 4.16.5
++ bullmq 5.79.3
++ cache-manager 7.2.8
++ cache-manager-ioredis-yet 2.1.2 deprecated
++ class-transformer 0.5.1
++ class-validator 0.15.1
++ cron-parser 5.5.0
++ crypto-js 4.2.0
++ dayjs 1.11.21
++ dotenv 17.4.2
++ evp_bytestokey 1.0.3
++ express 5.2.1
++ fastify 5.8.5
++ ioredis 5.11.0
++ jsonwebtoken 9.0.3
++ lodash 4.18.1
++ mysql2 3.22.4
++ nanoid 3.3.12
++ nestjs-cls 6.2.1
++ passport 0.7.0
++ passport-jwt 4.0.1
++ passport-local 1.0.0
++ pg 8.21.0
++ pluralize 8.0.0
++ qiniu 7.15.2
++ qs 6.15.2
++ redis 5.12.1
++ reflect-metadata 0.2.2
++ rxjs 7.8.2
++ socket.io 4.8.3
++ stripe 22.2.0
++ svg-captcha 1.4.0
++ systeminformation 5.31.7
++ typeorm 0.3.30
++ ua-parser-js 2.0.10
++ winston 3.19.0
++ winston-daily-rotate-file 5.0.0
++ ws 8.21.0
+
+devDependencies:
++ @eslint/js 9.39.4
++ @nestjs/schematics 11.1.0
++ @nestjs/testing 11.1.24
++ @nx/eslint 22.7.1
++ @nx/eslint-plugin 22.7.1
++ @nx/jest 22.7.0
++ @nx/js 22.7.1
++ @nx/nest 22.7.1
++ @nx/node 22.7.1
++ @nx/web 22.7.1
++ @nx/webpack 22.7.1
++ @swc-node/register 1.11.1
++ @swc/cli 0.8.1
++ @swc/core 1.15.40
++ @swc/helpers 0.5.23
++ @types/bcrypt 6.0.0
++ @types/express 5.0.6
++ @types/jest 30.0.0
++ @types/jsonwebtoken 9.0.10
++ @types/lodash 4.17.24
++ @types/node 20.19.9
++ @types/passport-jwt 4.0.1
++ @types/qs 6.15.1
++ @types/ua-parser-js 0.7.39
++ depcheck 1.4.7
++ eslint 9.39.4
++ eslint-config-prettier 10.1.8
++ jest 30.4.2
++ jest-environment-node 30.4.1
++ jest-util 30.4.1
++ jsonc-eslint-parser 2.4.2
++ nx 22.7.0
++ prettier 3.6.2 (3.8.3 is available)
++ ts-jest 29.4.11
++ ts-node 10.9.1
++ tslib 2.8.1
++ turbo 2.9.16
++ typescript 5.9.3
++ typescript-eslint 8.60.0
++ webpack-cli 5.1.4
+
+ WARN  Issues with peer dependencies found
+.
+├─┬ @nx/eslint 22.7.1
+│ └── ✕ unmet peer @nx/jest@22.7.1: found 22.7.0
+├─┬ @nx/web 22.7.1
+│ └── ✕ unmet peer @nx/jest@22.7.1: found 22.7.0
+├─┬ @swc/cli 0.8.1
+│ └── ✕ unmet peer chokidar@^5.0.0: found 3.6.0
+├─┬ @nestjs/schematics 11.1.0
+│ └─┬ @angular-devkit/core 19.2.24
+│   └── ✕ unmet peer chokidar@^4.0.0: found 3.6.0
+└─┬ @liaoliaots/nestjs-redis 10.0.0
+  ├── ✕ unmet peer @nestjs/common@^10.0.0: found 11.1.24
+  └── ✕ unmet peer @nestjs/core@^10.0.0: found 11.1.24
+
+apps/donut-sync-backend
+└─┬ @swc/cli 0.8.1
+  └── ✕ unmet peer chokidar@^5.0.0: found 4.0.3
+
+Done in 2m 54s
+
+---
+exit_code: -1
+elapsed_ms: 86400014
+ended_at: 2026-07-08T06:51:11.741Z
+---

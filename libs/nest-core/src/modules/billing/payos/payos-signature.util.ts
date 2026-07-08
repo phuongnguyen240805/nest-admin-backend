@@ -2,6 +2,10 @@ import { createHmac } from 'crypto'
 
 type PayOsSignatureData = Record<string, unknown>
 
+function asSignatureData(data: object): PayOsSignatureData {
+  return data as PayOsSignatureData
+}
+
 function sortObjDataByKey(object: PayOsSignatureData): PayOsSignatureData {
   return Object.keys(object)
     .sort()
@@ -37,16 +41,16 @@ function convertObjToQueryStr(object: PayOsSignatureData): string {
 }
 
 export function createPayOsSignature(
-  data: PayOsSignatureData,
+  data: object,
   checksumKey: string,
 ): string {
-  const sorted = sortObjDataByKey(data)
+  const sorted = sortObjDataByKey(asSignatureData(data))
   const query = convertObjToQueryStr(sorted)
   return createHmac('sha256', checksumKey).update(query).digest('hex')
 }
 
 export function verifyPayOsSignature(
-  data: PayOsSignatureData,
+  data: object,
   signature: string,
   checksumKey: string,
 ): boolean {

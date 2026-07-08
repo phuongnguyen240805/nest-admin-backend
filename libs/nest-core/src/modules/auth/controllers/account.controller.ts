@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Headers, Post, Put, Req, UseGuards } from '@nestjs/common'
 import { ApiExtraModels, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { SkipThrottle } from '@nestjs/throttler'
 import { FastifyRequest } from 'fastify'
 
 import { ApiResult } from '~/common/decorators/api-result.decorator'
@@ -44,6 +45,7 @@ export class AccountController {
   }
 
   @Get('profile')
+  @SkipThrottle()
   @ApiOperation({ summary: '获取账户资料' })
   @ApiResult({ type: AccountInfo })
   @AllowAnon()

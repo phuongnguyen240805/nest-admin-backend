@@ -19,12 +19,16 @@ COPY . .
 # Re-run install to pick up any lockfile changes (e.g. newly added packages)
 RUN pnpm install --frozen-lockfile
 
+COPY docker/scripts/nx-dev-entrypoint.sh /usr/local/bin/nx-dev-entrypoint.sh
+RUN chmod +x /usr/local/bin/nx-dev-entrypoint.sh
+
 # Expose port
 EXPOSE 7002
 
 ENV PORT=7002
 
-# Command cho dev mode (Nx serve)
+# Sync node_modules on each start (volume /app/node_modules may be stale after lockfile changes)
+ENTRYPOINT ["/usr/local/bin/nx-dev-entrypoint.sh"]
 CMD ["pnpm", "nx", "serve", "ladipage-backend", "--host=0.0.0.0", "--skip-nx-cache"]
 
 # =============== BUILD STAGE (cho production) ===============

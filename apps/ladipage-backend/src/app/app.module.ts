@@ -62,6 +62,22 @@ import { LadipageRpcModule } from '../modules/ladipage-rpc/ladipage-rpc.module';
 import { LadiflowRpcModule } from '../modules/ladiflow-rpc/ladiflow-rpc.module';
 import { LadiworkModule } from '../modules/ladiwork/ladiwork.module';
 import { AutomationModule } from '../modules/automation/automation.module';
+import { BullMqModule } from '@liora/nest-core';
+import {
+  buildLadipageBullMqOptions,
+  isBullMqEnabled,
+  isBullMqWorkerEnabled,
+} from '../config/bullmq.app.config';
+import { LandingAiApiModule } from '../modules/landing-ai/landing-ai-api.module';
+import { LandingAiWorkerModule } from '../modules/landing-ai/landing-ai-worker.module';
+
+const bullMqImports = isBullMqEnabled()
+  ? [
+      BullMqModule.forRoot(buildLadipageBullMqOptions()),
+      LandingAiApiModule,
+      ...(isBullMqWorkerEnabled() ? [LandingAiWorkerModule] : []),
+    ]
+  : [];
 
 @Module({
   imports: [
@@ -89,6 +105,7 @@ import { AutomationModule } from '../modules/automation/automation.module';
     }),
 
     // === NEST-CORE REUSABLE STACK ===
+    ...bullMqImports,
     SharedModule,        // Redis, Mailer, Logger, Scheduler, Throttler, EventEmitter...
     DatabaseModule,      // TypeORM + constraints
     TenantModule,        // Multi-tenant / workspace (dùng sau cho team)

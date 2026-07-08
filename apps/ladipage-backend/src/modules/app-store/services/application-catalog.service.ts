@@ -6,6 +6,11 @@ import type { LpApplication } from '@liora/ladipage-types';
 
 import type { RpcContext } from '../../ladipage-rpc/rpc-dispatcher.service';
 import { mapApplicationRpcItem } from '../../ladipage-rpc/mappers/landing/application.mapper';
+import {
+  buildAppStoreScopeKey,
+  resolveAppStoreOwnerId,
+  resolveAppStoreTenantId,
+} from '../app-store-context.util';
 import { ApplicationSeedStore } from '../data/application-seed.store';
 import { ApplicationEntity } from '../entities';
 import { ApplicationAccessService } from './application-access.service';
@@ -21,13 +26,17 @@ export class ApplicationCatalogService {
   ) {}
 
   async list(_body: Record<string, unknown>, ctx: RpcContext): Promise<LpApplication[]> {
+    const tenantId = resolveAppStoreTenantId(ctx);
+    const ownerId = resolveAppStoreOwnerId(ctx);
+
     if (this.applicationRepository) {
-      return this.accessService.enrichList(await this.listFromRepository(ctx), ctx);
+      return this.accessService.enrichList(await this.listFromRepository(ctx, tenantId, ownerId), ctx);
     }
 
     const storeId = ctx.storeId ?? this.seedStore.getStoreId();
+    const scopeKey = buildAppStoreScopeKey(tenantId, ownerId, storeId);
 
-    const applications = this.seedStore.listApplications()
+    const applications = this.seedStore.listApplications(scopeKey)
       .filter((application) => !storeId || application.store_id === storeId)
       .filter((application) => application.is_delete !== true)
       .map((application) => mapApplicationRpcItem(application));
@@ -35,14 +44,17 @@ export class ApplicationCatalogService {
     return this.accessService.enrichList(applications, ctx);
   }
 
-  private async listFromRepository(ctx: RpcContext): Promise<LpApplication[]> {
+  private async listFromRepository(
+    ctx: RpcContext,
+    tenantId: number,
+    ownerId: string,
+  ): Promise<LpApplication[]> {
     const storeId = ctx.storeId ?? this.seedStore.getStoreId();
+    const scopeKey = buildAppStoreScopeKey(tenantId, ownerId, storeId);
     const query = this.applicationRepository!.createQueryBuilder('application')
-      .where('application.is_delete = false');
-
-    if (ctx.tenantId != null) {
-      query.andWhere('application.tenantId = :tenantId', { tenantId: ctx.tenantId });
-    }
+      .where('application.is_delete = false')
+      .andWhere('application.tenantId = :tenantId', { tenantId })
+      .andWhere('application.ownerId = :ownerId', { ownerId });
 
     if (storeId) {
       query.andWhere('application.store_id = :storeId', { storeId });
@@ -57,7 +69,7 @@ export class ApplicationCatalogService {
       mapApplicationRpcItem(application as unknown as Record<string, unknown>),
     );
     const existingCodes = new Set(mappedApplications.map((application) => application.code));
-    const seededApplications = this.seedStore.listApplications()
+    const seededApplications = this.seedStore.listApplications(scopeKey)
       .filter((application) => !storeId || application.store_id === storeId)
       .filter((application) => application.is_delete !== true)
       .map((application) => mapApplicationRpcItem(application))

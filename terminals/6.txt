@@ -1,0 +1,132 @@
+---
+pid: 33764
+cwd: "D:\monorepo-project-workspace\liora-monorepo"
+command: "Set-Location D:\\monorepo-project-workspace\\liora-monorepo; pnpm install --frozen-lockfile"
+started_at: 2026-07-07T10:15:16.189Z
+running_for_ms: 86400008 
+---
+Scope: all 12 workspace projects
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+dependencies:
++ @aws-sdk/client-s3 3.1057.0
++ @aws-sdk/s3-request-presigner 3.1057.0
++ @fastify/cookie 11.0.2
++ @fastify/multipart 10.0.0
++ @fastify/static 9.1.3
++ @liaoliaots/nestjs-redis 10.0.0
++ @liora/api-types 0.1.0 <- apps\ladipage-backend\libs\api-types
++ @nestjs-modules/mailer 2.3.6
++ @nestjs/axios 4.0.1
++ @nestjs/bull 11.0.4
++ @nestjs/bullmq 11.0.4
++ @nestjs/cache-manager 3.1.2
++ @nestjs/common 11.1.24
++ @nestjs/config 4.0.4
++ @nestjs/core 11.1.24
++ @nestjs/event-emitter 3.1.0
++ @nestjs/jwt 11.0.2
++ @nestjs/passport 11.0.5
++ @nestjs/platform-express 11.1.24
++ @nestjs/platform-fastify 11.1.24
++ @nestjs/platform-socket.io 11.1.24
++ @nestjs/schedule 6.1.3
++ @nestjs/swagger 11.4.4
++ @nestjs/terminus 11.1.1
++ @nestjs/throttler 6.5.0
++ @nestjs/typeorm 11.0.1
++ @nestjs/websockets 11.1.24
++ @socket.io/redis-adapter 8.3.0
++ @socket.io/redis-emitter 5.1.0
++ @supabase/supabase-js 2.107.0
++ axios 1.16.1
++ bcrypt 6.0.0
++ bull 4.16.5
++ bullmq 5.79.3
++ cache-manager 7.2.8
++ cache-manager-ioredis-yet 2.1.2
++ class-transformer 0.5.1
++ class-validator 0.15.1
++ cron-parser 5.5.0
++ crypto-js 4.2.0
++ dayjs 1.11.21
++ dotenv 17.4.2
++ evp_bytestokey 1.0.3
++ express 5.2.1
++ fastify 5.8.5
++ ioredis 5.11.0
++ jsonwebtoken 9.0.3
++ lodash 4.18.1
++ mysql2 3.22.4
++ nanoid 3.3.12
++ nestjs-cls 6.2.1
++ passport 0.7.0
++ passport-jwt 4.0.1
++ passport-local 1.0.0
++ pg 8.21.0
++ pluralize 8.0.0
++ qiniu 7.15.2
++ qs 6.15.2
++ redis 5.12.1
++ reflect-metadata 0.2.2
++ rxjs 7.8.2
++ socket.io 4.8.3
++ stripe 22.2.0
++ svg-captcha 1.4.0
++ systeminformation 5.31.7
++ typeorm 0.3.30
++ ua-parser-js 2.0.10
++ winston 3.19.0
++ winston-daily-rotate-file 5.0.0
++ ws 8.21.0
+
+devDependencies:
++ @eslint/js 9.39.4
++ @nestjs/schematics 11.1.0
++ @nestjs/testing 11.1.24
++ @nx/eslint 22.7.1
++ @nx/eslint-plugin 22.7.1
++ @nx/jest 22.7.0
++ @nx/js 22.7.1
++ @nx/nest 22.7.1
++ @nx/node 22.7.1
++ @nx/web 22.7.1
++ @nx/webpack 22.7.1
++ @swc-node/register 1.11.1
++ @swc/cli 0.8.1
++ @swc/core 1.15.40
++ @swc/helpers 0.5.23
++ @types/bcrypt 6.0.0
++ @types/express 5.0.6
++ @types/jest 30.0.0
++ @types/jsonwebtoken 9.0.10
++ @types/lodash 4.17.24
++ @types/node 20.19.9
++ @types/passport-jwt 4.0.1
++ @types/qs 6.15.1
++ @types/ua-parser-js 0.7.39
++ depcheck 1.4.7
++ eslint 9.39.4
++ eslint-config-prettier 10.1.8
++ jest 30.4.2
++ jest-environment-node 30.4.1
++ jest-util 30.4.1
++ jsonc-eslint-parser 2.4.2
++ nx 22.7.0
++ prettier 3.6.2
++ ts-jest 29.4.11
++ ts-node 10.9.1
++ tslib 2.8.1
++ turbo 2.9.16
++ typescript 5.9.3
++ typescript-eslint 8.60.0
++ webpack-cli 5.1.4
+
+Done in 14.7s
+
+---
+exit_code: -1
+elapsed_ms: 86400008
+ended_at: 2026-07-08T10:15:31.684Z
+---
