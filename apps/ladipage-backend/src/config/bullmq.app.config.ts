@@ -5,7 +5,7 @@ export function isBullMqEnabled(): boolean {
   return process.env.BULLMQ_ENABLED !== 'false'
 }
 
-/** When false, API process only enqueues — processors run in ladipage-ai-worker. */
+/** When false, API process only enqueues — processors run via worker.main.ts (serve-worker). */
 export function isBullMqWorkerEnabled(): boolean {
   return isBullMqEnabled() && process.env.BULLMQ_RUN_WORKERS !== 'false'
 }

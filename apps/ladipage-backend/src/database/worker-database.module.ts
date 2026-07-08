@@ -6,7 +6,7 @@ import { DataSource } from 'typeorm'
 import type { IDatabaseConfig } from '@liora/database/config/database.config'
 
 /**
- * TypeORM bootstrap for the AI worker only — no class-validator constraints (UniqueConstraint / ClsService).
+ * TypeORM bootstrap for the BullMQ worker process — no class-validator constraints (UniqueConstraint / ClsService).
  */
 @Module({
   imports: [

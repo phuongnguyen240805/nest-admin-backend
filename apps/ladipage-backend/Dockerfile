@@ -35,7 +35,8 @@ CMD ["pnpm", "nx", "serve", "ladipage-backend", "--host=0.0.0.0", "--skip-nx-cac
 FROM base AS builder
 WORKDIR /app
 COPY . .
-RUN pnpm nx build ladipage-backend --prod
+RUN pnpm nx build ladipage-backend --prod \
+  && pnpm nx build-worker ladipage-backend --prod
 
 # =============== PRODUCTION STAGE ===============
 FROM node:20-alpine AS production

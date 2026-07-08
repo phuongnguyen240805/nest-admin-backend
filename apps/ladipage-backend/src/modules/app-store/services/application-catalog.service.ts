@@ -53,8 +53,7 @@ export class ApplicationCatalogService {
     const scopeKey = buildAppStoreScopeKey(tenantId, ownerId, storeId);
     const query = this.applicationRepository!.createQueryBuilder('application')
       .where('application.is_delete = false')
-      .andWhere('application.tenantId = :tenantId', { tenantId })
-      .andWhere('application.ownerId = :ownerId', { ownerId });
+      .andWhere('application.tenantId = :tenantId', { tenantId });
 
     if (storeId) {
       query.andWhere('application.store_id = :storeId', { storeId });

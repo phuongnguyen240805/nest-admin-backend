@@ -16,7 +16,7 @@ export const APPLICATION_SEED_CATALOG: ApplicationSeedCatalogItem[] = [
   { code: 'FacebookAds', name: 'Facebook Ads', price: 0, statusActive: false, statusPin: false, installsCount: 1520 },
   { code: 'CloudPhone', name: 'CloudPhone', price: 0, statusActive: false, statusPin: false, installsCount: 2048 },
   { code: 'OfferKit', name: 'OfferKit', price: 2_400_000, statusActive: false, statusPin: false, installsCount: 1786 },
-  { code: 'AiSeo', name: 'AI SEO', price: 1_500_000, statusActive: false, statusPin: false, installsCount: 2150 },
+  { code: 'AiSeo', name: 'AI SEO', price: 0, statusActive: false, statusPin: false, installsCount: 2150 },
   { code: 'SiteMetrics', name: 'Site Metrics', price: 0, statusActive: false, statusPin: false, installsCount: 1890 },
   { code: 'Local', name: 'Local', price: 800_000, statusActive: false, statusPin: false, installsCount: 1240 },
   { code: 'Content', name: 'Content', price: 1_500_000, statusActive: false, statusPin: false, installsCount: 4120 },

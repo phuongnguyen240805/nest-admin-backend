@@ -70,20 +70,14 @@ export class ApplicationLifecycleService {
     if (!code) throw new BadRequestException('Application code is required.');
 
     const storeId = ctx.storeId ?? this.seedStore.getStoreId();
-    const query = this.applicationRepository!.createQueryBuilder('application')
-      .where('application.code = :code', { code })
-      .andWhere('application.tenantId = :tenantId', { tenantId })
-      .andWhere('application.ownerId = :ownerId', { ownerId });
-
-    if (storeId) {
-      query.andWhere('application.store_id = :storeId', { storeId });
-    }
-
-    let current = await query.getOne();
+    let current = await this.findRepositoryApplication(tenantId, code, storeId);
 
     if (!current) {
       const template = this.newApplicationFromTemplate(code, storeId, ownerId);
       current = this.applicationRepository!.create(this.entityFromRpc(template, tenantId, ownerId));
+    } else {
+      current.ownerId = ownerId;
+      current.ladiUid = ownerId;
     }
 
     await this.accessService.assertCanUpdate(
@@ -129,6 +123,23 @@ export class ApplicationLifecycleService {
 
     const saved = mapApplicationRpcItem(this.seedStore.saveApplication(next, scopeKey));
     return (await this.accessService.enrichList([saved], ctx))[0];
+  }
+
+  private async findRepositoryApplication(
+    tenantId: number,
+    code: string,
+    storeId?: string,
+  ): Promise<ApplicationEntity | null> {
+    const query = this.applicationRepository!.createQueryBuilder('application')
+      .where('application.code = :code', { code })
+      .andWhere('application.tenantId = :tenantId', { tenantId })
+      .andWhere('application.is_delete = false');
+
+    if (storeId) {
+      query.andWhere('application.store_id = :storeId', { storeId });
+    }
+
+    return query.getOne();
   }
 
   private newApplicationFromTemplate(code: string, storeId?: string, ownerId?: string): JsonRecord {

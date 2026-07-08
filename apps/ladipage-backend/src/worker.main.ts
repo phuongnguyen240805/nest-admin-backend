@@ -4,7 +4,7 @@ import { NestFactory } from '@nestjs/core'
 import { WorkerAppModule } from './app/worker-app.module'
 
 async function bootstrap() {
-  const logger = new Logger('LadipageAiWorker')
+  const logger = new Logger('LadipageWorker')
   const app = await NestFactory.createApplicationContext(WorkerAppModule, {
     bufferLogs: true,
   })
@@ -19,7 +19,7 @@ async function bootstrap() {
 
   logger.log(
     [
-      'Landing AI worker ready',
+      'Ladipage BullMQ worker ready',
       `BULLMQ_ENABLED=${bullEnabled}`,
       `BULLMQ_RUN_WORKERS=${workerEnabled}`,
       `LANDING_AI_MOCK_GENERATE=${mockGenerate}`,
@@ -31,6 +31,6 @@ async function bootstrap() {
 }
 
 void bootstrap().catch((error) => {
-  console.error('Landing AI worker failed to start', error)
+  console.error('Ladipage worker failed to start', error)
   process.exit(1)
 })

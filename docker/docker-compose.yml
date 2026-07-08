@@ -191,8 +191,8 @@ services:
       LADIPAGE_PORT: "7002"
       APP_CODE: ladipage
       APP_SCOPED_AUTH: "false"
-      # Dev: API cũng chạy processor khi worker container lỗi (production: false)
-      BULLMQ_RUN_WORKERS: ${LADIPAGE_BULLMQ_RUN_WORKERS_IN_API:-true}
+      # API chỉ enqueue — processor chạy ở liora-ladipage-worker (cùng ladipage-backend image)
+      BULLMQ_RUN_WORKERS: ${LADIPAGE_BULLMQ_RUN_WORKERS_IN_API:-false}
       DB_TYPE: postgres
       DB_HOST: db
       DB_PORT: "5432"
@@ -241,13 +241,13 @@ services:
         aliases:
           - ladipage
 
-  # ================== LADIPAGE AI WORKER (BullMQ processors) ==================
-  liora-ladipage-ai-worker:
+  # ================== LADIPAGE BULLMQ WORKER (processors — cùng app ladipage-backend) ==================
+  liora-ladipage-worker:
     build:
       context: ..
-      dockerfile: apps/ladipage-ai-worker/Dockerfile
+      dockerfile: apps/ladipage-backend/Dockerfile
       target: development
-    container_name: liora-ladipage-ai-worker-dev
+    container_name: liora-ladipage-worker-dev
     restart: unless-stopped
     env_file:
       - ../.env
@@ -267,6 +267,7 @@ services:
       SCREENSHOT_TO_CODE_HTTP_URL: http://screenshot-to-code:7010
       SCREENSHOT_TO_CODE_WS_URL: ws://screenshot-to-code:7010
       LANDING_AI_MOCK_GENERATE: ${LANDING_AI_MOCK_GENERATE:-false}
+    command: ["pnpm", "nx", "serve-worker", "ladipage-backend", "--skip-nx-cache"]
     volumes:
       - ../apps:/app/apps
       - ../libs:/app/libs
@@ -290,7 +291,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "node -e \"const fs=require('fs');const p='/proc/1/cmdline';if(!fs.existsSync(p))process.exit(1);const c=fs.readFileSync(p,'utf8');process.exit(c.includes('ladipage-ai-worker')?0:1)\"",
+          "node -e \"const fs=require('fs');const p='/proc/1/cmdline';if(!fs.existsSync(p))process.exit(1);const c=fs.readFileSync(p,'utf8');process.exit(c.includes('serve-worker')||c.includes('worker.main')?0:1)\"",
         ]
       interval: 30s
       timeout: 5s
@@ -299,6 +300,7 @@ services:
     networks:
       liora-network:
         aliases:
+          - ladipage-worker
           - ladipage-ai-worker
 
   # ================== DONUT-SYNC BACKEND ==================

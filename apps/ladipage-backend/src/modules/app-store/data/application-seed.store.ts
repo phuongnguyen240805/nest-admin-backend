@@ -35,11 +35,16 @@ export class ApplicationSeedStore {
 
   getApplicationTemplate(code: string): JsonRecord | undefined {
     const fixtureApps = this.readFixtureData<JsonRecord[]>(PHASE_A_FIXTURES.applicationList);
-    const fromCatalog = fixtureApps.find((item) => item.code === code);
-    if (fromCatalog) return this.clone(fromCatalog);
+    const fromFixture = fixtureApps.find((item) => item.code === code);
+    if (fromFixture) return this.clone(fromFixture);
 
     const updateTemplate = this.getUpdateTemplate();
-    return updateTemplate.code === code ? updateTemplate : undefined;
+    if (updateTemplate.code === code) return this.clone(updateTemplate);
+
+    const catalogItem = APPLICATION_SEED_CATALOG.find((item) => item.code === code);
+    if (!catalogItem) return undefined;
+
+    return this.clone(this.buildCatalogSeedTemplate(catalogItem));
   }
 
   saveApplication(application: JsonRecord, scopeKey: string): JsonRecord {
@@ -99,28 +104,43 @@ export class ApplicationSeedStore {
     for (const item of APPLICATION_SEED_CATALOG) {
       if (byCode.has(item.code)) continue;
 
-      base.push({
-        _id: `seed-${ownerId}-${item.code}`,
-        store_id: storeId ?? this.getStoreId() ?? 'default-store',
-        owner_id: ownerId,
-        ladi_uid: ownerId,
-        name: item.name,
-        code: item.code,
-        logo: '',
-        thumb: '',
-        price: item.price,
-        status_active: item.statusActive === true,
-        status_actived_at: item.statusActive === true ? timestamp : null,
-        status_pin: item.statusPin === true,
-        is_delete: false,
-        installs_count: item.installsCount ?? 0,
-        views_count: 0,
-        created_at: timestamp,
-        updated_at: timestamp,
-      });
+      base.push(this.buildCatalogSeedTemplate(item, {
+        ownerId,
+        storeId: storeId ?? this.getStoreId() ?? 'default-store',
+        timestamp,
+      }));
     }
 
     return base;
+  }
+
+  private buildCatalogSeedTemplate(
+    item: (typeof APPLICATION_SEED_CATALOG)[number],
+    options?: { ownerId?: string; storeId?: string; timestamp?: string },
+  ): JsonRecord {
+    const ownerId = options?.ownerId ?? 'system';
+    const storeId = options?.storeId ?? this.getStoreId() ?? 'default-store';
+    const timestamp = options?.timestamp ?? this.getUpdateTimestamp() ?? new Date().toISOString();
+
+    return {
+      _id: `seed-${ownerId}-${item.code}`,
+      store_id: storeId,
+      owner_id: ownerId,
+      ladi_uid: ownerId,
+      name: item.name,
+      code: item.code,
+      logo: '',
+      thumb: '',
+      price: item.price,
+      status_active: item.statusActive === true,
+      status_actived_at: item.statusActive === true ? timestamp : null,
+      status_pin: item.statusPin === true,
+      is_delete: false,
+      installs_count: item.installsCount ?? 0,
+      views_count: 0,
+      created_at: timestamp,
+      updated_at: timestamp,
+    };
   }
 
   private parseScopeKey(scopeKey: string): { tenantId: string; ownerId: string; storeId?: string } {

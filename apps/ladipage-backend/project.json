@@ -89,6 +89,54 @@
           "buildTarget": "ladipage-backend:build:production"
         }
       }
+    },
+    "build-worker": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{workspaceRoot}/dist/apps/ladipage-backend"
+      ],
+      "options": {
+        "command": "webpack-cli build --config webpack.worker.config.js",
+        "args": [
+          "--node-env=production",
+          "--externals-presets-node"
+        ],
+        "cwd": "apps/ladipage-backend",
+        "outputPath": "dist/apps/ladipage-backend",
+        "outputFileName": "worker.main.js"
+      },
+      "configurations": {
+        "development": {
+          "args": [
+            "--node-env=development",
+            "--externals-presets-node"
+          ]
+        }
+      }
+    },
+    "serve-worker": {
+      "continuous": true,
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": [
+        "build-worker"
+      ],
+      "options": {
+        "buildTarget": "ladipage-backend:build-worker",
+        "runBuildTargetDependencies": false,
+        "buildTargetOptions": {
+          "outputPath": "dist/apps/ladipage-backend",
+          "outputFileName": "worker.main.js"
+        }
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "ladipage-backend:build-worker:development"
+        },
+        "production": {
+          "buildTarget": "ladipage-backend:build-worker:production"
+        }
+      }
     }
   }
 }

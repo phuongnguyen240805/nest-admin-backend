@@ -1,65 +1,64 @@
-  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    where: undefined,
 
-  File "/usr/local/lib/python3.12/site-packages/tenacity/asyncio/__init__.py", line 153, in iter
+    schema: 'public',
 
-    result = await action(retry_state)
+    table: 'lp_application',
 
-             ^^^^^^^^^^^^^^^^^^^^^^^^^
+    column: undefined,
 
-  File "/usr/local/lib/python3.12/site-packages/tenacity/_utils.py", line 99, in inner
+    dataType: undefined,
 
-    return call(*args, **kwargs)
+    constraint: 'IDX_lp_app_tenant_store_code',
 
-           ^^^^^^^^^^^^^^^^^^^^^
+    file: 'nbtinsert.c',
 
-  File "/usr/local/lib/python3.12/site-packages/tenacity/__init__.py", line 420, in exc_check
+    line: '666',
 
-    raise retry_exc.reraise()
+    routine: '_bt_check_unique'
 
-          ^^^^^^^^^^^^^^^^^^^
+  },
 
-  File "/usr/local/lib/python3.12/site-packages/tenacity/__init__.py", line 187, in reraise
+  length: 287,
 
-    raise self.last_attempt.result()
+  severity: 'ERROR',
 
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  code: '23505',
 
-  File "/usr/local/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+  detail: 'Key ("tenantId", store_id, code)=(6, 6a2c26caef58950011646639, CloudPhone) already exists.',
 
-    return self.__get_result()
+  hint: undefined,
 
-           ^^^^^^^^^^^^^^^^^^^
+  position: undefined,
 
-  File "/usr/local/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+  internalPosition: undefined,
 
-    raise self._exception
+  internalQuery: undefined,
 
-  File "/usr/local/lib/python3.12/site-packages/tenacity/asyncio/__init__.py", line 114, in __call__
+  where: undefined,
 
-    result = await fn(*args, **kwargs)
+  schema: 'public',
 
-             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  table: 'lp_application',
 
-  File "/usr/local/lib/python3.12/site-packages/google/genai/_api_client.py", line 1281, in _async_request_once
+  column: undefined,
 
-    await errors.APIError.raise_for_async_response(response)
+  dataType: undefined,
 
-  File "/usr/local/lib/python3.12/site-packages/google/genai/errors.py", line 203, in raise_for_async_response
+  constraint: 'IDX_lp_app_tenant_store_code',
 
-    await cls.raise_error_async(status_code, response_json, response)
+  file: 'nbtinsert.c',
 
-  File "/usr/local/lib/python3.12/site-packages/google/genai/errors.py", line 227, in raise_error_async
+  line: '666',
 
-    raise ServerError(status_code, response_json, response)
+  routine: '_bt_check_unique'
 
-google.genai.errors.ServerError: 503 Service Unavailable. {'message': '{\n  "error": {\n    "code": 503,\n    "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",\n    "status": "UNAVAILABLE"\n  }\n}\n', 'status': 'Service Unavailable'}
+}
 
-INFO:     connection closed
 
-[TOKEN USAGE] provider=gemini model=gemini-3-flash-preview | input=10319 output=4303 cache_read=2023 cache_write=0 total=16645 cache_hit_rate=16.39% cost=$0.0182
+[Nest] 1735  - 07/08/2026, 3:53:20 PM   DEBUG [LoggingInterceptor] +++ 请求：GET -> /api/health/ready
 
-Error in variant 1: 503 Service Unavailable. {'message': '{\n  "error": {\n    "code": 503,\n    "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",\n    "status": "UNAVAILABLE"\n  }\n}\n', 'status': 'Service Unavailable'}
+[Nest] 1735  - 07/08/2026, 3:53:20 PM   DEBUG [LoggingInterceptor] --- 响应：GET -> /api/health/ready +0ms
 
-Variant 1 error: 503 Service Unavailable. {'message': '{\n  "error": {\n    "code": 503,\n    "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",\n    "status": "UNAVAILABLE"\n  }\n}\n', 'status': 'Service Unavailable'}
+[Nest] 1735  - 07/08/2026, 3:53:39 PM   DEBUG [LoggingInterceptor] +++ 请求：GET -> /api/health/ready
 
-Error generating code. Please contact support.
+[Nest] 1735  - 07/08/2026, 3:53:39 PM   DEBUG [LoggingInterceptor] --- 响应：GET -> /api/health/ready +0ms

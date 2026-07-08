@@ -9,10 +9,10 @@ import { BullMqModule } from '@liora/nest-core'
 import {
   buildLadipageBullMqOptions,
   isBullMqEnabled,
-} from '../../../ladipage-backend/src/config/bullmq.app.config'
-import { LandingAiWorkerModule } from '../../../ladipage-backend/src/modules/landing-ai/landing-ai-worker.module'
+} from '../config/bullmq.app.config'
+import { LandingAiWorkerModule } from '../modules/landing-ai/landing-ai-worker.module'
 
-import { WorkerDatabaseModule } from './worker-database.module'
+import { WorkerDatabaseModule } from '../database/worker-database.module'
 
 const bullMqImports = isBullMqEnabled()
   ? [

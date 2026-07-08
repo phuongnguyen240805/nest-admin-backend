@@ -72,4 +72,107 @@ describe('ApplicationCatalogService', () => {
     expect(updated.status_pin).toBe(true);
     expect(updated.store_id).toBe(STORE_ID);
   });
+
+  it('resolves seed-catalog templates for apps missing from phaseA fixtures', () => {
+    const seedStore = new ApplicationSeedStore();
+
+    expect(seedStore.getApplicationTemplate('AiSeo')?.code).toBe('AiSeo');
+    expect(seedStore.getApplicationTemplate('CloudPhone')?.code).toBe('CloudPhone');
+    expect(seedStore.getApplicationTemplate('SiteMetrics')?.code).toBe('SiteMetrics');
+    expect(seedStore.getApplicationTemplate('UnknownApp')).toBeUndefined();
+  });
+
+  it('activates seed-catalog apps through the repository path', async () => {
+    const seedStore = new ApplicationSeedStore();
+    const accessService = {
+      enrichList: jest.fn(async (items: unknown[]) => items),
+      assertCanUpdate: jest.fn(async () => undefined),
+    } as unknown as ApplicationAccessService;
+    const repository = {
+      createQueryBuilder: jest.fn(() => ({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      })),
+      create: jest.fn((value: Record<string, unknown>) => value),
+      save: jest.fn(async (value: Record<string, unknown>) => value),
+    };
+    const repositoryLifecycle = new ApplicationLifecycleService(
+      seedStore,
+      accessService,
+      repository as never,
+    );
+
+    const updated = await repositoryLifecycle.update({
+      lang: 'vi',
+      code: 'AiSeo',
+      status_active: true,
+      status_pin: true,
+    }, TEST_CTX);
+
+    expect(updated.code).toBe('AiSeo');
+    expect(updated.status_active).toBe(true);
+    expect(updated.status_pin).toBe(true);
+    expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'AiSeo',
+      statusActive: false,
+    }));
+    expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'AiSeo',
+      statusActive: true,
+      statusPin: true,
+    }));
+  });
+
+  it('updates an existing tenant application instead of inserting a duplicate row', async () => {
+    const seedStore = new ApplicationSeedStore();
+    const accessService = {
+      enrichList: jest.fn(async (items: unknown[]) => items),
+      assertCanUpdate: jest.fn(async () => undefined),
+    } as unknown as ApplicationAccessService;
+    const existing = {
+      tenantId: 1,
+      storeId: STORE_ID,
+      code: 'CloudPhone',
+      ownerId: '99',
+      ladiUid: '99',
+      statusActive: true,
+      statusPin: false,
+      statusActivedAt: new Date('2026-06-24T13:57:15.509Z'),
+      installsCount: 1,
+    };
+    const repository = {
+      createQueryBuilder: jest.fn(() => ({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(existing),
+      })),
+      create: jest.fn(),
+      save: jest.fn(async (value: Record<string, unknown>) => value),
+    };
+    const repositoryLifecycle = new ApplicationLifecycleService(
+      seedStore,
+      accessService,
+      repository as never,
+    );
+
+    const updated = await repositoryLifecycle.update({
+      lang: 'vi',
+      code: 'CloudPhone',
+      status_active: true,
+      status_pin: true,
+    }, TEST_CTX);
+
+    expect(repository.create).not.toHaveBeenCalled();
+    expect(updated.code).toBe('CloudPhone');
+    expect(updated.status_active).toBe(true);
+    expect(updated.status_pin).toBe(true);
+    expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'CloudPhone',
+      ownerId: '42',
+      ladiUid: '42',
+      statusActive: true,
+      statusPin: true,
+    }));
+  });
 });
