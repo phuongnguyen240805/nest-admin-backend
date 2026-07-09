@@ -101,9 +101,7 @@
           "--node-env=production",
           "--externals-presets-node"
         ],
-        "cwd": "apps/ladipage-backend",
-        "outputPath": "dist/apps/ladipage-backend",
-        "outputFileName": "worker.main.js"
+        "cwd": "apps/ladipage-backend"
       },
       "configurations": {
         "development": {
@@ -118,9 +116,6 @@
       "continuous": true,
       "executor": "@nx/js:node",
       "defaultConfiguration": "development",
-      "dependsOn": [
-        "build-worker"
-      ],
       "options": {
         "buildTarget": "ladipage-backend:build-worker",
         "runBuildTargetDependencies": false,

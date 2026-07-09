@@ -1,64 +1,36 @@
-    where: undefined,
+Done in 4.3s
 
-    schema: 'public',
-
-    table: 'lp_application',
-
-    column: undefined,
-
-    dataType: undefined,
-
-    constraint: 'IDX_lp_app_tenant_store_code',
-
-    file: 'nbtinsert.c',
-
-    line: '666',
-
-    routine: '_bt_check_unique'
-
-  },
-
-  length: 287,
-
-  severity: 'ERROR',
-
-  code: '23505',
-
-  detail: 'Key ("tenantId", store_id, code)=(6, 6a2c26caef58950011646639, CloudPhone) already exists.',
-
-  hint: undefined,
-
-  position: undefined,
-
-  internalPosition: undefined,
-
-  internalQuery: undefined,
-
-  where: undefined,
-
-  schema: 'public',
-
-  table: 'lp_application',
-
-  column: undefined,
-
-  dataType: undefined,
-
-  constraint: 'IDX_lp_app_tenant_store_code',
-
-  file: 'nbtinsert.c',
-
-  line: '666',
-
-  routine: '_bt_check_unique'
-
-}
+[nx-dev-entrypoint] Starting: pnpm nx serve-worker ladipage-backend --skip-nx-cache
 
 
-[Nest] 1735  - 07/08/2026, 3:53:20 PM   DEBUG [LoggingInterceptor] +++ 请求：GET -> /api/health/ready
+> nx run ladipage-backend:serve-worker:development
 
-[Nest] 1735  - 07/08/2026, 3:53:20 PM   DEBUG [LoggingInterceptor] --- 响应：GET -> /api/health/ready +0ms
 
-[Nest] 1735  - 07/08/2026, 3:53:39 PM   DEBUG [LoggingInterceptor] +++ 请求：GET -> /api/health/ready
+NX Daemon is not running. Node process will not restart automatically after file changes.
 
-[Nest] 1735  - 07/08/2026, 3:53:39 PM   DEBUG [LoggingInterceptor] --- 响应：GET -> /api/health/ready +0ms
+> nx run ladipage-backend:build-worker:development
+
+> webpack-cli build --config webpack.worker.config.js --node-env=development --externals-presets-node
+
+Entrypoint main =
+
+Entrypoint worker.main [big] 853 KiB (1.01 MiB) = worker.main.js 1 auxiliary asset
+
+ERROR in main
+
+Module not found: Error: Can't resolve './src' in '/app/apps/ladipage-backend'
+
+webpack compiled with 1 error (5176aee2fdeadb86)
+
+Warning: command "webpack-cli build --config webpack.worker.config.js --node-env=development --externals-presets-node" exited with non-zero status code
+
+
+ NX   Running target build-worker for project ladipage-backend failed
+
+Failed tasks:
+
+- ladipage-backend:build-worker:development
+
+Hint: run the command with --verbose for more details.
+
+Build failed, waiting for changes to restart...

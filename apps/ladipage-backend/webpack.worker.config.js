@@ -21,6 +21,7 @@ module.exports = {
   },
   output: {
     path: join(__dirname, '../../dist/apps/ladipage-backend'),
+    filename: 'worker.main.js',
     clean: false,
     ...(process.env.NODE_ENV !== 'production' && {
       devtoolModuleFilenameTemplate: '[absolute-resource-path]',
