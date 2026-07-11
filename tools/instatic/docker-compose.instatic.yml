@@ -1,0 +1,35 @@
+# Instatic beside Ladipage — host ports chosen to avoid Next(:3000) / Nest.
+# CMS host: 8787  (map container listen; image may use 3000 or 3001 internally)
+# Prefer `run-dev-from-repo.sh` for local Bun; use this for image-based runs.
+#
+# Nest: INSTATIC_BASE_URL=http://127.0.0.1:8787
+# FE:   INSTATIC_REWRITE_TARGET=http://127.0.0.1:8787  (single-port image)
+#       or Vite path via run-dev-from-repo (5174)
+
+services:
+  instatic:
+    image: ${INSTATIC_IMAGE:-ghcr.io/corebunch/instatic:latest}
+    ports:
+      - "${INSTATIC_HOST_PORT:-8787}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      - instatic_data:/data
+    restart: unless-stopped
+
+  instatic-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: instatic
+      POSTGRES_PASSWORD: instatic
+      POSTGRES_DB: instatic
+    ports:
+      - "${INSTATIC_PG_PORT:-5434}:5432"
+    volumes:
+      - instatic_pg:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  instatic_data:
+  instatic_pg:

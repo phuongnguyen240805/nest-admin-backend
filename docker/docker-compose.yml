@@ -147,6 +147,9 @@ services:
       S3_ENDPOINT: http://minio:9000
       LIBREFANG_API_URL: ${LIBREFANG_API_URL:-http://host.docker.internal:4545}
       LIBREFANG_API_KEY: ${LIBREFANG_API_KEY:-}
+      # Instatic on host — 127.0.0.1 inside this container is NOT the host
+      INSTATIC_BASE_URL: ${INSTATIC_BASE_URL:-http://host.docker.internal:8787}
+      INSTATIC_MOCK: ${INSTATIC_MOCK:-false}
       # Supabase / anti-spam: lấy từ env_file + mount ../.env (không override rỗng ở đây)
     volumes:
       - ../apps:/app/apps
@@ -208,7 +211,12 @@ services:
       SCREENSHOT_TO_CODE_WS_URL: ws://screenshot-to-code:7010
       LIBREFANG_API_URL: ${LIBREFANG_API_URL:-http://host.docker.internal:4545}
       LIBREFANG_API_KEY: ${LIBREFANG_API_KEY:-}
+      # Instatic on host — 127.0.0.1 inside this container is NOT the host
+      INSTATIC_BASE_URL: ${INSTATIC_BASE_URL:-http://host.docker.internal:8787}
+      INSTATIC_MOCK: ${INSTATIC_MOCK:-false}
       # Supabase / anti-spam: lấy từ env_file + mount ../.env (không override rỗng ở đây)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ../apps:/app/apps
       - ../libs:/app/libs

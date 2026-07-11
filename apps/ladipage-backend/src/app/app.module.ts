@@ -70,6 +70,8 @@ import {
 } from '../config/bullmq.app.config';
 import { LandingAiApiModule } from '../modules/landing-ai/landing-ai-api.module';
 import { LandingAiWorkerModule } from '../modules/landing-ai/landing-ai-worker.module';
+import { LandingCmsModule } from '../modules/landing-cms/landing-cms.module';
+import { LandingCmsConfig } from '../modules/landing-cms/landing-cms.config';
 
 const bullMqImports = isBullMqEnabled()
   ? [
@@ -86,7 +88,7 @@ const bullMqImports = isBullMqEnabled()
       expandVariables: true,
       ignoreEnvFile: process.env.NODE_ENV === "production",
       envFilePath: resolveWorkspaceEnvPaths("ladipage-backend"),
-      load: [...Object.values(config), LibrefangConfig, SupabaseConfig],
+      load: [...Object.values(config), LibrefangConfig, SupabaseConfig, LandingCmsConfig],
     }),
     ClsModule.forRoot({
       global: true,
@@ -127,6 +129,7 @@ const bullMqImports = isBullMqEnabled()
     EcomStoreModule,
     DomainModule,
     PublishModule,
+    LandingCmsModule,
     AiSeoModule,
     CreditModule,
     PlanModule,
