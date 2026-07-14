@@ -6,3 +6,4 @@ export * from './customer-custom-field.types';
 export * from './customer-segment.types';
 export * from './customer-tag.types';
 export * from './customer.types';
+export * from './notification.types';

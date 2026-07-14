@@ -25,6 +25,26 @@ interface ContractFixture {
   capturedAt?: string;
 }
 
+const SENSITIVE_KEY_RE =
+  /authorization|cookie|token|secret|api[-_]?key|key_hash|checksum|signature|hmac|password|otp|fingerprint/i;
+
+function redact(value: unknown, keyName = ''): unknown {
+  if (value == null) return value;
+  if (SENSITIVE_KEY_RE.test(keyName)) return '[REDACTED]';
+  if (Array.isArray(value)) return value.map((item) => redact(item));
+  if (typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      out[key] = redact(child, key);
+    }
+    return out;
+  }
+  if (typeof value === 'string' && value.length > 80 && /[A-Za-z0-9_-]{24,}/.test(value)) {
+    return '[REDACTED]';
+  }
+  return value;
+}
+
 function parseRouteFilter(argv: string[]): Set<string> | null {
   const direct = argv.find((arg) => arg.startsWith('--routes='));
   const nextIndex = argv.findIndex((arg) => arg === '--routes');
@@ -121,9 +141,9 @@ async function main(): Promise<void> {
       host: api.host,
       path: api.path,
       status: api.status,
-      request: api.requestBody ?? null,
-      response: api.responseBody ?? null,
-      requestHeaders: api.requestHeaders,
+      request: redact(api.requestBody ?? null),
+      response: redact(api.responseBody ?? null),
+      requestHeaders: redact(api.requestHeaders ?? {}) as Record<string, unknown>,
       capturedAt: api.timestamp,
     };
     const output = join(outputRoot, phaseFolder(api), fixtureFileName(key));

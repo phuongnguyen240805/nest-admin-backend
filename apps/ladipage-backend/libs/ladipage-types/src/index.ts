@@ -9,3 +9,4 @@ export * from './crm';
 export * from './ecom';
 export * from './ladiwork';
 export * from './landing';
+export * from './misc';

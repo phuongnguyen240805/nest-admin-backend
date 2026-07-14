@@ -35,6 +35,13 @@ const TYPE_BY_FIELD_TYPE: Record<string, string> = {
   unknown: 'unknown',
 };
 
+const COMPAT_FIELDS: Record<string, FieldSchema[]> = {
+  lp_application: [
+    { name: 'views_count', type: 'integer', nullable: false },
+    { name: 'installs_count', type: 'integer', nullable: false },
+  ],
+};
+
 function pascalCase(input: string): string {
   return input
     .split(/[_\-.]+/)
@@ -138,7 +145,14 @@ function fieldType(field: FieldSchema): string {
 function renderTable(table: MergedTableSchema): string {
   const name = pascalCase(table.table);
   const routes = table.sourceRoutes.map((route) => ` * - ${route}`).join('\n');
-  const fields = table.fields
+  const seen = new Set<string>();
+  const fields = [...table.fields, ...(COMPAT_FIELDS[table.table] ?? [])]
+    .filter((field) => {
+      if (seen.has(field.name)) return false;
+      seen.add(field.name);
+      return true;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name))
     .map((field) => `  '${field.name}'?: ${fieldType(field)};`)
     .join('\n');
 

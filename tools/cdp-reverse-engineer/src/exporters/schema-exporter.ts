@@ -288,6 +288,8 @@ function isEmptyData(data: unknown): boolean {
 }
 
 function suggestTable(path: string): string | undefined {
+  if (/\/2\.0\/api-key\//i.test(path)) return 'lp_api_key';
+  if (/\/2\.0\/workspace\//i.test(path)) return 'lp_workspace_usage';
   if (/\/ladi-page\/report/i.test(path)) return 'lp_page_report';
   if (/\/dashboard\//i.test(path)) return 'lp_dashboard';
   if (/\/2\.0\/report\//i.test(path)) return 'lp_analytics_report';

@@ -12,14 +12,13 @@ export interface LpApplication {
   '_id'?: string;
   'code'?: string;
   'created_at'?: string;
+  'installs_count'?: number;
   'is_delete'?: boolean;
   'ladi_uid'?: string;
   'logo'?: string;
   'name'?: string;
   'owner_id'?: string;
-  'permission'?: string;
   'price'?: number;
-  'required_tier'?: 'free' | 'pro' | 'enterprise';
   'status_active'?: boolean;
   'status_actived_at'?: string;
   'status_pin'?: boolean;
@@ -27,8 +26,4 @@ export interface LpApplication {
   'thumb'?: string;
   'updated_at'?: string;
   'views_count'?: number;
-  'installs_count'?: number;
-  'can_install'?: boolean;
-  'can_open'?: boolean;
-  'upgrade_required'?: boolean;
 }

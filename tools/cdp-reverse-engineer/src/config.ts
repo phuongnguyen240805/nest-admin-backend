@@ -13,6 +13,7 @@ export const DEFAULT_SERVICE_PATTERNS: ServicePattern[] = [
       'ldpform.net',
       'apiv5.sales',
       'ladilink',
+      'api.ladiuid',
       'api.ladipage',
       'apiv5.ladipage',
       'app.ladipage',

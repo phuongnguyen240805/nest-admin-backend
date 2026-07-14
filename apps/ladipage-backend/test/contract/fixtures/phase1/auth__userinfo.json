@@ -1,0 +1,56 @@
+{
+  "route": "auth/userinfo",
+  "host": "api.ladiuid.com",
+  "path": "/2.0/auth/userinfo",
+  "status": 200,
+  "request": {
+    "lang": "vi"
+  },
+  "response": {
+    "data": {
+      "ladi_uid": "6a2c26c92d543800211b5157",
+      "fullname": "phuongnguyen",
+      "point": 0,
+      "language": "vi",
+      "email": "nxp240805@gmail.com",
+      "time_login": 1784021927352,
+      "phone": "0398838675",
+      "is_partner": false,
+      "is_verify_phone": false,
+      "is_verify_email": false,
+      "is_verify_domain": false,
+      "avatar": "",
+      "utm_source": "",
+      "utm_medium": "",
+      "utm_campaign": "",
+      "utm_term": "",
+      "gclid": "",
+      "fbclid": "",
+      "ttclid": "",
+      "otherClickId": "",
+      "referrer": "",
+      "created_at": "2026-06-12T15:33:29.766Z",
+      "credit_app": 250,
+      "maket_place_profile": {},
+      "user_data": "{\"xb-chidanxb-buildereditor-popupchidan-freeuser-view\":1}",
+      "pkg_name": "STARTER",
+      "totp_enabled": "[REDACTED]",
+      "sms_2fa_enabled": false,
+      "device_fingerprint": "[REDACTED]"
+    },
+    "message": "Thao tác thành công",
+    "code": 200
+  },
+  "requestHeaders": {
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "[REDACTED]",
+    "Referer": "https://appv6.ladipage.com/",
+    "sec-ch-ua": "\"HeadlessChrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+    "sec-ch-ua-mobile": "?0",
+    "store-id": "6a2c26caef58950011646639",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LioraCDP/1.0",
+    "accept": "application/json, text/plain, */*",
+    "content-type": "application/json;charset=UTF-8"
+  },
+  "capturedAt": "2026-07-14T09:38:47.209Z"
+}

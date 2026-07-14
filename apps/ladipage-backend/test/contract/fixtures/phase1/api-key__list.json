@@ -1,0 +1,57 @@
+{
+  "route": "api-key/list",
+  "host": "api.ladiuid.com",
+  "path": "/2.0/api-key/list",
+  "status": 200,
+  "request": {
+    "lang": "vi",
+    "owner_id": "6a2c26c92d543800211b5157",
+    "is_delete": false,
+    "keyword": "",
+    "page": 1,
+    "limit": 50
+  },
+  "response": {
+    "data": {
+      "total": 1,
+      "items": [
+        {
+          "is_default": false,
+          "_id": "6a55f0e5377fbf00115e0586",
+          "name": "auto",
+          "creator_id": "6a2c26c92d543800211b5157",
+          "ladi_uid": "6a2c26c92d543800211b5157",
+          "api_key": "[REDACTED]",
+          "scopes": {
+            "ladipage": [
+              ""
+            ],
+            "ladiflow": [
+              "*"
+            ],
+            "ladisale": [
+              ""
+            ]
+          },
+          "created_at": "2026-07-14T08:18:45.229Z",
+          "updated_at": "2026-07-14T08:18:45.229Z"
+        }
+      ],
+      "limit": 50
+    },
+    "message": "Thao tác thành công",
+    "code": 200
+  },
+  "requestHeaders": {
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "[REDACTED]",
+    "Referer": "https://appv6.ladipage.com/",
+    "sec-ch-ua": "\"HeadlessChrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+    "sec-ch-ua-mobile": "?0",
+    "store-id": "6a2c26caef58950011646639",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LioraCDP/1.0",
+    "accept": "application/json, text/plain, */*",
+    "content-type": "application/json;charset=UTF-8"
+  },
+  "capturedAt": "2026-07-14T09:35:50.902Z"
+}

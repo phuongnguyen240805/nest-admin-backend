@@ -3,6 +3,29 @@ import { loadConfig } from './config.js';
 import { runCapture } from './collector.js';
 import { buildLadipageFlow, isLadipageApi, isLadipageBackendApi } from './exporters/ladipage-flow.js';
 
+const SENSITIVE_KEY_RE = /token|authorization|cookie|api[-_]?key|secret|signature|hmac|password/i;
+
+function redactForLog(value: unknown, keyName = ''): unknown {
+  if (value == null) return value;
+  if (SENSITIVE_KEY_RE.test(keyName)) return '[REDACTED]';
+  if (Array.isArray(value)) return value.map((item) => redactForLog(item));
+  if (typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      out[key] = redactForLog(child, key);
+    }
+    return out;
+  }
+  if (typeof value === 'string' && value.length > 80 && /[A-Za-z0-9_-]{24,}/.test(value)) {
+    return '[REDACTED]';
+  }
+  return value;
+}
+
+function redactUrlForLog(url: string): string {
+  return url.replace(/([?&](?:token|authorization|api_key|apikey|signature|hmac)=)[^&]+/gi, '$1[REDACTED]');
+}
+
 async function main(): Promise<void> {
   const config = await loadConfig(process.argv.slice(2));
 
@@ -47,7 +70,7 @@ async function main(): Promise<void> {
   if (flow.postEndpoints.length > 0) {
     console.log('\n  Sample POST bodies:');
     for (const ep of flow.postEndpoints.slice(0, 6)) {
-      const body = ep.requestBody ? JSON.stringify(ep.requestBody).slice(0, 120) : '(none)';
+      const body = ep.requestBody ? JSON.stringify(redactForLog(ep.requestBody)).slice(0, 120) : '(none)';
       console.log(`    POST ${ep.path} [${ep.status ?? '?'}] → ${body}`);
     }
   }
@@ -69,7 +92,7 @@ async function main(): Promise<void> {
   if (report.websockets.length > 0) {
     console.log('\n  WebSockets:');
     for (const ws of report.websockets.slice(0, 5)) {
-      console.log(`    ${ws.url} (${ws.frames.length} frames)${ws.service ? ` [${ws.service}]` : ''}`);
+      console.log(`    ${redactUrlForLog(ws.url)} (${ws.frames.length} frames)${ws.service ? ` [${ws.service}]` : ''}`);
     }
   }
 }

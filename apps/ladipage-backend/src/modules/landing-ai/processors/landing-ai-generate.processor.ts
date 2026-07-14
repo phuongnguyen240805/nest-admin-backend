@@ -5,6 +5,7 @@ import { HtmlToEditorConverter } from '../converters/html-to-editor.converter'
 import { ScreenshotToCodeClient } from '../clients/screenshot-to-code.client'
 import { LandingPromptBuilder } from '../prompts/landing-prompt.builder'
 import { LANDING_AI_QUEUES } from '../queues/constants'
+import { LandingAiHtmlGeneratorService } from '../services/landing-ai-html-generator.service'
 import { LandingAiJobStoreService } from '../services/landing-ai-job-store.service'
 import { LandingAiMetricsService } from '../services/landing-ai-metrics.service'
 
@@ -24,6 +25,7 @@ export class LandingAiGenerateProcessor extends BaseQueueProcessor<LandingAiGene
   constructor(
     private readonly jobStore: LandingAiJobStoreService,
     private readonly s2cClient: ScreenshotToCodeClient,
+    private readonly htmlGenerator: LandingAiHtmlGeneratorService,
     private readonly landingStorage: LandingPagesStorageService,
     private readonly metrics: LandingAiMetricsService,
   ) {
@@ -66,6 +68,9 @@ export class LandingAiGenerateProcessor extends BaseQueueProcessor<LandingAiGene
       )
 
       let html = ''
+      let aiTrace: Record<string, unknown> | undefined
+      let aiUsage: Record<string, unknown> | undefined
+      let aiWarnings: string[] = []
       if (mockMode) {
         html = HtmlToEditorConverter.buildMockHtml(
           data.name,
@@ -75,36 +80,40 @@ export class LandingAiGenerateProcessor extends BaseQueueProcessor<LandingAiGene
         await onProgress('Mock mode: sinh HTML cục bộ', 80)
       }
       else {
-        let images: string[] | undefined
+        let sourceImageUrl: string | undefined
         if (data.type === 'clone') {
           if (!data.params.url) {
             throw new Error('Clone job requires params.url')
           }
           await onProgress('Đang chụp screenshot URL nguồn...', 20)
           const screenshotStarted = Date.now()
-          const imageDataUrl = await this.s2cClient.captureScreenshot(data.params.url)
+          sourceImageUrl = await this.s2cClient.captureScreenshot(data.params.url)
           screenshotDurationMs = Date.now() - screenshotStarted
-          images = [imageDataUrl]
         }
 
-        const imagePrompt =
-          data.type === 'clone'
-            ? LandingPromptBuilder.buildCloneImagePrompt(data.params)
-            : promptText
-
         const s2cStarted = Date.now()
-        html = await this.s2cClient.generate(
+        const generated = await this.htmlGenerator.generateHtml(
           {
-            generationType: 'create',
-            inputMode: data.type === 'clone' ? 'image' : 'text',
-            promptText: imagePrompt,
-            images,
-          },
-          (message, progress) => {
-            void onProgress(message, progress)
+            tenantId: data.tenantId,
+            organizationId: data.organizationId,
+            jobId: data.jobId,
+            pageId: data.pageId,
+            pageName: data.name,
+            type: data.type,
+            params: data.params,
+            promptText:
+              data.type === 'clone'
+                ? `${LandingPromptBuilder.buildCloneImagePrompt(data.params)}\n${promptText}`
+                : promptText,
+            sourceImageUrl,
           },
         )
+        html = generated.html
+        aiTrace = generated.trace
+        aiUsage = generated.usage
+        aiWarnings = generated.warnings
         s2cDurationMs = Date.now() - s2cStarted
+        await onProgress('AI gateway generated landing HTML', 80)
       }
 
       if (!html) {
@@ -138,6 +147,10 @@ export class LandingAiGenerateProcessor extends BaseQueueProcessor<LandingAiGene
           jobId: data.jobId,
           importMode: data.importMode ?? 'preserve',
           mock: mockMode,
+          aiGateway: mockMode ? 'mock' : 'omniroute',
+          aiTrace,
+          aiUsage,
+          aiWarnings,
         },
       })
 
@@ -150,6 +163,10 @@ export class LandingAiGenerateProcessor extends BaseQueueProcessor<LandingAiGene
           htmlLength: html.length,
           importMode: data.importMode ?? 'preserve',
           mock: mockMode,
+          aiGateway: mockMode ? 'mock' : 'omniroute',
+          aiTrace,
+          aiUsage,
+          aiWarnings,
         },
         errorMessage: null,
       })

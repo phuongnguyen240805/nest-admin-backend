@@ -72,6 +72,7 @@ import { LandingAiApiModule } from '../modules/landing-ai/landing-ai-api.module'
 import { LandingAiWorkerModule } from '../modules/landing-ai/landing-ai-worker.module';
 import { LandingCmsModule } from '../modules/landing-cms/landing-cms.module';
 import { LandingCmsConfig } from '../modules/landing-cms/landing-cms.config';
+import { McpLandingModule } from '../modules/mcp-landing/mcp-landing.module';
 
 const bullMqImports = isBullMqEnabled()
   ? [
@@ -130,6 +131,7 @@ const bullMqImports = isBullMqEnabled()
     DomainModule,
     PublishModule,
     LandingCmsModule,
+    McpLandingModule,
     AiSeoModule,
     CreditModule,
     PlanModule,

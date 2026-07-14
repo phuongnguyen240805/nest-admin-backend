@@ -27,7 +27,7 @@
         "ladi_store_email": "nxp240805@blog.ladimail.com",
         "created_at": "2026-06-12T15:33:30.427Z",
         "updated_at": "2026-06-14T06:02:46.478Z",
-        "addon": "[{\"_id\":\"6a2d6b9f2d543800211e3f4c\",\"app_code\":\"LCRM\",\"resource_type\":\"store\",\"limit_value\":1,\"pkg_name\":\"TRIAL\",\"status\":1},{\"_id\":\"6a2e440687ded00012aadb75\",\"app_code\":\"LS_ELEARNING\",\"resource_type\":\"store\",\"limit_value\":1,\"pkg_name\":\"TRIAL\",\"exp_date\":\"2026-06-28T06:02:46.041Z\",\"status\":1},{\"_id\":\"6a2e440687ded00012aadb77\",\"app_code\":\"LS_ELEARNING\",\"resource_type\":\"course\",\"exp_date\":\"2026-06-28T06:02:46.043Z\",\"limit_value\":10,\"status\":1},{\"_id\":\"6a2e440687ded00012aadb79\",\"app_code\":\"LS_ELEARNING\",\"resource_type\":\"course_customer\",\"exp_date\":\"2026-06-28T06:02:46.045Z\",\"limit_value\":100,\"status\":1}]",
+        "addon": "[REDACTED]",
         "old_pkg_name": "STARTER",
         "pkg_display_name": "STARTER",
         "resource_limits": {
@@ -62,14 +62,14 @@
         "maket_place_profile": {},
         "user_data": "{\"xb-chidanxb-buildereditor-popupchidan-freeuser-view\":1}",
         "pkg_name": "STARTER",
-        "totp_enabled": false,
+        "totp_enabled": "[REDACTED]",
         "sms_2fa_enabled": false,
-        "device_fingerprint": "b5d1a9e929d3d4d7531f76b7ebb9ed2b9db99b198b963ec9bfb1da7d024b0aff",
+        "device_fingerprint": "[REDACTED]",
         "role": "OWNER",
         "admin_teams": [],
         "is_create_showcase": false
       },
-      "hmac": "ea666b80cfef448487652ee9a213193bd8f428a9f1afa1f5c23862bf47b8fe39",
+      "hmac": "[REDACTED]",
       "config": {
         "visited": 0,
         "max_visit": 1000,
@@ -82,7 +82,7 @@
   },
   "requestHeaders": {
     "sec-ch-ua-platform": "\"Windows\"",
-    "Authorization": "c588de441f49361e9d88ec98cd4fdb9fa54690d1f05542b5a56f838ad558e5f218b17b07e8392dc5e342ae73784ef985729e75ea72e53c0f39091e216bdf353b1128a5060c690b0d50cedf379770bcc2ec81bf87c4c7f1cd5d103d81d1a16a033413473606bcdeb600af92be385b77832c67a69ad7573d986bc2983feb1f722223e3509e0e03391a51180eca76a4bc8f7b9cb189c60bcfc8b181ccfb9a0128704a06a8e64cbadfb97f7dfd79c31e39024e68db40b342515f85f4e945e7457420fc491dfee74c452797ec680b69cb300132556cdf33c26f6a4d4e0509dc8bd611e0f1ab2cec87167e8b6117ea7b85aa15d2d10a11d949806d74c77b2583af6e2e4317910780f4d102c3081667f93970ffd4e66d156582c5266e6930b0332a6080",
+    "Authorization": "[REDACTED]",
     "Referer": "https://appv6.ladipage.com/",
     "sec-ch-ua": "\"HeadlessChrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
     "sec-ch-ua-mobile": "?0",

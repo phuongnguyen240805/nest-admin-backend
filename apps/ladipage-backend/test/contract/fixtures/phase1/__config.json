@@ -1,0 +1,2899 @@
+{
+  "route": "/config",
+  "host": "a.ladipage.com",
+  "path": "/config",
+  "status": 200,
+  "request": {
+    "event": "PopupXConfig",
+    "store_id": "57b167caca57d39c18a1c57e",
+    "domain": "appv6.ladipage.com",
+    "url": "https://appv6.ladipage.com/ladipage",
+    "data": []
+  },
+  "response": {
+    "data": {
+      "ladi_client_id": "83c41481-f91c-4520-af29-c5b66cdb941a",
+      "client_info": {
+        "ip": "115.76.55.102",
+        "agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LioraCDP/1.0",
+        "origin": "https://appv6.ladipage.com",
+        "referer": "https://appv6.ladipage.com/",
+        "os": "OSWindows",
+        "osVersion": "10.0",
+        "device": "DeviceComputer",
+        "browser": "BrowserChrome",
+        "country": "VN",
+        "city": "VN-39"
+      },
+      "popupx_configs": [
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "builder.ladipage.com"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "show_popupx_inline",
+                    "value": [
+                      "STICKY_BAR1"
+                    ]
+                  }
+                ],
+                [
+                  {
+                    "type": "show_popupx",
+                    "value": [
+                      "POPUP3"
+                    ]
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_CONDITION3_UPGRADE"
+                  ]
+                },
+                {
+                  "operator": "CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "builder.ladipage.com"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "show_popupx",
+                    "value": [
+                      "POPUP5"
+                    ]
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "650924a10cf8480020a69203",
+          "popupx_url": "popupx.ladi.me/650924a10cf8480020a69203"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "builder.ladipage.com"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "show_popupx_inline",
+                    "value": [
+                      "STICKY_BAR1"
+                    ]
+                  }
+                ],
+                [
+                  {
+                    "type": "show_popupx",
+                    "value": [
+                      "POPUP3"
+                    ]
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_CONDITION1_UPGRADE"
+                  ]
+                },
+                {
+                  "operator": "CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "builder.ladipage.com"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "show_popupx",
+                    "value": [
+                      "POPUP6"
+                    ]
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "64fae83de6e5180012428214",
+          "popupx_url": "popupx.ladi.me/64fae83de6e5180012428214"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "builder.ladipage.com"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "show_popupx_inline",
+                    "value": [
+                      "STICKY_BAR1"
+                    ]
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "64fa7696e0b6260038d0737c",
+          "popupx_url": "popupx.ladi.me/64fa7696e0b6260038d0737c"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "/editor/"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "show_popupx",
+                    "value": [
+                      "POPUP_3"
+                    ]
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "65557e54e6c17900124d9737",
+          "popupx_url": "popupx.ladi.me/65557e54e6c17900124d9737"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "frequency": "month",
+                  "type": "FREQUENCY"
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "a=1"
+                    ]
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "658e27c297ab4e001279c96f",
+          "popupx_url": "popupx.ladi.me/658e27c297ab4e001279c96f"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "frequency": "month",
+                  "type": "FREQUENCY"
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "a=1"
+                    ]
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "658e279e1602450012f6e925",
+          "popupx_url": "popupx.ladi.me/658e279e1602450012f6e925"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "frequency": "month",
+                  "type": "FREQUENCY"
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "a=1"
+                    ]
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "658e284997ab4e001279e647",
+          "popupx_url": "popupx.ladi.me/658e284997ab4e001279e647"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "/editor/"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "show_popupx_inline",
+                    "value": [
+                      "NOTIFY_BAR_XB_1"
+                    ]
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "/editor/"
+                  ]
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "/editor/website"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "show_popupx",
+                    "value": [
+                      "POPUP_XB_1"
+                    ]
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "65583365162cf80012d8dcfb",
+          "popupx_url": "popupx.ladi.me/65583365162cf80012d8dcfb"
+        },
+        {
+          "config": [],
+          "ladipage_id": "6616536e96a5dd0012ebb8cf",
+          "popupx_url": "popupx.ladi.me/6616536e96a5dd0012ebb8cf"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    1
+                  ]
+                },
+                {
+                  "operator": "CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "affiliate.ladipage.com",
+                    "aff.dev.ladishare.com"
+                  ]
+                },
+                {
+                  "behavior_type": "click_element",
+                  "operator": "=",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "commission-policy-menu-item",
+                    "view-detail-box-statistics"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "show_popupx",
+                    "value": [
+                      "POPUP_chinhsachhoahong"
+                    ]
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "66418f519ae79400116994ca",
+          "popupx_url": "popupx.ladi.me/66418f519ae79400116994ca"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "class",
+                  "value": [
+                    "show_trian"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_HOME"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP25"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_26_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP23"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP25"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_27_expires"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP24"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "/editor/"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_NANG_CAP"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "/editor/"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_NANG_CAP"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "677b8360e98e010012c54a77",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "fx.ldpfunnel.com/677b8360e98e010012c54a77"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    1
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "b1_builder=1"
+                    ],
+                    "funnelx_type": "FUNNELX_STICKY_BAR"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "67637bb2651cfb0012b44813",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "fx.ldpfunnel.com/67637bb2651cfb0012b44813"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    1
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "b1_builder=1"
+                    ],
+                    "funnelx_type": "FUNNELX_STICKY_BAR"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "6789decfedcb39001275f119",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "fx.ldpfunnel.com/6789decfedcb39001275f119"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    "show_trian"
+                  ],
+                  "selector": "class"
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "builder.ladipage.com/editor"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_HOME"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP25"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_26_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP23"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP25"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_27_expires"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP24"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "/editor/"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_NANG_CAP"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "/editor/"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_NANG_CAP"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "6789deea8971480012029a30",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "fx.ldpfunnel.com/6789deea8971480012029a30"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    "show_campMKT"
+                  ],
+                  "selector": "class"
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "builder.ladipage.com/editor",
+                    "app.ladipage.com/editor",
+                    "v5.ladipage.vn/banggia"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_HOME"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_26_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP23"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "/editor/"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_NANG_CAP"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "/editor/"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_NANG_CAP"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "67b84425581df000128d9dfd",
+          "is_show_resent_step": false,
+          "is_show_again_completed": true,
+          "popupx_url": "fx.ldpfunnel.com/67b84425581df000128d9dfd"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    1
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "b1_builder=1"
+                    ],
+                    "funnelx_type": "FUNNELX_STICKY_BAR"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "67be8b7d2e8a640218d672a1",
+          "is_show_resent_step": false,
+          "is_show_again_completed": true,
+          "popupx_url": "fx.ldpfunnel.com/67be8b7d2e8a640218d672a1"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    3
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP6"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "67b850acf7cb2a0012664635",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "fx.ldpfunnel.com/67b850acf7cb2a0012664635"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    "_POPUPX_mkt_29_limit"
+                  ],
+                  "selector": "id"
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP6"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP6"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_27_expires"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP24"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "67b84f81581df00012900f7b",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "fx.ldpfunnel.com/67b84f81581df00012900f7b"
+        },
+        {
+          "config": [
+            {
+              "conditions": [],
+              "actions": [
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "sticky_load=1"
+                    ],
+                    "funnelx_type": "FUNNELX_EMBED"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "67dcd1b8e8a7ba001196b0c5",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "fx.ldpfunnel.com/67dcd1b8e8a7ba001196b0c5"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    3
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "show_onboarding=1"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "67dcec77e8a7ba00119c9814",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "fx.ldpfunnel.com/67dcec77e8a7ba00119c9814"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    "show_campMKT"
+                  ],
+                  "selector": "class"
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "builder.ladipage.com/editor",
+                    "app.ladipage.com/editor"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP43"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP44"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP44"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_26_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP45"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "/editor/",
+                    "/app/automation/"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP14"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "NOT_IN",
+                  "type": "URL",
+                  "value": [
+                    "/editor/"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP14"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP47"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP47"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_27_expires"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP48"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "67ff7166747aa90012bd069a",
+          "is_show_resent_step": false,
+          "is_show_again_completed": true,
+          "popupx_url": "fx.ldpfunnel.com/67ff7166747aa90012bd069a"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    "_POPUPX_mkt_29_limit"
+                  ],
+                  "selector": "id"
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP6"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP6"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_27_expires"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP24"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "68070b51712c5000133ae8cc",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "fx.ldpfunnel.com/68070b51712c5000133ae8cc"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    0
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "b1_builder=1"
+                    ],
+                    "funnelx_type": "FUNNELX_STICKY_BAR"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "680717b2712c5000133dad86",
+          "is_show_resent_step": false,
+          "is_show_again_completed": true,
+          "popupx_url": "fx.ldpfunnel.com/680717b2712c5000133dad86"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "app/automation"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "sticky_load=1"
+                    ],
+                    "funnelx_type": "FUNNELX_EMBED"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "681c311c75d062001fbe3979",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "fx.ldpfunnel.com/681c311c75d062001fbe3979"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "NOT_IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                },
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "starter-div"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "show_popupx",
+                    "value": [
+                      "POPUP_1"
+                    ]
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_open_popup_POPUP3"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "show_popupx",
+                    "value": [
+                      "POPUP3"
+                    ]
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    1
+                  ]
+                },
+                {
+                  "operator": "CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "app.dev.ladiflow.com"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "show_popupx",
+                    "value": [
+                      "NOTIFYBAR1"
+                    ]
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "656d984f46f47c0020a7c04b",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "popupx.ladi.me/656d984f46f47c0020a7c04b"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    "show_campMKT"
+                  ],
+                  "selector": "class"
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "builder.ladipage.com/editor",
+                    "app.ladipage.com/editor"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_HOME"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_26_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP23"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP36"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP36"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_27_expires"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP37"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "camp=ladixguuads"
+                  ]
+                },
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    0
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_HOME"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "683d2790f451be001212c71a",
+          "is_show_resent_step": false,
+          "is_show_again_completed": true,
+          "popupx_url": "fx.ldpfunnel.com/683d2790f451be001212c71a"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "app/automation",
+                    "app.ladipage.com/ladipage?tab=template",
+                    "app.ladipage.com/editor"
+                  ]
+                },
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    2
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "hook_pop_load=1"
+                    ],
+                    "funnelx_type": "FUNNELX_HOOK_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "683d22fbdf98d20012654862",
+          "is_show_resent_step": false,
+          "is_show_again_completed": true,
+          "popupx_url": "fx.ldpfunnel.com/683d22fbdf98d20012654862"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    3
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "a=1"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "68479844142fd80044af893d",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "fx.ldpfunnel.com/68479844142fd80044af893d"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "FROM_TO",
+                  "type": "TIME",
+                  "value": [
+                    "00:04-06:30"
+                  ]
+                },
+                {
+                  "operator": "NOT_IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "yes"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP4"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ],
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "notice_maintain3107=yes"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "6889dff8c78e3a0013ecb328",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "fx.ldpfunnel.com/6889dff8c78e3a0013ecb328"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "class",
+                  "value": [
+                    "show_campMKT"
+                  ]
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "builder.ladipage.com/editor",
+                    "app.ladipage.com/editor"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_HOME"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_26_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP23"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP36"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP36"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_27_expires"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP37"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "694508cc01f0d30012b6bdca",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "fx.ldpfunnel.com/694508cc01f0d30012b6bdca"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    "show_campMKT"
+                  ],
+                  "selector": "class"
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "builder.ladipage.com/editor",
+                    "app.ladipage.com/editor"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP1"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_26_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP23"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP36"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP36"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_27_expires"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP37"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "697c28fb03260b0013e79e99",
+          "is_show_resent_step": false,
+          "is_show_again_completed": true,
+          "popupx_url": "fx.ldpfunnel.com/697c28fb03260b0013e79e99"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    0
+                  ]
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "app/automation",
+                    "app.ladipage.com/ladipage?tab=template",
+                    "app.ladipage.com/editor",
+                    "https://app.ladipage.com/ladipage/builder/ai-new",
+                    "ladipage.vn",
+                    "ladipage.vn/p/",
+                    "https://app.ladipage.com/automation-editor",
+                    "https://app.ladipage.com/ladipage/html-to-ladipage",
+                    "https://app.ladipage.com/editor-html"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP7"
+                    ],
+                    "funnelx_type": "FUNNELX_HOOK_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "6a0196c2bc3e5c0012a69944",
+          "is_show_resent_step": false,
+          "is_show_again_completed": true,
+          "popupx_url": "fx.ldpfunnel.com/6a0196c2bc3e5c0012a69944"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "behavior_type": "click_element",
+                  "operator": "=",
+                  "type": "BEHAVIOR",
+                  "selector": "class",
+                  "value": [
+                    "show_campMKT"
+                  ]
+                },
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "builder.ladipage.com/editor",
+                    "app.ladipage.com/editor"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_HOME"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP22"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_26_warning"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP23"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_29_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP36"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_25_limit"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP36"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "_POPUPX_mkt_27_expires"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STEP37"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            },
+            {
+              "conditions": [
+                {
+                  "operator": "CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "banggia?uu-dai-sinh-nhat=ladipage-2026"
+                  ]
+                },
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    0
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "FORM_HOME"
+                    ],
+                    "funnelx_type": "FUNNELX_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "6a1fae6b17463800128d245e",
+          "is_show_resent_step": false,
+          "is_show_again_completed": true,
+          "popupx_url": "fx.ldpfunnel.com/6a1fae6b17463800128d245e"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "NOT_CONTAINS",
+                  "type": "URL",
+                  "value": [
+                    "app/automation",
+                    "app.ladipage.com/ladipage?tab=template",
+                    "app.ladipage.com/editor",
+                    "ladipage.vn",
+                    "https://app.ladipage.com/automation-editor",
+                    "/auth/login"
+                  ]
+                },
+                {
+                  "operator": ">=",
+                  "behavior_type": "time_on_page",
+                  "type": "BEHAVIOR",
+                  "value": [
+                    2
+                  ]
+                },
+                {
+                  "operator": "NOT_IN",
+                  "type": "COOKIE",
+                  "cookie_name": "[REDACTED]",
+                  "value": [
+                    "1"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "cookie",
+                    "value": [
+                      "hook_popup_sn=1"
+                    ],
+                    "funnelx_type": "FUNNELX_HOOK_POPUP"
+                  }
+                ],
+                [
+                  {
+                    "type": "change_step",
+                    "value": [
+                      "STICK_NANG_CAP"
+                    ],
+                    "funnelx_type": "FUNNELX_HOOK_POPUP"
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "6a20e7e4e5df4200139c4a01",
+          "is_show_resent_step": false,
+          "is_show_again_completed": true,
+          "popupx_url": "fx.ldpfunnel.com/6a20e7e4e5df4200139c4a01"
+        },
+        {
+          "config": [
+            {
+              "conditions": [
+                {
+                  "operator": "=",
+                  "behavior_type": "click_element",
+                  "type": "BEHAVIOR",
+                  "selector": "id",
+                  "value": [
+                    "LADI_REQUEST_FEATURE"
+                  ]
+                }
+              ],
+              "actions": [
+                [
+                  {
+                    "type": "show_popupx",
+                    "value": [
+                      "POPUP1"
+                    ]
+                  }
+                ]
+              ]
+            }
+          ],
+          "ladipage_id": "6a4f72f9cb83b200121c298e",
+          "is_show_resent_step": false,
+          "is_show_again_completed": false,
+          "popupx_url": "popupx.ladi.me/6a4f72f9cb83b200121c298e"
+        }
+      ]
+    },
+    "message": "",
+    "code": 200
+  },
+  "requestHeaders": {
+    "sec-ch-ua-platform": "\"Windows\"",
+    "Referer": "https://appv6.ladipage.com/",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LioraCDP/1.0",
+    "sec-ch-ua": "\"HeadlessChrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+    "LADI_CLIENT_ID": "",
+    "Content-Type": "application/json",
+    "sec-ch-ua-mobile": "?0"
+  },
+  "capturedAt": "2026-07-14T09:38:48.548Z"
+}

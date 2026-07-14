@@ -1,0 +1,1 @@
+export const AI_PROVIDER_GATEWAY = Symbol('AI_PROVIDER_GATEWAY')

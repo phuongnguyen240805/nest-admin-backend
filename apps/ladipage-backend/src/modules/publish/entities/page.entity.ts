@@ -34,6 +34,15 @@ export class PageEntity extends TenantScopedEntity {
   @Column({ name: 'publish_platform', type: 'varchar', length: 50, nullable: true })
   publishPlatform: string | null
 
+  @Column({ name: 'render_engine', type: 'varchar', length: 50, default: 'legacy' })
+  renderEngine: string
+
+  @Column({ name: 'external_site_id', type: 'varchar', length: 128, nullable: true })
+  externalSiteId: string | null
+
+  @Column({ name: 'external_page_id', type: 'varchar', length: 128, nullable: true })
+  externalPageId: string | null
+
   @Column({ name: 'origin_id', type: 'varchar', length: 64, nullable: true })
   originId: string | null
 
@@ -111,6 +120,9 @@ export class PageEntity extends TenantScopedEntity {
 
   @Column({ name: 'tracking_last_updated_at', type: 'timestamptz', nullable: true })
   trackingLastUpdatedAt: Date | null
+
+  @Column({ name: 'published_at', type: 'timestamptz', nullable: true })
+  publishedAt: Date | null
 
   @Column({ type: 'jsonb', default: () => "'{}'" })
   revenue: Record<string, unknown>

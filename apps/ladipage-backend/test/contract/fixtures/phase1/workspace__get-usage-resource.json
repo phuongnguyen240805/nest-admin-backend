@@ -1,0 +1,146 @@
+{
+  "route": "workspace/get-usage-resource",
+  "host": "api.ladiuid.com",
+  "path": "/2.0/workspace/get-usage-resource",
+  "status": 200,
+  "request": {
+    "lang": "vi",
+    "owner_id": "6a2c26c92d543800211b5157"
+  },
+  "response": {
+    "data": {
+      "resource_limits": {
+        "workspace": {
+          "pkg_name": "STARTER",
+          "pkg_actived_at": "2026-06-12T15:33:29.766Z",
+          "credit_app": "250.00",
+          "money": 0
+        }
+      },
+      "usages": [
+        {
+          "resource_type": "landing_page",
+          "app_code": "LP",
+          "limit_value": 10,
+          "current_usage": 4
+        },
+        {
+          "resource_type": "popupx",
+          "app_code": "LP",
+          "limit_value": 10,
+          "current_usage": 0
+        },
+        {
+          "resource_type": "funnelx",
+          "app_code": "LP",
+          "limit_value": 10,
+          "current_usage": 0
+        },
+        {
+          "resource_type": "banner",
+          "app_code": "LP",
+          "limit_value": 10,
+          "current_usage": 0
+        },
+        {
+          "resource_type": "banner_download_image",
+          "app_code": "LP",
+          "limit_value": 100,
+          "current_usage": 0
+        },
+        {
+          "resource_type": "file",
+          "app_code": "LP",
+          "limit_value": 50,
+          "current_usage": 0
+        },
+        {
+          "resource_type": "team",
+          "app_code": "LP",
+          "limit_value": 0,
+          "current_usage": 0
+        },
+        {
+          "resource_type": "staff",
+          "app_code": "LP",
+          "limit_value": 1,
+          "current_usage": 1
+        },
+        {
+          "resource_type": "domain",
+          "app_code": "LP",
+          "limit_value": 0,
+          "current_usage": 0
+        },
+        {
+          "resource_type": "traffic",
+          "app_code": "LP",
+          "limit_value": 1000,
+          "current_usage": 0
+        },
+        {
+          "resource_type": "content_ai",
+          "app_code": "LP",
+          "limit_value": 0,
+          "current_usage": 0
+        },
+        {
+          "resource_type": "form_account",
+          "app_code": "LP",
+          "limit_value": 1,
+          "current_usage": 0
+        },
+        {
+          "resource_type": "customer",
+          "app_code": "LF",
+          "limit_value": 100,
+          "current_usage": 1
+        },
+        {
+          "resource_type": "email_sender",
+          "app_code": "LF",
+          "limit_value": 1,
+          "current_usage": 0
+        },
+        {
+          "resource_type": "facebook_page",
+          "app_code": "LF",
+          "limit_value": 1,
+          "current_usage": 0
+        },
+        {
+          "resource_type": "zalo_oa",
+          "app_code": "LF",
+          "limit_value": 0,
+          "current_usage": 0
+        },
+        {
+          "resource_type": "crm_deal",
+          "app_code": "LCRM",
+          "limit_value": 100,
+          "current_usage": 1
+        },
+        {
+          "resource_type": "crm_pipeline",
+          "app_code": "LCRM",
+          "limit_value": 2,
+          "current_usage": 1
+        }
+      ]
+    },
+    "message": "Thao tác thành công",
+    "code": 200
+  },
+  "requestHeaders": {
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "[REDACTED]",
+    "Referer": "https://appv6.ladipage.com/",
+    "sec-ch-ua": "\"HeadlessChrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+    "sec-ch-ua-mobile": "?0",
+    "store-id": "6a2c26caef58950011646639",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LioraCDP/1.0",
+    "accept": "application/json, text/plain, */*",
+    "content-type": "application/json;charset=UTF-8"
+  },
+  "capturedAt": "2026-07-14T09:38:56.735Z"
+}

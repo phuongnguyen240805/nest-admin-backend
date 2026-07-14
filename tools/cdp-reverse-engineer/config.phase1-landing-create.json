@@ -1,0 +1,20 @@
+{
+  "url": "https://appv6.ladipage.com/ladipage",
+  "durationMs": 22000,
+  "headless": true,
+  "outputDir": "output/phase1-landing-create",
+  "maxBodyBytes": 4194304,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 8000, "label": "initial-load" },
+    { "type": "click", "selector": "button:has-text('Tạo Landing Page'), button:has-text('Tạo trang'), button:has-text('Create Landing Page'), a:has-text('Tạo Landing Page')", "label": "open-create-landing-page", "force": true },
+    { "type": "wait", "ms": 4000, "label": "wait-create-options" },
+    { "type": "click", "selector": "button:has-text('Trang trắng'), button:has-text('Tạo trang trắng'), button:has-text('Blank'), [data-testid*='blank'], [class*='blank']", "label": "select-blank-page", "force": true },
+    { "type": "wait", "ms": 5000, "label": "wait-name-step" },
+    { "type": "fill", "selector": "input[name='name'], input[placeholder*='Tên'], input[placeholder*='Name'], input[type='text']", "value": "cdp-mcp-landing-page", "label": "fill-page-name" },
+    { "type": "click", "selector": "button:has-text('Tạo'), button:has-text('Tiếp tục'), button:has-text('Create'), button:has-text('Continue')", "label": "submit-create-page", "force": true },
+    { "type": "wait", "ms": 15000, "label": "wait-created-or-editor" },
+    { "type": "click", "selector": "button:has-text('Lưu'), button:has-text('Save'), [aria-label*='Lưu'], [aria-label*='Save']", "label": "save-created-page", "force": true },
+    { "type": "wait", "ms": 8000, "label": "wait-save" }
+  ]
+}

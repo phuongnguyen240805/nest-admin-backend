@@ -1,0 +1,28 @@
+{
+  "route": "auth/renew-token",
+  "host": "api.ladiuid.com",
+  "path": "/2.0/auth/renew-token",
+  "status": 200,
+  "request": {
+    "lang": "vi",
+    "token": "[REDACTED]"
+  },
+  "response": {
+    "data": {
+      "token": "[REDACTED]",
+      "isRenew": true
+    },
+    "message": "Thao tác thành công",
+    "code": 200
+  },
+  "requestHeaders": {
+    "sec-ch-ua-platform": "\"Windows\"",
+    "Referer": "https://appv6.ladipage.com/",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 LioraCDP/1.0",
+    "accept": "application/json, text/plain, */*",
+    "sec-ch-ua": "\"HeadlessChrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+    "content-type": "application/json;charset=UTF-8",
+    "sec-ch-ua-mobile": "?0"
+  },
+  "capturedAt": "2026-07-14T09:38:46.636Z"
+}

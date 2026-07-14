@@ -1,0 +1,27 @@
+{
+  "url": "https://appv6.ladipage.com/settings/api",
+  "durationMs": 18000,
+  "headless": true,
+  "outputDir": "output/settings-api-mutations",
+  "maxBodyBytes": 2097152,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 8000, "label": "initial-load" },
+    { "type": "click", "selector": "button:has-text('Tạo'), button:has-text('Tạo API'), button:has-text('Create'), button:has-text('Add'), [data-testid*='api-key'][data-testid*='create']", "label": "open-create-api-key", "force": true },
+    { "type": "wait", "ms": 2000, "label": "wait-create-modal" },
+    { "type": "fill", "selector": "input[name='name'], input[placeholder*='Tên'], input[placeholder*='Name'], input[type='text']", "value": "cdp-mcp-landing-key", "label": "fill-api-key-name" },
+    { "type": "click", "selector": "button:has-text('Lưu'), button:has-text('Tạo'), button:has-text('Create'), button:has-text('Xác nhận'), button:has-text('Confirm')", "label": "submit-create-api-key", "force": true },
+    { "type": "wait", "ms": 8000, "label": "wait-after-create" },
+    { "type": "click", "selector": "button:has-text('Đóng'), button:has-text('Close'), button:has-text('Xong'), button:has-text('Done')", "label": "close-key-once-dialog", "force": true },
+    { "type": "wait", "ms": 2000, "label": "wait-after-close" },
+    { "type": "fill", "selector": "input[placeholder*='Tìm'], input[placeholder*='Search'], input[type='search']", "value": "cdp-mcp-landing-key", "label": "filter-created-key" },
+    { "type": "wait", "ms": 3000, "label": "wait-filter" },
+    { "type": "click", "selector": "table tbody tr:first-child button:last-child, [role='row']:has-text('cdp-mcp-landing-key') button:last-child", "label": "open-key-menu", "force": true },
+    { "type": "wait", "ms": 1500, "label": "wait-menu" },
+    { "type": "click", "selector": "[role='menuitem']:has-text('Thu hồi'), [role='menuitem']:has-text('Xóa'), [role='menuitem']:has-text('Delete'), [role='menuitem']:has-text('Revoke')", "label": "revoke-created-key", "force": true },
+    { "type": "wait", "ms": 1500, "label": "wait-revoke-confirm" },
+    { "type": "click", "selector": "button:has-text('Xác nhận'), button:has-text('Đồng ý'), button:has-text('Delete'), button:has-text('Revoke'), button:has-text('Confirm')", "label": "confirm-revoke-created-key", "force": true },
+    { "type": "wait", "ms": 8000, "label": "wait-after-revoke" }
+  ]
+}
+

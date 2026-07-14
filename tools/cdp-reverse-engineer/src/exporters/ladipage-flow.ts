@@ -8,9 +8,9 @@ const NOISE_HOSTS =
   /google|yandex|facebook|doubleclick|hotjar|analytics|googletagmanager|clarity|linkedin|tiktok|twitter|bing|taboola|pinterest/i;
 
 const LADI_HOSTS =
-  /\.ladipage\.com$|^a\.ladipage\.com$|^api(v5)?\.ladipage|^apps\.ladipage|^build\.ladipage|^app\.ladipage|\.ldpform\.net$|^apiv5\.sales\.ldpform|\.ladiflow\.com$|^api\.lcrm/i;
+  /\.ladipage\.com$|^a\.ladipage\.com$|^api(v5)?\.ladipage|^api\.ladiuid|^apps\.ladipage|^build\.ladipage|^app\.ladipage|\.ldpform\.net$|^apiv5\.sales\.ldpform|\.ladiflow\.com$|^api\.lcrm/i;
 const LADI_PATHS =
-  /\/ladi-[-a-z/]+|\/api\/|\/1\.0\/(customer|segment|crm|report|dashboard|custom-field|sync)/i;
+  /\/ladi-[-a-z/]+|\/api\/|\/1\.0\/(customer|segment|crm|report|dashboard|custom-field|sync)|\/2\.0\/(api-key|auth|workspace)\//i;
 
 export function isLadipageApi(api: ApiEntry): boolean {
   if (api.url.startsWith('file:') || api.url.startsWith('data:')) return false;
