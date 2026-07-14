@@ -1,0 +1,17 @@
+{
+  "url": "https://appv6.ladipage.com/settings/api",
+  "durationMs": 25000,
+  "headless": true,
+  "outputDir": "output/settings-api",
+  "maxBodyBytes": 2097152,
+  "storageStatePath": ".session/ladipage-appv6-auth.json",
+  "actions": [
+    { "type": "wait", "ms": 8000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/settings" },
+    { "type": "wait", "ms": 5000 },
+    { "type": "navigate", "value": "https://appv6.ladipage.com/settings/api" },
+    { "type": "wait", "ms": 10000 },
+    { "type": "click", "selector": "button:has-text('Tạo'), button:has-text('Create'), button:has-text('Add'), a:has-text('API')" },
+    { "type": "wait", "ms": 5000 }
+  ]
+}

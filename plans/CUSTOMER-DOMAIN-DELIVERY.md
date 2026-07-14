@@ -82,13 +82,16 @@ Schema + hook publish **đã phác** custom domain (`landing_domains`, `landing_
 
 ### Definition of Done
 
-- [ ] Flag on staging: full flow add → CNAME → verified → map page → open custom URL 200  
-- [ ] `cloudflare_hostname_id` lưu DB; delete domain xóa CF resource  
-- [ ] `edge_status` phản ánh KV sync thật (`synced` \| `error`)  
-- [ ] Domain insert **không** default VERIFIED khi chưa check  
-- [ ] Quota + RLS owner still enforced  
-- [ ] Worker handles custom host keys  
-- [ ] Tests: resolvePublicUrls, adapter mock CF, route unique path  
+- [x] Code MVP (2026-07-13): POST PENDING, CF client, refresh/delete, routes CRUD, adapter KV, publish auto-sync  
+- [x] Domain insert **không** default VERIFIED (PENDING)  
+- [x] `cloudflare_hostname_id` + cname_target columns (migration)  
+- [x] Unit tests: hostname util, CF client mock, adapter, resolvePublicUrls, Nest util  
+- [x] Worker stub KV key helper aligned with FE  
+- [ ] Flag on staging: full flow add → CNAME → verified → map page → open custom URL 200 (ops + CF account)  
+- [ ] Live CF Custom Hostname + KV with real token  
+- [ ] Worker deploy production  
+- [ ] UI Domains panel (B7) — API ready, UI optional follow-up  
+- [x] Quota + RLS owner still enforced (assertDomainQuota unchanged)
 
 ---
 
