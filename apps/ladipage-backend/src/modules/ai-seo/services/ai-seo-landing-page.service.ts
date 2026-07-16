@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { TenantContextService } from '@liora/nest-core'
 import { Repository } from 'typeorm'
 
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
+import { PageEntity } from '../../publish/entities'
 import { LinkLandingPageDto } from '../dto/link-landing-page.dto'
 import { ScanProjectDto } from '../dto/scan-project.dto'
 import { SeoProjectEntity, SeoProjectPageEntity } from '../entities'
@@ -23,6 +24,9 @@ export class AiSeoLandingPageService extends TenantScopedService {
     private readonly pageRepository: Repository<SeoProjectPageEntity>,
     @InjectRepository(SeoProjectEntity)
     private readonly projectRepository: Repository<SeoProjectEntity>,
+    @Optional()
+    @InjectRepository(PageEntity)
+    private readonly builderPageRepository: Repository<PageEntity> | undefined,
     private readonly projectService: AiSeoProjectService,
     private readonly taskService: AiSeoTaskService,
   ) {
@@ -46,6 +50,22 @@ export class AiSeoLandingPageService extends TenantScopedService {
   async link(projectId: string, dto: LinkLandingPageDto) {
     const tenantId = this.requireTenantId()
     const project = await this.projectService.findProjectOrFail(projectId)
+
+    // Isolation: internal builder pages must belong to the same tenant
+    if (dto.websitePageId && (dto.source === 'internal' || !dto.source)) {
+      if (this.builderPageRepository) {
+        const owned = await this.builderPageRepository.findOne({
+          where: {
+            tenantId,
+            externalId: dto.websitePageId,
+            isDelete: false,
+          },
+        })
+        if (!owned && dto.source === 'internal') {
+          throw new ForbiddenException('Landing page not found')
+        }
+      }
+    }
 
     if (dto.websitePageId) {
       const existing = await this.pageRepository.findOne({

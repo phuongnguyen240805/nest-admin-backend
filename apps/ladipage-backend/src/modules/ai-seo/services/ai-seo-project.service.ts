@@ -12,6 +12,7 @@ import { UpdateSeoProjectDto } from '../dto/update-seo-project.dto'
 import { SeoProjectEntity, SeoTaskEntity } from '../entities'
 import { mapSeoProjectToDto } from '../mappers/seo-project.mapper'
 import { AiSeoQuotaService } from './ai-seo-quota.service'
+import { AiSeoTrafficService } from './ai-seo-traffic.service'
 import { OpenSeoClientService } from './openseo-client.service'
 
 @Injectable()
@@ -27,6 +28,7 @@ export class AiSeoProjectService extends TenantScopedService {
     private readonly pageRepository: Repository<PageEntity> | undefined,
     private readonly openSeoClient: OpenSeoClientService,
     private readonly quotaService: AiSeoQuotaService,
+    private readonly trafficService: AiSeoTrafficService,
   ) {
     super(tenantContext)
   }
@@ -94,10 +96,18 @@ export class AiSeoProjectService extends TenantScopedService {
         connectedData: {},
         siteAudit: {},
         lastAnalysisAt: null,
+        umamiWebsiteId: null,
+        umamiShareId: null,
+        trafficScriptState: 'not_installed',
+        trafficSyncedAt: null,
+        trafficSnapshot: {},
       }),
     )
 
-    return mapSeoProjectToDto(project)
+    // Fail-soft Umami provision — never blocks SEO project create
+    await this.trafficService.provisionForProject(project.id).catch(() => undefined)
+    const refreshed = await this.projectRepository.findOne({ where: { id: project.id, tenantId } })
+    return mapSeoProjectToDto(refreshed ?? project)
   }
 
   async detail(id: string) {
@@ -253,7 +263,14 @@ export class AiSeoProjectService extends TenantScopedService {
     const existing = await this.projectRepository.findOne({
       where: { tenantId, landingPageId },
     })
-    if (existing) return mapSeoProjectToDto(existing)
+    if (existing) {
+      if (!existing.umamiWebsiteId) {
+        await this.trafficService.provisionForProject(existing.id).catch(() => undefined)
+        const refreshed = await this.projectRepository.findOne({ where: { id: existing.id, tenantId } })
+        return mapSeoProjectToDto(refreshed ?? existing)
+      }
+      return mapSeoProjectToDto(existing)
+    }
 
     const page = await this.findPage(landingPageId)
     const hostname = page

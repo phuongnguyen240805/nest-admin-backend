@@ -1,10 +1,11 @@
-import { Injectable, Optional } from '@nestjs/common'
+import { ForbiddenException, Inject, Injectable, Optional, forwardRef } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { TenantContextService } from '@liora/nest-core'
 import { Repository } from 'typeorm'
 
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 import { PageEntity } from '../../publish/entities'
+import { PublishService } from '../../publish/publish.service'
 import { LinkLandingPageDto } from '../dto/link-landing-page.dto'
 import { AiSeoLandingPageService } from './ai-seo-landing-page.service'
 import { AiSeoProjectService } from './ai-seo-project.service'
@@ -18,6 +19,8 @@ export class AiSeoWebsiteService extends TenantScopedService {
     private readonly pageRepository: Repository<PageEntity> | undefined,
     private readonly projectService: AiSeoProjectService,
     private readonly landingPageService: AiSeoLandingPageService,
+    @Inject(forwardRef(() => PublishService))
+    private readonly publishService: PublishService,
   ) {
     super(tenantContext)
   }
@@ -57,14 +60,40 @@ export class AiSeoWebsiteService extends TenantScopedService {
   }
 
   async publishWebsitePage(websiteProjectId: string, pageId: string) {
-    const page = await this.findBuilderPage(websiteProjectId, pageId)
-    if (page) {
-      page.isPublish = true
-      await this.pageRepository!.save(page)
+    const tenantId = this.requireTenantId()
+    // Isolation: only pages under this tenant's virtual website project
+    if (websiteProjectId !== this.virtualProjectId(tenantId)) {
+      return this.mapWebsitePage(null, tenantId, pageId, 'draft')
     }
 
-    const seoProject = await this.projectService.ensureForLandingPage(pageId)
-    return this.mapWebsitePage(page ?? null, this.requireTenantId(), pageId, 'published')
+    const page = await this.findBuilderPage(websiteProjectId, pageId)
+    const html =
+      page?.source && typeof page.source === 'object' && typeof (page.source as { html?: string }).html === 'string'
+        ? (page.source as { html: string }).html
+        : null
+
+    const result = await this.publishService.completeLandingPublish({
+      pageId,
+      html,
+      storeId: page?.storeId,
+      ensureSeoProject: true,
+    })
+
+    const refreshed = await this.findBuilderPage(websiteProjectId, pageId)
+    const mapped = this.mapWebsitePage(
+      refreshed ?? page ?? null,
+      tenantId,
+      pageId,
+      result.published ? 'published' : refreshed?.isPublish || page?.isPublish ? 'published' : 'draft',
+    )
+    return {
+      ...mapped,
+      public_url: result.publicUrl ?? mapped.published_url,
+      seo_project_id: result.seoProjectId,
+      seo_sync_status: result.seoSyncStatus,
+      traffic_sync_status: result.trafficSyncStatus,
+      scripts_injected: result.scriptsInjected,
+    }
   }
 
   async connectWebsitePageToAiSeo(
@@ -72,7 +101,17 @@ export class AiSeoWebsiteService extends TenantScopedService {
     pageId: string,
     aiSeoProjectId: string,
   ) {
+    const tenantId = this.requireTenantId()
+    if (websiteProjectId !== this.virtualProjectId(tenantId)) {
+      throw new ForbiddenException('Website project not found')
+    }
+
     const page = await this.findBuilderPage(websiteProjectId, pageId)
+    // Isolation: internal connect requires page owned by tenant
+    if (this.pageRepository && !page) {
+      throw new ForbiddenException('Landing page not found')
+    }
+
     const pageUrl = page
       ? (page.pageUrl || page.url || `https://${page.domain ?? page.alias}`)
       : `https://page.local/${pageId}`

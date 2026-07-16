@@ -11,6 +11,7 @@ import { AiSeoJobsController } from './controllers/ai-seo-jobs.controller'
 import { AiSeoKeywordsController } from './controllers/ai-seo-keywords.controller'
 import { AiSeoProjectsController } from './controllers/ai-seo-projects.controller'
 import { AiSeoTasksController } from './controllers/ai-seo-tasks.controller'
+import { AiSeoTrafficController } from './controllers/ai-seo-traffic.controller'
 import { AiSeoWebsiteProjectsController } from './controllers/ai-seo-website-projects.controller'
 import {
   SeoIntegrationEntity,
@@ -25,10 +26,13 @@ import { AiSeoJobsService } from './services/ai-seo-jobs.service'
 import { AiSeoKeywordsService } from './services/ai-seo-keywords.service'
 import { AiSeoLandingPageService } from './services/ai-seo-landing-page.service'
 import { AiSeoProjectService } from './services/ai-seo-project.service'
+import { AiSeoPublishService } from './services/ai-seo-publish.service'
 import { AiSeoQuotaService } from './services/ai-seo-quota.service'
 import { AiSeoTaskService } from './services/ai-seo-task.service'
+import { AiSeoTrafficService } from './services/ai-seo-traffic.service'
 import { AiSeoWebsiteService } from './services/ai-seo-website.service'
 import { OpenSeoClientService } from './services/openseo-client.service'
+import { UmamiClientService } from './services/umami-client.service'
 
 @Module({
   imports: [
@@ -51,6 +55,7 @@ import { OpenSeoClientService } from './services/openseo-client.service'
     AiSeoKeywordsController,
     AiSeoAgentsController,
     AiSeoWebsiteProjectsController,
+    AiSeoTrafficController,
   ],
   providers: [
     AiSeoProjectService,
@@ -60,10 +65,19 @@ import { OpenSeoClientService } from './services/openseo-client.service'
     AiSeoIntegrationService,
     AiSeoJobsService,
     AiSeoKeywordsService,
+    AiSeoTrafficService,
+    AiSeoPublishService,
     OpenSeoClientService,
+    UmamiClientService,
     AiSeoCacheService,
     AiSeoQuotaService,
   ],
-  exports: [AiSeoProjectService, OpenSeoClientService],
+  exports: [
+    AiSeoProjectService,
+    AiSeoPublishService,
+    OpenSeoClientService,
+    AiSeoTrafficService,
+    UmamiClientService,
+  ],
 })
 export class AiSeoModule {}

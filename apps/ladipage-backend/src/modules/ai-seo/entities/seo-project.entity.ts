@@ -13,6 +13,7 @@ import { SeoTaskEntity } from './seo-task.entity'
 export type SeoProjectStatus = 'draft' | 'active' | 'archived'
 export type SeoProjectTaskStatus = 'pending' | 'running' | 'done' | 'failed'
 export type SeoProjectPixelTagState = 'not_installed' | 'installed'
+export type SeoTrafficScriptState = 'not_installed' | 'installed' | 'unknown'
 
 @Entity('lp_seo_project')
 @Index('idx_lp_seo_project_tenant_landing', ['tenantId', 'landingPageId'])
@@ -68,6 +69,21 @@ export class SeoProjectEntity {
 
   @Column({ name: 'last_analysis_at', type: 'timestamptz', nullable: true })
   lastAnalysisAt: Date | null
+
+  @Column({ name: 'umami_website_id', type: 'varchar', length: 128, nullable: true })
+  umamiWebsiteId: string | null
+
+  @Column({ name: 'umami_share_id', type: 'varchar', length: 128, nullable: true })
+  umamiShareId: string | null
+
+  @Column({ name: 'traffic_script_state', type: 'varchar', length: 30, default: 'not_installed' })
+  trafficScriptState: SeoTrafficScriptState
+
+  @Column({ name: 'traffic_synced_at', type: 'timestamptz', nullable: true })
+  trafficSyncedAt: Date | null
+
+  @Column({ name: 'traffic_snapshot', type: 'jsonb', default: () => "'{}'" })
+  trafficSnapshot: Record<string, unknown>
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date
