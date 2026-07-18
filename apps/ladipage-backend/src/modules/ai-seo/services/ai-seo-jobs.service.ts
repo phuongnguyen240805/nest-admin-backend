@@ -58,6 +58,23 @@ export class AiSeoJobsService extends TenantScopedService {
     const task = await this.findTaskByJobId(jobId)
     const project = task.project
 
+    // Domain-overview scans are completed at create time — return stored result.
+    if (
+      jobId.startsWith('domain-overview-') &&
+      (task.status === 'approved' || task.status === 'deployed') &&
+      task.result &&
+      Object.keys(task.result).length > 0
+    ) {
+      return {
+        jobId,
+        taskId: task.id,
+        projectId: project.id,
+        status: 'success',
+        progress: 100,
+        result: task.result,
+      }
+    }
+
     try {
       const status = await this.openSeoClient.getAuditStatus(jobId)
       if (this.isComplete(status.status) && project.openseoProjectId) {

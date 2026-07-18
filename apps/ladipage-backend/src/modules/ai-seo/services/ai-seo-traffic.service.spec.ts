@@ -16,7 +16,15 @@ describe('AiSeoTrafficService', () => {
   let umamiClient: jest.Mocked<
     Pick<
       UmamiClientService,
-      'isEnabled' | 'getCircuitState' | 'healthCheck' | 'getStats' | 'getMetrics' | 'getPageviews' | 'createWebsite'
+      | 'isEnabled'
+      | 'getCircuitState'
+      | 'healthCheck'
+      | 'getStats'
+      | 'getMetrics'
+      | 'getPageviews'
+      | 'createWebsite'
+      | 'findWebsiteByDomain'
+      | 'listWebsites'
     >
   >
   let cache: AiSeoCacheService
@@ -56,6 +64,8 @@ describe('AiSeoTrafficService', () => {
       getMetrics: jest.fn().mockResolvedValue([{ x: 'google', y: 3 }]),
       getPageviews: jest.fn().mockResolvedValue([{ x: '2026-07-01', y: 2 }]),
       createWebsite: jest.fn().mockResolvedValue({ id: 'web-new', name: 'n', domain: 'd' }),
+      findWebsiteByDomain: jest.fn().mockResolvedValue(null),
+      listWebsites: jest.fn().mockResolvedValue([]),
     }
 
     cache = new AiSeoCacheService()
@@ -88,11 +98,27 @@ describe('AiSeoTrafficService', () => {
     expect(umamiClient.getStats).not.toHaveBeenCalled()
   })
 
-  it('returns not_configured when project has no website id', async () => {
+  it('auto-provisions then returns not_configured when provision fails', async () => {
     project.umamiWebsiteId = null
+    umamiClient.createWebsite = jest.fn().mockRejectedValue(new Error('no key'))
+    umamiClient.findWebsiteByDomain = jest.fn().mockResolvedValue(null)
+    // provision uses real service method with mocked client
     const result = await service.getProjectTraffic(projectId)
     expect(result.status).toBe('not_configured')
     expect(umamiClient.getStats).not.toHaveBeenCalled()
+  })
+
+  it('auto-provisions then loads stats when create succeeds', async () => {
+    project.umamiWebsiteId = null
+    umamiClient.createWebsite = jest.fn().mockResolvedValue({
+      id: 'web-new',
+      name: 'n',
+      domain: 'example.com',
+    })
+    umamiClient.findWebsiteByDomain = jest.fn()
+    const result = await service.getProjectTraffic(projectId)
+    expect(result.status).toBe('ok')
+    expect(umamiClient.getStats).toHaveBeenCalledWith('web-new', expect.any(Object))
   })
 
   it('returns ok stats for tenant project', async () => {

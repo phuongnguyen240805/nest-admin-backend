@@ -77,6 +77,10 @@ export class AiSeoWebsiteService extends TenantScopedService {
       html,
       storeId: page?.storeId,
       ensureSeoProject: true,
+      publicUrl: page?.pageUrl || page?.url || null,
+      hostname: page?.domain || null,
+      name: page?.name || null,
+      slug: page?.alias || null,
     })
 
     const refreshed = await this.findBuilderPage(websiteProjectId, pageId)
@@ -93,6 +97,7 @@ export class AiSeoWebsiteService extends TenantScopedService {
       seo_sync_status: result.seoSyncStatus,
       traffic_sync_status: result.trafficSyncStatus,
       scripts_injected: result.scriptsInjected,
+      auto_linked: result.autoLinked,
     }
   }
 

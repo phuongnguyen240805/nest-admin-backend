@@ -105,6 +105,8 @@ services:
           - screenshot-to-code
 
   # ================== OPENSEO MICROSERVICE ==================
+  # Official self-host needs CLOUDFLARE_INCLUDE_PROCESS_ENV so AUTH_MODE reaches
+  # cloudflare:workers bindings (otherwise defaults to cloudflare_access → MCP 500).
   openseo:
     image: ${OPEN_SEO_IMAGE:-ghcr.io/every-app/open-seo:latest}
     container_name: liora-openseo-dev
@@ -112,14 +114,77 @@ services:
     env_file:
       - ../.env.openseo
     environment:
+      # Expose process env to cloudflare:workers (required for AUTH_MODE)
+      CLOUDFLARE_INCLUDE_PROCESS_ENV: "true"
       PORT: "7003"
       AUTH_MODE: local_noauth
+      # Nest calls http://openseo:7003 — Host header "openseo" must be allowed (localhost always ok)
+      ALLOWED_HOST: openseo
+      # DATAFORSEO_API_KEY comes from env_file ../.env.openseo only.
+      # Do NOT set DATAFORSEO_API_KEY: ${DATAFORSEO_API_KEY:-} here — an empty
+      # host interpolation overrides env_file and breaks get_domain_overview.
+      VITE_SHOW_DEVTOOLS: "false"
     ports:
       - "7003:7003"
+    volumes:
+      - openseo_data:/app/.wrangler
     networks:
       liora-network:
         aliases:
           - openseo
+
+  # ================== UMAMI (AI-SEO traffic analytics) ==================
+  # Host: http://localhost:7004  |  Docker network: http://umami:3000
+  # Default login: admin / umami  (change password after first login)
+  umami-db:
+    image: postgres:15-alpine
+    container_name: liora-umami-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${UMAMI_DB_NAME:-umami}
+      POSTGRES_USER: ${UMAMI_DB_USER:-umami}
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:-umami}
+    volumes:
+      - umami_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${UMAMI_DB_USER:-umami} -d ${UMAMI_DB_NAME:-umami}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      liora-network:
+        aliases:
+          - umami-db
+
+  umami:
+    image: ${UMAMI_IMAGE:-ghcr.io/umami-software/umami:postgresql-latest}
+    container_name: liora-umami-dev
+    restart: unless-stopped
+    ports:
+      - "7004:3000"
+    environment:
+      DATABASE_URL: postgresql://${UMAMI_DB_USER:-umami}:${UMAMI_DB_PASSWORD:-umami}@umami-db:5432/${UMAMI_DB_NAME:-umami}
+      DATABASE_TYPE: postgresql
+      APP_SECRET: ${UMAMI_APP_SECRET:-liora-umami-dev-secret-change-me-32chars}
+      # Collect from browser on host / other containers
+      TRACKER_SCRIPT_NAME: script.js
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/api/heartbeat').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      liora-network:
+        aliases:
+          - umami
 
   # ================== NEST-ADMIN BACKEND (Liora control plane) ==================
   liora-nest-admin:
@@ -200,6 +265,9 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       DB_SSL: "false"
+      # TypeORM prefers DATABASE_URL over DB_HOST. Root .env often points at Supabase
+      # pooler → getaddrinfo EAI_AGAIN breaks AI-SEO scan. Force local compose Postgres.
+      DATABASE_URL: ""
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
@@ -207,6 +275,13 @@ services:
       S3_ENDPOINT: http://minio:9000
       OPENSEO_BASE_URL: http://openseo:7003
       OPENSEO_MCP_URL: http://openseo:7003/mcp
+      # Umami inside compose network (host Nest uses localhost:7004 via .env)
+      UMAMI_ENABLED: ${UMAMI_ENABLED:-true}
+      UMAMI_BASE_URL: http://umami:3000
+      UMAMI_PUBLIC_SCRIPT_URL: ${UMAMI_PUBLIC_SCRIPT_URL:-http://localhost:7004}
+      UMAMI_API_KEY: ${UMAMI_API_KEY:-}
+      UMAMI_USERNAME: ${UMAMI_USERNAME:-admin}
+      UMAMI_PASSWORD: ${UMAMI_PASSWORD:-umami}
       SCREENSHOT_TO_CODE_HTTP_URL: http://screenshot-to-code:7010
       SCREENSHOT_TO_CODE_WS_URL: ws://screenshot-to-code:7010
       LIBREFANG_API_URL: ${LIBREFANG_API_URL:-http://host.docker.internal:4545}
@@ -237,6 +312,8 @@ services:
       minio:
         condition: service_healthy
       openseo:
+        condition: service_started
+      umami:
         condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:7002/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
@@ -269,12 +346,20 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       DB_SSL: "false"
+      DATABASE_URL: ""
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
       SCREENSHOT_TO_CODE_HTTP_URL: http://screenshot-to-code:7010
       SCREENSHOT_TO_CODE_WS_URL: ws://screenshot-to-code:7010
       LANDING_AI_MOCK_GENERATE: ${LANDING_AI_MOCK_GENERATE:-false}
+      UMAMI_ENABLED: ${UMAMI_ENABLED:-true}
+      UMAMI_BASE_URL: http://umami:3000
+      UMAMI_PUBLIC_SCRIPT_URL: ${UMAMI_PUBLIC_SCRIPT_URL:-http://localhost:7004}
+      UMAMI_USERNAME: ${UMAMI_USERNAME:-admin}
+      UMAMI_PASSWORD: ${UMAMI_PASSWORD:-umami}
+      OPENSEO_BASE_URL: http://openseo:7003
+      OPENSEO_MCP_URL: http://openseo:7003/mcp
     command: ["pnpm", "nx", "serve-worker", "ladipage-backend", "--skip-nx-cache"]
     volumes:
       - ../apps:/app/apps
@@ -374,3 +459,5 @@ volumes:
   postgres_data:
   mysql_data:
   minio_data:
+  umami_db_data:
+  openseo_data:

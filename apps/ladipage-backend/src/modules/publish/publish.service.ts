@@ -17,6 +17,11 @@ export type CompleteLandingPublishInput = {
   storeId?: string
   /** When true, ensure SEO project even if not previously linked */
   ensureSeoProject?: boolean
+  /** Public URL from FE publish (preferred hostname source when Nest page row missing) */
+  publicUrl?: string | null
+  hostname?: string | null
+  name?: string | null
+  slug?: string | null
 }
 
 export type CompleteLandingPublishResult = {
@@ -27,6 +32,8 @@ export type CompleteLandingPublishResult = {
   seoSyncStatus: PreparePublishedHtmlResult['seoSyncStatus'] | AfterPublishResult['seoSyncStatus']
   trafficSyncStatus: PreparePublishedHtmlResult['trafficSyncStatus'] | AfterPublishResult['trafficSyncStatus']
   scriptsInjected: { seoPixel: boolean; umami: boolean }
+  /** Auto-link created a new project_page row this publish */
+  autoLinked: boolean
   published: boolean
   message?: string
 }
@@ -58,13 +65,18 @@ export class PublishService {
   }
 
   /**
-   * Full L1 publish side-effects for a landing page (tenant-scoped):
-   * 1. Assert page ownership (when PageEntity present)
-   * 2. Inject SEO pixel + Umami into HTML when linked (soft)
-   * 3. Mark page published (soft if no page row)
-   * 4. Ensure SEO project + Umami provision when ensureSeoProject (soft)
+   * Full L1 publish side-effects for a landing page (tenant-scoped).
    *
-   * SEO/Umami errors never block marking publish when page entity exists.
+   * Auto SEO order (when ensureSeoProject !== false):
+   * 1. Ensure + auto-link SEO project + Umami provision (soft)
+   * 2. Inject SEO pixel + Umami into HTML (soft)
+   * 3. Mark page published (only if page belongs to tenant)
+   *
+   * Manual flow remains valid: pre-created project is reused by ensure.
+   * SEO/Umami errors never block publish flag when page entity exists.
+   *
+   * Note: FE Supabase pages may not exist in Nest `lp_page` — ensure still
+   * creates `lp_seo_project` by landingPageId + hostname/slug options.
    */
   async completeLandingPublish(
     input: CompleteLandingPublishInput,
@@ -77,16 +89,48 @@ export class PublishService {
     let seoSyncStatus: CompleteLandingPublishResult['seoSyncStatus'] = 'skipped'
     let trafficSyncStatus: CompleteLandingPublishResult['trafficSyncStatus'] = 'skipped'
     let scriptsInjected = { seoPixel: false, umami: false }
+    let autoLinked = false
     let message: string | undefined
 
+    // --- Auto path first: ensure + link so inject can run on first publish ---
+    const shouldEnsure = input.ensureSeoProject !== false
+    if (!this.aiSeoPublishService && shouldEnsure) {
+      this.logger.warn(
+        `completeLandingPublish: AiSeoPublishService missing — cannot auto SEO page=${input.pageId}`,
+      )
+      seoSyncStatus = 'failed'
+      message = 'AI-SEO module not wired'
+    }
+    if (this.aiSeoPublishService && shouldEnsure) {
+      const after = await this.aiSeoPublishService.afterPublish(input.pageId, {
+        storeId: input.storeId ?? page?.storeId ?? undefined,
+        publicUrl: input.publicUrl ?? page?.pageUrl ?? page?.url ?? null,
+        hostname: input.hostname ?? page?.domain ?? null,
+        name: input.name ?? page?.name ?? null,
+        slug: input.slug ?? page?.alias ?? null,
+      })
+      if (after.seoProjectId) seoProjectId = after.seoProjectId
+      seoSyncStatus = after.seoSyncStatus
+      trafficSyncStatus = after.trafficSyncStatus
+      autoLinked = after.linked
+      if (after.message) message = after.message
+      this.logger.log(
+        `completeLandingPublish ensure page=${input.pageId} seoProjectId=${seoProjectId} seo=${seoSyncStatus} linked=${autoLinked}`,
+      )
+    }
+
+    // --- Inject tracking (now that project/link may exist) ---
     if (this.aiSeoPublishService) {
       const prepared = await this.aiSeoPublishService.preparePublishedHtml(input.pageId, html)
       html = prepared.html
-      seoProjectId = prepared.seoProjectId
-      seoSyncStatus = prepared.seoSyncStatus
-      trafficSyncStatus = prepared.trafficSyncStatus
+      if (prepared.seoProjectId) seoProjectId = prepared.seoProjectId
+      if (prepared.seoSyncStatus === 'ok') seoSyncStatus = 'ok'
+      if (prepared.seoSyncStatus === 'failed') seoSyncStatus = 'failed'
+      if (prepared.trafficSyncStatus !== 'skipped') {
+        trafficSyncStatus = prepared.trafficSyncStatus
+      }
       scriptsInjected = prepared.scriptsInjected
-      message = prepared.message
+      if (prepared.message && seoSyncStatus !== 'ok') message = prepared.message
     }
 
     let published = false
@@ -100,35 +144,13 @@ export class PublishService {
       published = true
       publicUrl = page.pageUrl || page.url || (page.alias ? `/p/${page.alias}` : null)
     } else if (!this.pageRepository) {
-      // No page store — HTML/SEO-only path
       published = true
       publicUrl = null
     }
-    // Missing page row: do not flip isPublish (cannot touch another tenant's page);
-    // still allow soft SEO ensure for external landing ids.
-
-    const shouldEnsure = input.ensureSeoProject !== false
-    if (this.aiSeoPublishService && shouldEnsure) {
-      const after = await this.aiSeoPublishService.afterPublish(input.pageId, input.storeId)
-      if (after.seoProjectId) seoProjectId = after.seoProjectId
-      if (after.seoSyncStatus === 'failed') seoSyncStatus = 'failed'
-      else if (seoSyncStatus === 'skipped' && after.seoSyncStatus === 'ok') seoSyncStatus = 'ok'
-      if (after.trafficSyncStatus !== 'skipped') trafficSyncStatus = after.trafficSyncStatus
-      if (after.message) message = after.message
-
-      // Re-inject if ensure just created umami website and we still have html
-      if (html && after.seoProjectId && after.trafficSyncStatus === 'ok') {
-        const again = await this.aiSeoPublishService.preparePublishedHtml(input.pageId, html)
-        html = again.html
-        scriptsInjected = {
-          seoPixel: scriptsInjected.seoPixel || again.scriptsInjected.seoPixel,
-          umami: scriptsInjected.umami || again.scriptsInjected.umami,
-        }
-      }
-    }
+    // Missing page row: do not flip isPublish (cannot touch another tenant's page).
 
     this.logger.log(
-      `completeLandingPublish page=${input.pageId} tenant=${tenantId} seo=${seoSyncStatus} traffic=${trafficSyncStatus}`,
+      `completeLandingPublish page=${input.pageId} tenant=${tenantId} seo=${seoSyncStatus} traffic=${trafficSyncStatus} linked=${autoLinked}`,
     )
 
     return {
@@ -139,6 +161,7 @@ export class PublishService {
       seoSyncStatus,
       trafficSyncStatus,
       scriptsInjected,
+      autoLinked,
       published,
       ...(message ? { message } : {}),
     }

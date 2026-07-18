@@ -37,4 +37,15 @@ describe('cloudflare-saas.util (Plan B)', () => {
       }),
     ).toBe('fallback.example.com')
   })
+
+  it('accepts publicvm free-domain style hostnames', () => {
+    expect(isValidCustomerHostname('ladipage.publicvm.com')).toBe(true)
+    expect(isValidCustomerHostname('shop.ladipage.publicvm.com')).toBe(true)
+    expect(normalizeCustomerHostname('https://Shop.Ladipage.Publicvm.com/')).toBe(
+      'shop.ladipage.publicvm.com',
+    )
+    expect(buildEdgeKvKey('shop.ladipage.publicvm.com', '/')).toBe(
+      'shop.ladipage.publicvm.com/',
+    )
+  })
 })

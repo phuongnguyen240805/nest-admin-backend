@@ -48,6 +48,7 @@ describe('PublishService.completeLandingPublish', () => {
         seoProjectId: 's1',
         seoSyncStatus: 'ok',
         trafficSyncStatus: 'ok',
+        linked: true,
       }),
     }
 
@@ -70,10 +71,23 @@ describe('PublishService.completeLandingPublish', () => {
 
     expect(result.published).toBe(true)
     expect(result.seoProjectId).toBe('s1')
+    expect(result.autoLinked).toBe(true)
     expect(result.scriptsInjected.seoPixel).toBe(true)
     expect(page.isPublish).toBe(true)
     expect(pageRepository.save).toHaveBeenCalled()
-    expect(aiSeoPublish.afterPublish).toHaveBeenCalledWith(pageId, undefined)
+    // Auto order: ensure/link before inject
+    expect(aiSeoPublish.afterPublish).toHaveBeenCalledWith(
+      pageId,
+      expect.objectContaining({
+        storeId: 'store-1',
+        publicUrl: 'https://example.com/p/x',
+        slug: 'x',
+      }),
+    )
+    expect(aiSeoPublish.preparePublishedHtml).toHaveBeenCalled()
+    const afterOrder = aiSeoPublish.afterPublish.mock.invocationCallOrder[0]
+    const prepOrder = aiSeoPublish.preparePublishedHtml.mock.invocationCallOrder[0]
+    expect(afterOrder).toBeLessThan(prepOrder)
   })
 
   it('isolation: does not publish page belonging to another tenant', async () => {
@@ -108,10 +122,23 @@ describe('PublishService.completeLandingPublish', () => {
       seoProjectId: null,
       seoSyncStatus: 'failed',
       trafficSyncStatus: 'failed',
+      linked: false,
     })
 
     const result = await service.completeLandingPublish({ pageId, html: '<html></html>' })
     expect(result.published).toBe(true)
     expect(result.seoSyncStatus).toBe('failed')
+    expect(result.autoLinked).toBe(false)
+  })
+
+  it('isolation: ensureSeoProject false skips auto SEO entirely', async () => {
+    const result = await service.completeLandingPublish({
+      pageId,
+      html: '<html><head></head></html>',
+      ensureSeoProject: false,
+    })
+    expect(aiSeoPublish.afterPublish).not.toHaveBeenCalled()
+    expect(result.autoLinked).toBe(false)
+    expect(result.published).toBe(true)
   })
 })

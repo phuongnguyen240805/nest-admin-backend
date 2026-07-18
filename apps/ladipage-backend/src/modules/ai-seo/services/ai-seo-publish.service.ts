@@ -12,8 +12,10 @@ import {
   htmlHasUmamiWebsite,
   injectHtmlBeforeHeadClose,
 } from '../hooks/ai-seo-publish.hook'
-import { AiSeoProjectService } from './ai-seo-project.service'
+import { AiSeoProjectService, type EnsureLandingPageOptions } from './ai-seo-project.service'
 import { AiSeoTrafficService, TrafficStatus } from './ai-seo-traffic.service'
+
+export type AfterPublishOptions = EnsureLandingPageOptions
 
 export type SeoSyncStatus = 'ok' | 'skipped' | 'failed'
 /** Traffic side of publish pipeline (includes soft-fail). */
@@ -33,6 +35,8 @@ export type AfterPublishResult = {
   seoProjectId: string | null
   seoSyncStatus: SeoSyncStatus
   trafficSyncStatus: PublishTrafficSyncStatus
+  /** true when a new lp_seo_project_page row was created this call */
+  linked: boolean
   message?: string
 }
 
@@ -175,19 +179,34 @@ export class AiSeoPublishService extends TenantScopedService {
   }
 
   /**
-   * After HTML is persisted: ensure SEO project + soft Umami provision (tenant-scoped).
+   * Auto path after publish (tenant-scoped, fail-soft):
+   * 1. ensure SEO project for landing (create or reuse)
+   * 2. auto-link page row (lp_seo_project_page) if missing
+   * 3. soft Umami provision
+   *
+   * Manual flow (create project first) still works — ensure reuses existing.
    */
-  async afterPublish(landingPageId: string, storeId?: string): Promise<AfterPublishResult> {
+  async afterPublish(
+    landingPageId: string,
+    storeIdOrOptions?: string | AfterPublishOptions,
+  ): Promise<AfterPublishResult> {
     try {
       await this.assertLandingPageOwnedByTenant(landingPageId)
 
-      const dto = await this.projectService.ensureForLandingPage(landingPageId, storeId)
+      const options: AfterPublishOptions =
+        typeof storeIdOrOptions === 'string'
+          ? { storeId: storeIdOrOptions }
+          : (storeIdOrOptions ?? {})
+
+      const dto = await this.projectService.ensureForLandingPage(landingPageId, options)
+      const linked = await this.autoLinkLandingPage(dto.id, landingPageId)
       const provision = await this.trafficService.provisionForProject(dto.id)
 
       return {
         seoProjectId: dto.id,
         seoSyncStatus: 'ok',
         trafficSyncStatus: provision.status,
+        linked,
         message: provision.message,
       }
     } catch (error) {
@@ -197,9 +216,69 @@ export class AiSeoPublishService extends TenantScopedService {
         seoProjectId: null,
         seoSyncStatus: 'failed',
         trafficSyncStatus: 'failed',
+        linked: false,
         message,
       }
     }
+  }
+
+  /**
+   * Ensure lp_seo_project_page exists for this tenant + project + website page.
+   * Never links across tenants (project must already belong to current tenant).
+   */
+  async autoLinkLandingPage(seoProjectId: string, landingPageId: string): Promise<boolean> {
+    const tenantId = this.requireTenantId()
+
+    const project = await this.projectRepository.findOne({
+      where: { id: seoProjectId, tenantId },
+    })
+    if (!project) {
+      this.logger.warn(`autoLink skipped: project ${seoProjectId} not in tenant ${tenantId}`)
+      return false
+    }
+
+    const existing = await this.projectPageRepository.findOne({
+      where: {
+        tenantId,
+        seoProjectId: project.id,
+        websitePageId: landingPageId,
+      },
+    })
+    if (existing) return false
+
+    const pageUrl = await this.resolvePageUrl(landingPageId, project.hostname)
+
+    await this.projectPageRepository.save(
+      this.projectPageRepository.create({
+        tenantId,
+        seoProjectId: project.id,
+        pageUrl,
+        websitePageId: landingPageId,
+        source: 'internal',
+        scanStatus: 'pending',
+        scores: {},
+      }),
+    )
+
+    if (!project.landingPageId) {
+      project.landingPageId = landingPageId
+      await this.projectRepository.save(project)
+    }
+
+    return true
+  }
+
+  private async resolvePageUrl(landingPageId: string, fallbackHostname: string): Promise<string> {
+    if (this.pageRepository) {
+      const tenantId = this.requireTenantId()
+      const page = await this.pageRepository.findOne({
+        where: { tenantId, externalId: landingPageId, isDelete: false },
+      })
+      if (page) {
+        return page.pageUrl || page.url || `https://${page.domain ?? page.alias ?? landingPageId}`
+      }
+    }
+    return fallbackHostname.startsWith('http') ? fallbackHostname : `https://${fallbackHostname}`
   }
 
   /**

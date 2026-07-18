@@ -61,8 +61,22 @@ export class AiSeoTrafficService extends TenantScopedService {
       return this.envelope('disabled', null, window, false, null, 'Umami is disabled')
     }
 
+    // Self-heal: provision Umami website if missing (create failed at project create time)
     if (!project.umamiWebsiteId) {
-      return this.envelope('not_configured', null, window, false, null, 'Umami website is not provisioned')
+      const provision = await this.provisionForProject(project.id)
+      if (provision.umamiWebsiteId) {
+        project.umamiWebsiteId = provision.umamiWebsiteId
+      } else {
+        return this.envelope(
+          'not_configured',
+          null,
+          window,
+          false,
+          null,
+          provision.message
+            ?? 'Umami website is not provisioned. Set UMAMI_ENABLED=true, UMAMI_API_KEY, and retry provision.',
+        )
+      }
     }
 
     const cacheKey = this.cacheKey(project.tenantId, project.id, 'stats', range)
@@ -161,12 +175,22 @@ export class AiSeoTrafficService extends TenantScopedService {
     }
 
     try {
-      const website = await this.umamiClient.createWebsite({
+      let website = await this.umamiClient.createWebsite({
         name: `t${project.tenantId}-${project.slug}`.slice(0, 100),
         domain: project.hostname,
       })
+
       if (!website.id) {
-        return { status: 'degraded', umamiWebsiteId: null, message: 'Umami createWebsite returned empty id' }
+        const existing = await this.umamiClient.findWebsiteByDomain(project.hostname)
+        if (existing?.id) website = existing
+      }
+
+      if (!website.id) {
+        return {
+          status: 'degraded',
+          umamiWebsiteId: null,
+          message: 'Umami createWebsite returned empty id',
+        }
       }
 
       project.umamiWebsiteId = website.id
@@ -174,9 +198,26 @@ export class AiSeoTrafficService extends TenantScopedService {
       await this.projectRepository.save(project)
       return { status: 'ok', umamiWebsiteId: website.id }
     } catch (error) {
+      // Domain may already exist in Umami — reuse by domain match
+      try {
+        const existing = await this.umamiClient.findWebsiteByDomain(project.hostname)
+        if (existing?.id) {
+          project.umamiWebsiteId = existing.id
+          project.umamiShareId = existing.shareId ?? null
+          await this.projectRepository.save(project)
+          return { status: 'ok', umamiWebsiteId: existing.id }
+        }
+      } catch {
+        // fall through
+      }
+
       const message = error instanceof Error ? error.message : 'Umami provision failed'
       this.logger.warn(`Umami provision failed for project ${projectId}: ${message}`)
-      return { status: 'degraded', umamiWebsiteId: null, message }
+      return {
+        status: 'degraded',
+        umamiWebsiteId: null,
+        message: `${message}. Check UMAMI_ENABLED, UMAMI_BASE_URL, UMAMI_API_KEY.`,
+      }
     }
   }
 

@@ -109,4 +109,41 @@ describe('UmamiClientService', () => {
     const website = await service.createWebsite({ name: 'n', domain: 'd.com' })
     expect(website.id).toBe('w-9')
   })
+
+  it('createWebsite unwraps nested data.id', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ data: { id: 'w-nested', name: 'n', domain: 'd.com' } }),
+    })
+
+    const service = new UmamiClientService(config)
+    const website = await service.createWebsite({ name: 'n', domain: 'd.com' })
+    expect(website.id).toBe('w-nested')
+  })
+
+  it('ignores non-ASCII placeholder API key and falls back to login', async () => {
+    configValues.UMAMI_API_KEY = '<API key tạo trong Umami admin>'
+    configValues.UMAMI_USERNAME = 'admin'
+    configValues.UMAMI_PASSWORD = 'umami'
+    ;(global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ token: 'session-token-ascii' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ id: 'w-1', name: 'n', domain: 'd.com' }),
+      })
+
+    const service = new UmamiClientService(config)
+    const website = await service.getWebsite('w-1')
+    expect(website.id).toBe('w-1')
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://umami.test/api/auth/login',
+      expect.objectContaining({ method: 'POST' }),
+    )
+  })
 })

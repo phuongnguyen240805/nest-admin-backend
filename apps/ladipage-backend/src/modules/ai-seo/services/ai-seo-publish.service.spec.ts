@@ -15,17 +15,22 @@ describe('AiSeoPublishService', () => {
 
   let project: SeoProjectEntity
   let projectRepository: jest.Mocked<Pick<Repository<SeoProjectEntity>, 'findOne' | 'save'>>
-  let projectPageRepository: jest.Mocked<Pick<Repository<SeoProjectPageEntity>, 'findOne'>>
+  let projectPageRepository: jest.Mocked<
+    Pick<Repository<SeoProjectPageEntity>, 'findOne' | 'save' | 'create'>
+  >
   let builderPageRepository: jest.Mocked<Pick<Repository<PageEntity>, 'findOne'>>
   let projectService: jest.Mocked<Pick<AiSeoProjectService, 'ensureForLandingPage'>>
   let trafficService: jest.Mocked<Pick<AiSeoTrafficService, 'buildScriptTag' | 'provisionForProject'>>
   let service: AiSeoPublishService
+  let projectPages: SeoProjectPageEntity[]
 
   beforeEach(() => {
+    projectPages = []
     project = {
       id: projectId,
       tenantId,
       landingPageId: pageId,
+      hostname: 'example.com',
       umamiWebsiteId: 'web-1',
       pixelTagState: 'not_installed',
       trafficScriptState: 'not_installed',
@@ -50,7 +55,26 @@ describe('AiSeoPublishService', () => {
     }
 
     projectPageRepository = {
-      findOne: jest.fn().mockResolvedValue(null),
+      findOne: jest.fn().mockImplementation(async (opts: { where?: Record<string, unknown> }) => {
+        const where = (opts?.where ?? {}) as {
+          tenantId?: number
+          seoProjectId?: string
+          websitePageId?: string
+        }
+        return (
+          projectPages.find(
+            (p) =>
+              p.tenantId === where.tenantId
+              && p.seoProjectId === where.seoProjectId
+              && p.websitePageId === where.websitePageId,
+          ) ?? null
+        )
+      }),
+      create: jest.fn().mockImplementation((data) => data),
+      save: jest.fn().mockImplementation(async (entity) => {
+        projectPages.push(entity as SeoProjectPageEntity)
+        return entity
+      }),
     }
 
     builderPageRepository = {
@@ -128,12 +152,33 @@ describe('AiSeoPublishService', () => {
     expect(result.seoProjectId).toBeNull()
   })
 
-  it('afterPublish ensures project and provisions umami soft', async () => {
+  it('afterPublish ensures project, auto-links page, and provisions umami soft', async () => {
     const result = await service.afterPublish(pageId)
     expect(result.seoSyncStatus).toBe('ok')
     expect(result.seoProjectId).toBe(projectId)
-    expect(projectService.ensureForLandingPage).toHaveBeenCalledWith(pageId, undefined)
+    expect(result.linked).toBe(true)
+    expect(projectService.ensureForLandingPage).toHaveBeenCalledWith(
+      pageId,
+      expect.objectContaining({ storeId: undefined }),
+    )
     expect(trafficService.provisionForProject).toHaveBeenCalledWith(projectId)
+    expect(projectPageRepository.save).toHaveBeenCalled()
+    expect(projectPages[0]?.tenantId).toBe(tenantId)
+    expect(projectPages[0]?.websitePageId).toBe(pageId)
+  })
+
+  it('afterPublish auto-link is idempotent (second call linked=false)', async () => {
+    await service.afterPublish(pageId)
+    const second = await service.afterPublish(pageId)
+    expect(second.linked).toBe(false)
+    expect(projectPages).toHaveLength(1)
+  })
+
+  it('autoLink isolation: refuses project id from another tenant', async () => {
+    projectRepository.findOne.mockResolvedValue(null)
+    const linked = await service.autoLinkLandingPage('foreign-project', pageId)
+    expect(linked).toBe(false)
+    expect(projectPageRepository.save).not.toHaveBeenCalled()
   })
 
   it('afterPublish soft-fails without throwing', async () => {
@@ -141,5 +186,6 @@ describe('AiSeoPublishService', () => {
     const result = await service.afterPublish(pageId)
     expect(result.seoSyncStatus).toBe('failed')
     expect(result.seoProjectId).toBeNull()
+    expect(result.linked).toBe(false)
   })
 })

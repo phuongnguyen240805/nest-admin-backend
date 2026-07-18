@@ -57,3 +57,45 @@ export interface SeoTaskDto {
   createdAt: string
   updatedAt: string
 }
+
+/** Umami traffic envelope from Nest AI-SEO adapter (fail-soft). */
+export type SeoTrafficStatus = 'ok' | 'degraded' | 'not_configured' | 'disabled'
+
+export type SeoTrafficRange = '7d' | '30d'
+
+export type SeoTrafficMetricType = 'referrer' | 'url' | 'device' | 'country' | 'event'
+
+export interface SeoTrafficStatsDto {
+  pageviews: number
+  visitors: number
+  visits: number
+  bounces: number
+  totaltime: number
+}
+
+export interface SeoTrafficEnvelopeDto<T = SeoTrafficStatsDto | null> {
+  status: SeoTrafficStatus
+  stale: boolean
+  syncedAt: string | null
+  range: { start: string; end: string } | null
+  data: T
+  message?: string
+}
+
+export interface SeoTrafficMetricRowDto {
+  x: string
+  y: number
+}
+
+export interface SeoTrafficHealthDto {
+  ok: boolean
+  circuit?: string
+  enabled?: boolean
+  latencyMs?: number
+}
+
+export interface SeoTrafficProvisionDto {
+  status: SeoTrafficStatus | 'degraded' | 'ok'
+  umamiWebsiteId: string | null
+  message?: string
+}
