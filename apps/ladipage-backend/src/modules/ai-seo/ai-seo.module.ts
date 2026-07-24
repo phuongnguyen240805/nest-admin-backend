@@ -1,14 +1,16 @@
 import { Module, forwardRef } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
 
-import { TenantModule } from '@liora/nest-core'
+import { BullMqModule, TenantModule } from '@liora/nest-core'
 
+import { isBullMqEnabled } from '../../config/bullmq.app.config'
 import { PageEntity } from '../publish/entities'
 import { PublishModule } from '../publish/publish.module'
 import { AiSeoAgentsController } from './controllers/ai-seo-agents.controller'
 import { AiSeoIntegrationsController } from './controllers/ai-seo-integrations.controller'
 import { AiSeoJobsController } from './controllers/ai-seo-jobs.controller'
 import { AiSeoKeywordsController } from './controllers/ai-seo-keywords.controller'
+import { AiSeoLabScansController } from './controllers/ai-seo-lab-scans.controller'
 import { AiSeoProjectsController } from './controllers/ai-seo-projects.controller'
 import { AiSeoTasksController } from './controllers/ai-seo-tasks.controller'
 import { AiSeoTrafficController } from './controllers/ai-seo-traffic.controller'
@@ -20,6 +22,7 @@ import {
   SeoProjectPageEntity,
   SeoTaskEntity,
 } from './entities'
+import { AI_SEO_QUEUES } from './queues/constants'
 import { AiSeoCacheService } from './services/ai-seo-cache.service'
 import { AiSeoIntegrationService } from './services/ai-seo-integration.service'
 import { AiSeoJobsService } from './services/ai-seo-jobs.service'
@@ -31,8 +34,23 @@ import { AiSeoQuotaService } from './services/ai-seo-quota.service'
 import { AiSeoTaskService } from './services/ai-seo-task.service'
 import { AiSeoTrafficService } from './services/ai-seo-traffic.service'
 import { AiSeoWebsiteService } from './services/ai-seo-website.service'
+import { LabScanService } from './services/lab-scan.service'
 import { OpenSeoClientService } from './services/openseo-client.service'
 import { UmamiClientService } from './services/umami-client.service'
+import { UnlighthouseRunner } from './services/unlighthouse.runner'
+
+const lighthouseQueueImports = isBullMqEnabled()
+  ? [
+      BullMqModule.registerQueue({
+        name: AI_SEO_QUEUES.LIGHTHOUSE,
+        defaultJobOptions: {
+          priority: 10,
+          attempts: 2,
+          backoff: { type: 'exponential', delay: 10_000 },
+        },
+      }),
+    ]
+  : []
 
 @Module({
   imports: [
@@ -46,6 +64,7 @@ import { UmamiClientService } from './services/umami-client.service'
       SeoIntegrationEntity,
       PageEntity,
     ]),
+    ...lighthouseQueueImports,
   ],
   controllers: [
     AiSeoProjectsController,
@@ -56,6 +75,7 @@ import { UmamiClientService } from './services/umami-client.service'
     AiSeoAgentsController,
     AiSeoWebsiteProjectsController,
     AiSeoTrafficController,
+    AiSeoLabScansController,
   ],
   providers: [
     AiSeoProjectService,
@@ -71,6 +91,8 @@ import { UmamiClientService } from './services/umami-client.service'
     UmamiClientService,
     AiSeoCacheService,
     AiSeoQuotaService,
+    UnlighthouseRunner,
+    LabScanService,
   ],
   exports: [
     AiSeoProjectService,
@@ -78,6 +100,7 @@ import { UmamiClientService } from './services/umami-client.service'
     OpenSeoClientService,
     AiSeoTrafficService,
     UmamiClientService,
+    LabScanService,
   ],
 })
 export class AiSeoModule {}

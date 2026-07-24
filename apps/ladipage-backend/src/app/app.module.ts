@@ -73,6 +73,7 @@ import { LandingAiWorkerModule } from '../modules/landing-ai/landing-ai-worker.m
 import { LandingCmsModule } from '../modules/landing-cms/landing-cms.module';
 import { LandingCmsConfig } from '../modules/landing-cms/landing-cms.config';
 import { McpLandingModule } from '../modules/mcp-landing/mcp-landing.module';
+import { CommerceModule } from '../modules/commerce/commerce.module';
 
 const bullMqImports = isBullMqEnabled()
   ? [
@@ -128,6 +129,7 @@ const bullMqImports = isBullMqEnabled()
     WebsiteModule,
     CrmModule,
     EcomStoreModule,
+    CommerceModule,
     DomainModule,
     PublishModule,
     LandingCmsModule,

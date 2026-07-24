@@ -72,7 +72,7 @@ export class OpenSeoClientService {
 
   /**
    * Resolve / bind an OpenSEO project id for a Liora SEO project.
-   * Real MCP has no create_project — match by domain, else first org project.
+   * Prefer domain match. Default/fallback only when OPENSEO_ALLOW_DEFAULT_FALLBACK=true.
    */
   async createProject(input: { name: string; domain?: string }): Promise<OpenSeoProject> {
     // Future-proof: try create_project if a newer OpenSEO image adds it.
@@ -80,7 +80,13 @@ export class OpenSeoClientService {
       const created = await this.callMcpTool<OpenSeoProject>('create_project', input)
       const id = this.extractProjectId(created)
       if (id) {
-        return { ...created, id, name: created.name ?? input.name, domain: created.domain ?? input.domain ?? null }
+        return {
+          ...created,
+          id,
+          name: created.name ?? input.name,
+          domain: created.domain ?? input.domain ?? null,
+          binding: 'created',
+        }
       }
     } catch {
       // Expected on MCP v0.0.x — fall through to list_projects binding.
@@ -100,7 +106,33 @@ export class OpenSeoClientService {
       ? projects.find((p) => this.normalizeDomain(String(p.domain ?? '')) === domain)
       : undefined
 
-    const matched = byDomain ?? projects.find((p) => /default/i.test(String(p.name ?? ''))) ?? projects[0]
+    if (byDomain) {
+      const id = this.extractProjectId(byDomain)
+      if (!id) throw new BadGatewayException('OpenSEO list_projects returned a project without id')
+      return {
+        ...byDomain,
+        id,
+        name: byDomain.name ?? input.name,
+        domain: byDomain.domain ?? input.domain ?? null,
+        binding: 'matched',
+      }
+    }
+
+    const allowFallback =
+      this.configService.get<string>('OPENSEO_ALLOW_DEFAULT_FALLBACK') === 'true' ||
+      this.configService.get<string>('OPENSEO_ALLOW_DEFAULT_FALLBACK') === '1'
+
+    if (!allowFallback) {
+      throw new ServiceUnavailableException({
+        message:
+          `No OpenSEO project matched domain "${domain || input.name}". ` +
+          'Create a project for this domain in OpenSEO UI, or set OPENSEO_ALLOW_DEFAULT_FALLBACK=true for dev.',
+        retryAfter: 30,
+      })
+    }
+
+    const matched =
+      projects.find((p) => /default/i.test(String(p.name ?? ''))) ?? projects[0]
     const id = this.extractProjectId(matched)
     if (!id) {
       throw new BadGatewayException('OpenSEO list_projects returned a project without id')
@@ -111,6 +143,7 @@ export class OpenSeoClientService {
       id,
       name: matched.name ?? input.name,
       domain: matched.domain ?? input.domain ?? null,
+      binding: 'fallback',
     }
   }
 
@@ -203,6 +236,35 @@ export class OpenSeoClientService {
       domain: input.domain,
       includeSubdomains: input.includeSubdomains ?? false,
     })
+  }
+
+  /** Soft enrichment — never throws (returns null). */
+  async getBacklinksOverviewSafe(
+    projectId: string,
+    domain: string,
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      return await this.callMcpTool<Record<string, unknown>>('get_backlinks_overview', {
+        projectId,
+        domain,
+      })
+    } catch {
+      return null
+    }
+  }
+
+  async getDomainKeywordSuggestionsSafe(
+    projectId: string,
+    domain: string,
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      return await this.callMcpTool<Record<string, unknown>>('get_domain_keyword_suggestions', {
+        projectId,
+        domain,
+      })
+    } catch {
+      return null
+    }
   }
 
   researchKeywords(input: KeywordResearchDto): Promise<Record<string, unknown>> {

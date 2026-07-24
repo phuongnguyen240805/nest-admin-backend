@@ -19,11 +19,47 @@ export type AiSeoProjectPageDto = {
   technicalScore: number
   uxScore: number
   authorityScore: number
+  /** Lab (Unlighthouse) compact scores when available */
+  lighthouse?: {
+    performance: number | null
+    accessibility: number | null
+    bestPractices: number | null
+    seo: number | null
+    lcpMs: number | null
+    cls: number | null
+    mock?: boolean
+    fetchedAt?: string
+    phase?: string
+  } | null
 }
 
 function score(value: unknown): number {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? Math.round(parsed) : 0
+}
+
+function mapLighthouse(pageScores: Record<string, unknown>) {
+  const lh = pageScores.lighthouse as
+    | {
+        scores?: Record<string, number | null>
+        metrics?: Record<string, { numericValue?: number | null }>
+        mock?: boolean
+        fetchedAt?: string
+        phase?: string
+      }
+    | undefined
+  if (!lh?.scores) return null
+  return {
+    performance: lh.scores.performance ?? null,
+    accessibility: lh.scores.accessibility ?? null,
+    bestPractices: lh.scores['best-practices'] ?? null,
+    seo: lh.scores.seo ?? null,
+    lcpMs: lh.metrics?.largestContentfulPaint?.numericValue ?? null,
+    cls: lh.metrics?.cumulativeLayoutShift?.numericValue ?? null,
+    mock: lh.mock,
+    fetchedAt: lh.fetchedAt,
+    phase: lh.phase,
+  }
 }
 
 export function mapSeoProjectPageToDto(
@@ -53,6 +89,7 @@ export function mapSeoProjectPageToDto(
     technicalScore: score(pageScores.technicalScore ?? holistic.technicalsScore),
     uxScore: score(pageScores.uxScore ?? holistic.uxScore),
     authorityScore: score(pageScores.authorityScore ?? holistic.authorityScore),
+    lighthouse: mapLighthouse(pageScores),
   }
 }
 
@@ -69,6 +106,7 @@ export function mapLandingPageScores(page: SeoProjectPageEntity, project: SeoPro
     technical_score: score(pageScores.technicalScore ?? holistic.technicalsScore),
     ux_score: score(pageScores.uxScore ?? holistic.uxScore),
     authority_score: score(pageScores.authorityScore ?? holistic.authorityScore),
+    lighthouse: mapLighthouse(pageScores),
     updated_at: page.updatedAt.toISOString(),
   }
 }

@@ -64,13 +64,24 @@ export class AiSeoTaskService extends TenantScopedService {
 
   async deploy(id: string, dto: SeoTaskActionDto) {
     const task = await this.findTaskOrFail(id)
-    task.status = 'deployed'
-    task.result = {
+    const deployPayload = (dto.payload ?? {}) as Record<string, unknown>
+    const taskPayload = (task.payload ?? {}) as Record<string, unknown>
+    // Explicit Record so meta fields are assignable under strict TS (docker build)
+    const mergedResult: Record<string, unknown> = {
       ...(task.result ?? {}),
-      ...(dto.payload ?? {}),
+      ...deployPayload,
       reason: dto.reason ?? (task.result ?? {}).reason,
       deployedAt: new Date().toISOString(),
     }
+    if (deployPayload.metaTitle != null) mergedResult.metaTitle = deployPayload.metaTitle
+    if (deployPayload.metaDescription != null) {
+      mergedResult.metaDescription = deployPayload.metaDescription
+    }
+    if (mergedResult.metaTitle == null && taskPayload.suggested != null) {
+      mergedResult.metaTitle = taskPayload.suggested
+    }
+    task.status = 'deployed'
+    task.result = mergedResult
 
     const saved = await this.taskRepository.save(task)
     await this.applyDeploySuggestions(task.project, saved)
@@ -93,26 +104,40 @@ export class AiSeoTaskService extends TenantScopedService {
   }
 
   private async applyDeploySuggestions(project: SeoProjectEntity, task: SeoTaskEntity) {
-    const suggestion = task.result ?? {}
-    const metaTitle = suggestion.metaTitle ?? suggestion.title
-    const metaDescription = suggestion.metaDescription ?? suggestion.description
+    const suggestion = (task.result ?? {}) as Record<string, unknown>
+    const payload = (task.payload ?? {}) as Record<string, unknown>
+    const metaTitle = (suggestion.metaTitle ?? suggestion.title ?? null) as string | null
+    const metaDescription = (suggestion.metaDescription ??
+      suggestion.description ??
+      null) as string | null
+    const deployedAt = suggestion.deployedAt ?? null
 
     project.siteAudit = {
       ...(project.siteAudit ?? {}),
       deployedSuggestions: {
         taskId: task.id,
-        metaTitle: metaTitle ?? null,
-        metaDescription: metaDescription ?? null,
-        deployedAt: task.result.deployedAt,
+        metaTitle,
+        metaDescription,
+        deployedAt,
+        websitePageId: payload.websitePageId ?? project.landingPageId ?? null,
+      },
+      publishedMeta: {
+        title: metaTitle,
+        description: metaDescription,
+        updatedAt: deployedAt,
       },
     }
     await this.projectRepository.save(project)
 
-    if (project.landingPageId) {
+    const websitePageId =
+      (typeof payload.websitePageId === 'string' ? payload.websitePageId : null) ||
+      project.landingPageId
+
+    if (websitePageId) {
       const linkedPage = await this.projectPageRepository.findOne({
         where: {
           seoProjectId: project.id,
-          websitePageId: project.landingPageId,
+          websitePageId,
           tenantId: project.tenantId,
         },
       })
@@ -120,8 +145,12 @@ export class AiSeoTaskService extends TenantScopedService {
         linkedPage.scores = {
           ...(linkedPage.scores ?? {}),
           lastDeployedTaskId: task.id,
-          metaTitle: metaTitle ?? null,
-          metaDescription: metaDescription ?? null,
+          metaTitle,
+          metaDescription,
+          publishedMeta: {
+            title: metaTitle,
+            description: metaDescription,
+          },
         }
         await this.projectPageRepository.save(linkedPage)
       }

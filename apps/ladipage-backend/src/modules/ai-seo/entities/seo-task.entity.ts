@@ -11,7 +11,7 @@ import {
 
 import { SeoProjectEntity } from './seo-project.entity'
 
-export type SeoTaskType = 'AUDIT' | 'KEYWORD' | 'DEPLOY'
+export type SeoTaskType = 'AUDIT' | 'KEYWORD' | 'DEPLOY' | 'ON_PAGE' | 'CONTENT' | 'TECHNICAL'
 export type SeoTaskStatus = 'pending' | 'approved' | 'rejected' | 'deployed'
 
 @Entity('lp_seo_task')

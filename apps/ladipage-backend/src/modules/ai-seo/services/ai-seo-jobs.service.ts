@@ -75,6 +75,20 @@ export class AiSeoJobsService extends TenantScopedService {
       }
     }
 
+    // Unlighthouse lab jobs (BullMQ / inline) — never call OpenSEO for these ids.
+    if (jobId.startsWith('lab-')) {
+      const done = task.status === 'approved' || task.status === 'deployed'
+      const failed = task.status === 'rejected'
+      return {
+        jobId,
+        taskId: task.id,
+        projectId: project.id,
+        status: done ? 'success' : failed ? 'failed' : 'queued',
+        progress: done || failed ? 100 : 20,
+        result: task.result ?? {},
+      }
+    }
+
     try {
       const status = await this.openSeoClient.getAuditStatus(jobId)
       if (this.isComplete(status.status) && project.openseoProjectId) {

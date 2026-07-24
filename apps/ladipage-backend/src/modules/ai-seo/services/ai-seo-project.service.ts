@@ -1,4 +1,11 @@
-import { Injectable, Logger, NotFoundException, Optional, ServiceUnavailableException } from '@nestjs/common'
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { TenantContextService } from '@liora/nest-core'
 import { Repository } from 'typeorm'
@@ -9,11 +16,14 @@ import { CreateSeoProjectDto } from '../dto/create-seo-project.dto'
 import { ListSeoProjectsQueryDto } from '../dto/list-seo-projects-query.dto'
 import { ScanDepth, ScanProjectDto } from '../dto/scan-project.dto'
 import { UpdateSeoProjectDto } from '../dto/update-seo-project.dto'
-import { SeoProjectEntity, SeoTaskEntity } from '../entities'
+import { SeoProjectEntity, SeoProjectPageEntity, SeoTaskEntity } from '../entities'
+import type { SeoTaskType } from '../entities/seo-task.entity'
 import { mapSeoProjectToDto } from '../mappers/seo-project.mapper'
+import { auditHtml, scoresFromPageIssues, type PageAuditIssue } from '../utils/page-audit.util'
+import { extractHostname, resolveSeoHostname } from '../utils/domain.util'
+import { resolveScanStartUrl, scanBlockedMessage } from '../utils/scan-url.util'
 import { AiSeoQuotaService } from './ai-seo-quota.service'
 import { AiSeoTrafficService } from './ai-seo-traffic.service'
-import { extractHostname, resolveSeoHostname } from '../utils/domain.util'
 import { OpenSeoClientService } from './openseo-client.service'
 
 export type EnsureLandingPageOptions = {
@@ -35,6 +45,8 @@ export class AiSeoProjectService extends TenantScopedService {
     private readonly projectRepository: Repository<SeoProjectEntity>,
     @InjectRepository(SeoTaskEntity)
     private readonly taskRepository: Repository<SeoTaskEntity>,
+    @InjectRepository(SeoProjectPageEntity)
+    private readonly projectPageRepository: Repository<SeoProjectPageEntity>,
     @Optional()
     @InjectRepository(PageEntity)
     private readonly pageRepository: Repository<PageEntity> | undefined,
@@ -198,91 +210,182 @@ export class AiSeoProjectService extends TenantScopedService {
     let project = await this.findProjectOrFail(id)
     this.quotaService.assertAvailable(tenantId)
 
-    // Self-heal: OpenSEO may have been down at create time
-    project = await this.ensureOpenSeoLinked(project)
+    const linkedPages = await this.projectPageRepository.find({
+      where: { seoProjectId: project.id, tenantId },
+      order: { updatedAt: 'DESC' },
+    })
+    const pageUrlCandidates = linkedPages.map((p) => p.pageUrl)
+    if (project.landingPageId) {
+      const builder = await this.findPage(project.landingPageId)
+      if (builder) {
+        pageUrlCandidates.unshift(builder.pageUrl, builder.url, builder.domain, builder.alias)
+      }
+    }
 
-    if (!project.openseoProjectId) {
-      throw new ServiceUnavailableException({
-        message:
-          'OpenSEO project is not ready. Check OPENSEO_MCP_URL / OpenSEO service, then retry scan.',
-        retryAfter: 30,
-      })
+    const resolved = resolveScanStartUrl([
+      ...pageUrlCandidates,
+      project.hostname,
+      this.toStartUrl(project.hostname),
+    ])
+
+    if (!resolved.startUrl || (!resolved.canDomainOverview && !resolved.canPageAudit)) {
+      throw new BadRequestException(scanBlockedMessage(resolved.host || project.hostname))
     }
 
     const depth = dto.depth ?? ScanDepth.QUICK
-    const startUrl = this.toStartUrl(project.hostname)
-    let audit: { auditId: string }
-    try {
-      audit = await this.openSeoClient.startAudit({
-        projectId: project.openseoProjectId,
-        startUrl,
-        maxPages: depth === ScanDepth.FULL ? 50 : 10,
-        lighthouseStrategy: 'auto',
-      })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      // Local / non-public hostnames (localhost, *.landing.local) are rejected by OpenSEO (tldts).
-      // Keep message actionable; do not rephrase OpenSEO validation away.
-      throw new ServiceUnavailableException({
-        message: message.startsWith('OpenSEO') ? message : `OpenSEO scan failed: ${message}`,
-        retryAfter: 30,
-      })
+    const startUrl = resolved.startUrl
+    const modes: string[] = []
+    let auditId = `hybrid-${Date.now()}`
+    let domainResult: Record<string, unknown> = {}
+    let pageIssues: PageAuditIssue[] = []
+    let holistic = {
+      technicalsScore: 0,
+      uxScore: 0,
+      authorityScore: 0,
+      contentScore: 0,
     }
 
-    // Domain-overview fallback completes immediately; real start_audit stays pending.
-    // SeoTaskStatus uses approved (not "done") for completed audit work items.
-    let immediateResult: Record<string, unknown> = {}
-    let taskStatus: 'pending' | 'approved' = 'pending'
-    let projectTaskStatus: 'running' | 'done' = 'running'
-    let responseStatus: 'running' | 'success' = 'running'
-
-    if (audit.auditId.startsWith('domain-overview-')) {
+    // Path A — domain overview (public registrable only)
+    if (resolved.canDomainOverview) {
+      project = await this.ensureOpenSeoLinked(project)
+      if (!project.openseoProjectId) {
+        throw new ServiceUnavailableException({
+          message:
+            'OpenSEO project is not ready. Check OPENSEO_MCP_URL / OpenSEO service, then retry scan.',
+          retryAfter: 30,
+        })
+      }
       try {
-        immediateResult = await this.openSeoClient.getAuditResults(
-          project.openseoProjectId,
-          audit.auditId,
-        )
-        taskStatus = 'approved'
-        projectTaskStatus = 'done'
-        responseStatus = 'success'
-
-        const scores = (immediateResult.scores ?? {}) as Record<string, unknown>
-        project.holisticScores = {
-          ...(project.holisticScores ?? {}),
-          technicalsScore: Number(scores.technicalsScore ?? 0) || 0,
-          uxScore: Number(scores.uxScore ?? 0) || 0,
-          authorityScore: Number(scores.authorityScore ?? 0) || 0,
-          contentScore: Number(scores.contentScore ?? 0) || 0,
+        const audit = await this.openSeoClient.startAudit({
+          projectId: project.openseoProjectId,
+          startUrl,
+          maxPages: depth === ScanDepth.FULL ? 50 : 10,
+          lighthouseStrategy: 'auto',
+        })
+        auditId = audit.auditId
+        if (audit.auditId.startsWith('domain-overview-')) {
+          domainResult =
+            (await this.openSeoClient.getAuditResults(project.openseoProjectId, audit.auditId)) ??
+            {}
+          modes.push('domain_overview')
+          const scores = (domainResult.scores ?? {}) as Record<string, unknown>
+          holistic = {
+            technicalsScore: Number(scores.technicalsScore ?? 0) || 0,
+            uxScore: Number(scores.uxScore ?? 0) || 0,
+            authorityScore: Number(scores.authorityScore ?? 0) || 0,
+            contentScore: Number(scores.contentScore ?? 0) || 0,
+          }
+          // Soft enrichment (fail-soft)
+          const [backlinks, kwSuggest] = await Promise.all([
+            this.openSeoClient.getBacklinksOverviewSafe(project.openseoProjectId, resolved.host),
+            this.openSeoClient.getDomainKeywordSuggestionsSafe(
+              project.openseoProjectId,
+              resolved.host,
+            ),
+          ])
+          if (backlinks) domainResult = { ...domainResult, backlinks }
+          if (kwSuggest) domainResult = { ...domainResult, keywordSuggestions: kwSuggest }
+        } else {
+          modes.push('start_audit')
         }
-        project.siteAudit = immediateResult
-        project.lastAnalysisAt = new Date()
-      } catch {
-        // Keep running; jobs poll may still resolve via local cache
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        if (!resolved.canPageAudit) {
+          throw new ServiceUnavailableException({
+            message: message.startsWith('OpenSEO') ? message : `OpenSEO scan failed: ${message}`,
+            retryAfter: 30,
+          })
+        }
+        this.logger.warn(`Path A soft-fail project=${project.id}: ${message}`)
       }
     }
+
+    // Path B-lite — page HTML rules (any crawlable absolute URL)
+    if (resolved.canPageAudit) {
+      try {
+        const html = await this.fetchPageHtml(startUrl)
+        pageIssues = auditHtml(html ?? '', startUrl)
+        const pageScores = scoresFromPageIssues(pageIssues)
+        // Prefer page scores when we audited HTML; blend authority from domain path
+        holistic = {
+          technicalsScore: pageScores.technicalsScore,
+          contentScore: pageScores.contentScore,
+          uxScore: pageScores.uxScore,
+          authorityScore:
+            holistic.authorityScore > 0 ? holistic.authorityScore : pageScores.authorityScore,
+        }
+        modes.push('page_audit')
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        this.logger.warn(`Path B-lite soft-fail project=${project.id}: ${message}`)
+        if (modes.length === 0) {
+          throw new ServiceUnavailableException({
+            message: `Page audit failed: ${message}`,
+            retryAfter: 30,
+          })
+        }
+      }
+    }
+
+    if (modes.length === 0) {
+      throw new BadRequestException(scanBlockedMessage(resolved.host || project.hostname))
+    }
+
+    const immediateResult: Record<string, unknown> = {
+      source: modes.join('+'),
+      startUrl,
+      host: resolved.host,
+      domain: domainResult,
+      pageIssues,
+      scores: holistic,
+      mode: modes.includes('domain_overview') && modes.includes('page_audit')
+        ? 'hybrid'
+        : modes[0],
+    }
+
+    const taskStatus: 'pending' | 'approved' =
+      modes.includes('start_audit') && !modes.includes('domain_overview') ? 'pending' : 'approved'
+    const projectTaskStatus: 'running' | 'done' = taskStatus === 'pending' ? 'running' : 'done'
+    const responseStatus: 'running' | 'success' = taskStatus === 'pending' ? 'running' : 'success'
 
     await this.taskRepository.save(
       this.taskRepository.create({
         seoProjectId: project.id,
-        externalTaskId: audit.auditId,
+        externalTaskId: auditId,
         type: 'AUDIT',
         status: taskStatus,
         payload: {
           depth,
           startUrl,
           openseoProjectId: project.openseoProjectId,
-          source: audit.auditId.startsWith('domain-overview-')
-            ? 'get_domain_overview'
-            : 'start_audit',
+          modes,
         },
         result: immediateResult,
       }),
     )
 
-    project.taskStatus = projectTaskStatus
-    await this.projectRepository.save(project)
+    if (projectTaskStatus === 'done') {
+      project.holisticScores = {
+        ...(project.holisticScores ?? {}),
+        ...holistic,
+      }
+      project.siteAudit = immediateResult
+      project.lastAnalysisAt = new Date()
+      project.taskStatus = 'done'
+      await this.projectRepository.save(project)
+      await this.syncLinkedPagesAfterScan(project, auditId, holistic)
+      await this.upsertIssuesAsTasks(project.id, pageIssues, linkedPages[0]?.websitePageId ?? project.landingPageId)
+    } else {
+      project.taskStatus = 'running'
+      await this.projectRepository.save(project)
+    }
 
-    return { jobId: audit.auditId, status: responseStatus }
+    return {
+      jobId: auditId,
+      status: responseStatus,
+      mode: immediateResult.mode,
+      startUrl,
+    }
   }
 
   async agentStatus(id: string) {
@@ -312,6 +415,7 @@ export class AiSeoProjectService extends TenantScopedService {
 
   async scanLandingPage(projectId: string, pageId: string, dto: ScanProjectDto) {
     await this.landingPageDetail(projectId, pageId)
+    // Same hybrid scan; page list scores sync covers linked rows including pageId.
     return this.scan(projectId, dto)
   }
 
@@ -502,6 +606,112 @@ export class AiSeoProjectService extends TenantScopedService {
 
   private toStartUrl(hostname: string): string {
     return /^https?:\/\//i.test(hostname) ? hostname : `https://${hostname}`
+  }
+
+  private async fetchPageHtml(url: string): Promise<string | null> {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 12_000)
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        redirect: 'follow',
+        signal: controller.signal,
+        headers: {
+          Accept: 'text/html,application/xhtml+xml',
+          'User-Agent': 'Liora-AiSeo-PageAudit/1.0',
+        },
+      })
+      if (!res.ok) return null
+      const text = await res.text()
+      // Cap size for rule engine
+      return text.slice(0, 500_000)
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
+  private async syncLinkedPagesAfterScan(
+    project: SeoProjectEntity,
+    jobId: string,
+    scores: {
+      technicalsScore: number
+      contentScore: number
+      uxScore: number
+      authorityScore: number
+    },
+  ): Promise<void> {
+    const tenantId = this.requireTenantId()
+    const pages = await this.projectPageRepository.find({
+      where: { seoProjectId: project.id, tenantId },
+    })
+    if (pages.length === 0) return
+
+    const grader = Math.round(
+      (scores.technicalsScore + scores.contentScore + scores.uxScore + scores.authorityScore) / 4,
+    )
+    const now = new Date()
+    for (const page of pages) {
+      page.scanStatus = 'completed'
+      page.lastScanJobId = jobId
+      page.lastScannedAt = now
+      page.scores = {
+        ...(page.scores ?? {}),
+        graderScore: grader,
+        contentScore: scores.contentScore,
+        technicalScore: scores.technicalsScore,
+        uxScore: scores.uxScore,
+        authorityScore: scores.authorityScore,
+      }
+    }
+    await this.projectPageRepository.save(pages)
+  }
+
+  /** Dedup issue tasks by code within recent window; create ON_PAGE/CONTENT/TECHNICAL rows. */
+  private async upsertIssuesAsTasks(
+    projectId: string,
+    issues: PageAuditIssue[],
+    websitePageId: string | null | undefined,
+  ): Promise<void> {
+    if (!issues.length) return
+
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    const existing = await this.taskRepository
+      .createQueryBuilder('task')
+      .where('task.seoProjectId = :projectId', { projectId })
+      .andWhere('task.type IN (:...types)', { types: ['ON_PAGE', 'CONTENT', 'TECHNICAL'] })
+      .andWhere('task.createdAt >= :since', { since })
+      .getMany()
+
+    const existingCodes = new Set(
+      existing.map((t) => String((t.payload ?? {}).code ?? '')).filter(Boolean),
+    )
+
+    const toCreate = issues.filter((i) => !existingCodes.has(i.code))
+    if (!toCreate.length) return
+
+    await this.taskRepository.save(
+      toCreate.map((issue) =>
+        this.taskRepository.create({
+          seoProjectId: projectId,
+          externalTaskId: null,
+          type: issue.type as SeoTaskType,
+          status: 'pending',
+          payload: {
+            code: issue.code,
+            severity: issue.severity,
+            message: issue.message,
+            current: issue.current,
+            suggested: issue.suggested,
+            websitePageId: websitePageId ?? null,
+          },
+          result: {
+            metaTitle: issue.metaTitle ?? null,
+            metaDescription: issue.metaDescription ?? null,
+            feStatus: 'todo',
+          },
+        }),
+      ),
+    )
   }
 
   private positiveNumber(value: unknown, fallback: number): number {

@@ -15,6 +15,7 @@ import {
 } from '../mappers/seo-project-page.mapper'
 import { AiSeoProjectService } from './ai-seo-project.service'
 import { AiSeoTaskService } from './ai-seo-task.service'
+import { LabScanService } from './lab-scan.service'
 
 @Injectable()
 export class AiSeoLandingPageService extends TenantScopedService {
@@ -29,6 +30,7 @@ export class AiSeoLandingPageService extends TenantScopedService {
     private readonly builderPageRepository: Repository<PageEntity> | undefined,
     private readonly projectService: AiSeoProjectService,
     private readonly taskService: AiSeoTaskService,
+    private readonly labScanService: LabScanService,
   ) {
     super(tenantContext)
   }
@@ -123,12 +125,37 @@ export class AiSeoLandingPageService extends TenantScopedService {
     page.scanStatus = 'scanning'
     await this.pageRepository.save(page)
 
-    const result = await this.projectService.scan(projectId, dto)
-    page.lastScanJobId = result.jobId
-    page.scanStatus = 'scanning'
-    await this.pageRepository.save(page)
-
-    return { jobId: result.jobId, status: 'running' }
+    // Path C: Unlighthouse lab (tenant-scoped). OpenSEO hybrid remains on project scan.
+    try {
+      const lab = await this.labScanService.startLabScan({
+        trigger: 'list',
+        depth: dto.depth === 'full' ? 'full' : 'quick',
+        seoProjectId: projectId,
+        seoProjectPageId: page.id,
+        websitePageId: page.websitePageId ?? undefined,
+        targetUrl: page.pageUrl || undefined,
+        allowLocal: true,
+      })
+      page.lastScanJobId = lab.jobId
+      page.scanStatus =
+        lab.status === 'success'
+          ? 'completed'
+          : lab.status === 'failed'
+            ? 'failed'
+            : 'scanning'
+      if (lab.status === 'success') {
+        page.lastScannedAt = new Date()
+      }
+      await this.pageRepository.save(page)
+      return { jobId: lab.jobId, status: lab.status, mode: 'unlighthouse', targetUrl: lab.targetUrl }
+    } catch {
+      // Soft-fallback: existing hybrid project scan (domain + HTML)
+      const result = await this.projectService.scan(projectId, dto)
+      page.lastScanJobId = result.jobId
+      page.scanStatus = 'scanning'
+      await this.pageRepository.save(page)
+      return { jobId: result.jobId, status: 'running', mode: result.mode ?? 'hybrid' }
+    }
   }
 
   async scores(projectId: string, pageId: string) {

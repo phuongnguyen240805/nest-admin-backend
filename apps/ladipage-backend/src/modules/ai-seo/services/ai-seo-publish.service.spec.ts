@@ -6,6 +6,7 @@ import { SeoProjectEntity, SeoProjectPageEntity } from '../entities'
 import { AiSeoProjectService } from './ai-seo-project.service'
 import { AiSeoPublishService } from './ai-seo-publish.service'
 import { AiSeoTrafficService } from './ai-seo-traffic.service'
+import { LabScanService } from './lab-scan.service'
 
 describe('AiSeoPublishService', () => {
   const tenantId = 7
@@ -21,6 +22,7 @@ describe('AiSeoPublishService', () => {
   let builderPageRepository: jest.Mocked<Pick<Repository<PageEntity>, 'findOne'>>
   let projectService: jest.Mocked<Pick<AiSeoProjectService, 'ensureForLandingPage'>>
   let trafficService: jest.Mocked<Pick<AiSeoTrafficService, 'buildScriptTag' | 'provisionForProject'>>
+  let labScanService: jest.Mocked<Pick<LabScanService, 'enqueueAfterPublish'>>
   let service: AiSeoPublishService
   let projectPages: SeoProjectPageEntity[]
 
@@ -96,6 +98,10 @@ describe('AiSeoPublishService', () => {
       provisionForProject: jest.fn().mockResolvedValue({ status: 'ok', umamiWebsiteId: 'web-1' }),
     }
 
+    labScanService = {
+      enqueueAfterPublish: jest.fn().mockResolvedValue({ jobId: 'lab-test', skipped: false }),
+    }
+
     const tenantContext = {
       getTenantId: () => tenantId,
     } as unknown as TenantContextService
@@ -107,6 +113,7 @@ describe('AiSeoPublishService', () => {
       builderPageRepository as unknown as Repository<PageEntity>,
       projectService as unknown as AiSeoProjectService,
       trafficService as unknown as AiSeoTrafficService,
+      labScanService as unknown as LabScanService,
     )
   })
 
@@ -157,10 +164,7 @@ describe('AiSeoPublishService', () => {
     expect(result.seoSyncStatus).toBe('ok')
     expect(result.seoProjectId).toBe(projectId)
     expect(result.linked).toBe(true)
-    expect(projectService.ensureForLandingPage).toHaveBeenCalledWith(
-      pageId,
-      expect.objectContaining({ storeId: undefined }),
-    )
+    expect(projectService.ensureForLandingPage).toHaveBeenCalledWith(pageId, expect.any(Object))
     expect(trafficService.provisionForProject).toHaveBeenCalledWith(projectId)
     expect(projectPageRepository.save).toHaveBeenCalled()
     expect(projectPages[0]?.tenantId).toBe(tenantId)

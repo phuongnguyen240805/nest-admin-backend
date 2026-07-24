@@ -289,6 +289,19 @@ services:
       # Instatic on host — 127.0.0.1 inside this container is NOT the host
       INSTATIC_BASE_URL: ${INSTATIC_BASE_URL:-http://host.docker.internal:8787}
       INSTATIC_MOCK: ${INSTATIC_MOCK:-false}
+      # Unlighthouse 0.18 needs Node 22+ (image) + Chromium in container
+      RUNNING_IN_DOCKER: "true"
+      UNLIGHTHOUSE_MODE: ${UNLIGHTHOUSE_MODE:-cli}
+      UNLIGHTHOUSE_INLINE: ${UNLIGHTHOUSE_INLINE:-true}
+      UNLIGHTHOUSE_ALLOW_LOCAL: "true"
+      UNLIGHTHOUSE_FALLBACK_MOCK: ${UNLIGHTHOUSE_FALLBACK_MOCK:-false}
+      UNLIGHTHOUSE_HOST_BRIDGE: host.docker.internal
+      UNLIGHTHOUSE_DEBUG_KEEP_REPORT: ${UNLIGHTHOUSE_DEBUG_KEEP_REPORT:-false}
+      # Prefer Alpine Chromium inside container (not Windows chrome.exe)
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+      CHROME_PATH: /usr/bin/chromium-browser
+      CHROMIUM_PATH: /usr/bin/chromium-browser
+      PUPPETEER_SKIP_DOWNLOAD: "true"
       # Supabase / anti-spam: lấy từ env_file + mount ../.env (không override rỗng ở đây)
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -360,6 +373,7 @@ services:
       UMAMI_PASSWORD: ${UMAMI_PASSWORD:-umami}
       OPENSEO_BASE_URL: http://openseo:7003
       OPENSEO_MCP_URL: http://openseo:7003/mcp
+      UNLIGHTHOUSE_DEBUG_KEEP_REPORT: ${UNLIGHTHOUSE_DEBUG_KEEP_REPORT:-false}
     command: ["pnpm", "nx", "serve-worker", "ladipage-backend", "--skip-nx-cache"]
     volumes:
       - ../apps:/app/apps

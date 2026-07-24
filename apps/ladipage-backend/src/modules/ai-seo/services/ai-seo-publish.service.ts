@@ -14,6 +14,7 @@ import {
 } from '../hooks/ai-seo-publish.hook'
 import { AiSeoProjectService, type EnsureLandingPageOptions } from './ai-seo-project.service'
 import { AiSeoTrafficService, TrafficStatus } from './ai-seo-traffic.service'
+import { LabScanService } from './lab-scan.service'
 
 export type AfterPublishOptions = EnsureLandingPageOptions
 
@@ -59,6 +60,7 @@ export class AiSeoPublishService extends TenantScopedService {
     private readonly pageRepository: Repository<PageEntity> | undefined,
     private readonly projectService: AiSeoProjectService,
     private readonly trafficService: AiSeoTrafficService,
+    private readonly labScanService: LabScanService,
   ) {
     super(tenantContext)
   }
@@ -198,9 +200,26 @@ export class AiSeoPublishService extends TenantScopedService {
           ? { storeId: storeIdOrOptions }
           : (storeIdOrOptions ?? {})
 
+      const tenantId = this.requireTenantId()
       const dto = await this.projectService.ensureForLandingPage(landingPageId, options)
       const linked = await this.autoLinkLandingPage(dto.id, landingPageId)
       const provision = await this.trafficService.provisionForProject(dto.id)
+
+      // Unlighthouse post-publish lab — never blocks publish (fail-soft)
+      const publicUrl =
+        options.publicUrl?.trim() ||
+        (await this.resolvePublicUrlForLanding(landingPageId))
+      try {
+        await this.labScanService.enqueueAfterPublish({
+          tenantId,
+          seoProjectId: dto.id,
+          websitePageId: landingPageId,
+          publicUrl,
+        })
+      } catch (labError) {
+        const labMessage = labError instanceof Error ? labError.message : String(labError)
+        this.logger.warn(`afterPublish lab soft-fail: ${labMessage}`)
+      }
 
       return {
         seoProjectId: dto.id,
@@ -220,6 +239,16 @@ export class AiSeoPublishService extends TenantScopedService {
         message,
       }
     }
+  }
+
+  private async resolvePublicUrlForLanding(landingPageId: string): Promise<string | null> {
+    if (!this.pageRepository) return null
+    const tenantId = this.requireTenantId()
+    const page = await this.pageRepository.findOne({
+      where: { tenantId, externalId: landingPageId, isDelete: false },
+    })
+    if (!page) return null
+    return page.pageUrl || page.url || null
   }
 
   /**

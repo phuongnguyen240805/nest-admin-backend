@@ -102,6 +102,10 @@ describe('AI-SEO private data isolation', () => {
       provisionForProject: jest.fn().mockResolvedValue({ status: 'ok', umamiWebsiteId: 'w' }),
     }
 
+    const labScanService = {
+      enqueueAfterPublish: jest.fn().mockResolvedValue({ jobId: null, skipped: true }),
+    }
+
     const tenantContext = {
       getTenantId: () => tenantId,
     } as unknown as TenantContextService
@@ -113,6 +117,7 @@ describe('AI-SEO private data isolation', () => {
       builderPageRepository as unknown as Repository<PageEntity>,
       projectService as unknown as AiSeoProjectService,
       trafficService as unknown as AiSeoTrafficService,
+      labScanService as never,
     )
   }
 

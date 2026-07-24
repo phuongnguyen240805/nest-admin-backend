@@ -93,13 +93,13 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "@liora/api-types": "workspace:*",
     "@aws-sdk/client-s3": "^3.1024.0",
     "@aws-sdk/s3-request-presigner": "^3.1024.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/multipart": "^10.0.0",
     "@fastify/static": "^9.1.3",
     "@liaoliaots/nestjs-redis": "^10.0.0",
+    "@liora/api-types": "workspace:*",
     "@nestjs-modules/mailer": "^2.3.4",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/bull": "^11.0.4",
@@ -123,6 +123,7 @@
     "@socket.io/redis-adapter": "^8.3.0",
     "@socket.io/redis-emitter": "^5.1.0",
     "@supabase/supabase-js": "^2.55.0",
+    "@unlighthouse/cli": "^0.18.0",
     "axios": "^1.15.2",
     "bcrypt": "^6.0.0",
     "bull": "^4.16.5",
@@ -149,6 +150,7 @@
     "passport-local": "^1.0.0",
     "pg": "^8.20.0",
     "pluralize": "^8.0.0",
+    "puppeteer": "^25.3.0",
     "qiniu": "^7.15.2",
     "qs": "^6.15.1",
     "redis": "^5.12.1",
@@ -160,8 +162,8 @@
     "systeminformation": "^5.31.6",
     "typeorm": "^0.3.28",
     "ua-parser-js": "^2.0.9",
-    "ws": "^8.18.0",
     "winston": "^3.19.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston-daily-rotate-file": "^5.0.0",
+    "ws": "^8.18.0"
   }
 }

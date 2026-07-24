@@ -6,6 +6,8 @@ describe('OpenSeoClientService', () => {
   const config = {
     get: jest.fn((key: string) => {
       if (key === 'OPENSEO_MCP_URL') return 'http://openseo.test/mcp'
+      // Dev default: allow Default project bind when domain unmatched
+      if (key === 'OPENSEO_ALLOW_DEFAULT_FALLBACK') return 'true'
       return undefined
     }),
   } as unknown as ConfigService
