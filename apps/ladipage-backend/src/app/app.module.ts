@@ -1,6 +1,6 @@
 import { ClassSerializerInterceptor, Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, Reflector } from "@nestjs/core";
 import { ThrottlerGuard } from "@nestjs/throttler";
 import { ClsModule } from "nestjs-cls";
 
@@ -158,7 +158,11 @@ const bullMqImports = isBullMqEnabled()
     { provide: APP_INTERCEPTOR, useClass: ClassSerializerInterceptor },
     { provide: APP_INTERCEPTOR, useExisting: TenantInterceptor },
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
-    { provide: APP_INTERCEPTOR, useFactory: () => new TimeoutInterceptor(15 * 1000) },
+    {
+      provide: APP_INTERCEPTOR,
+      useFactory: (reflector: Reflector) => new TimeoutInterceptor(15 * 1000, reflector),
+      inject: [Reflector],
+    },
     { provide: APP_INTERCEPTOR, useClass: IdempotenceInterceptor },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RbacGuard },

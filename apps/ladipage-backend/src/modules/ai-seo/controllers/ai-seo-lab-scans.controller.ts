@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
 import { ApiSecurity, ApiTags } from '@nestjs/swagger'
 import { SkipThrottle } from '@nestjs/throttler'
 
-import { API_SECURITY_AUTH, TenantGuard } from '@liora/nest-core'
+import { API_SECURITY_AUTH, RequestTimeoutMs, TenantGuard } from '@liora/nest-core'
 
 import { CreateLabScanDto } from '../dto/create-lab-scan.dto'
 import { LabScanService } from '../services/lab-scan.service'
@@ -21,6 +21,7 @@ export class AiSeoLabScansController {
    * SkipThrottle: scan is user-triggered and may poll job status without 429.
    */
   @Post()
+  @RequestTimeoutMs(180_000)
   start(@Body() dto: CreateLabScanDto) {
     return this.labScanService.startLabScan(dto)
   }
