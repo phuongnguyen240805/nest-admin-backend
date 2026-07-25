@@ -625,6 +625,9 @@ export class AiSeoProjectService extends TenantScopedService {
       const text = await res.text()
       // Cap size for rule engine
       return text.slice(0, 500_000)
+    } catch (err) {
+      this.logger.warn(`fetchPageHtml failed for ${url}: ${err instanceof Error ? err.message : String(err)}`)
+      return null
     } finally {
       clearTimeout(timer)
     }
