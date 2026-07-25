@@ -74,12 +74,18 @@ export interface PublishIntentResult {
   artifact: PublishedArtifact
 }
 
+export interface DraftSavedResult {
+  accepted: boolean
+  pageId: string
+}
+
 export const LANDING_PAGE_PORT = Symbol('LANDING_PAGE_PORT')
 
 export interface LandingPagePort {
   openEditorSession(pageId: string, actorUserId: number): Promise<EditorSessionResult>
   materializeFromHtml(input: MaterializeHtmlInput): Promise<MaterializeHtmlResult>
-  getPublishedArtifact(pageId: string): Promise<PublishedArtifact>
+  getPublishedArtifact(pageId: string, actorUserId: number): Promise<PublishedArtifact>
   acceptPublishIntent(input: PublishIntentInput): Promise<PublishIntentResult>
+  acceptDraftSaved(input: PublishIntentInput): Promise<DraftSavedResult>
   runtimeHealth(): Promise<{ ok: boolean; mock: boolean; protocol: string; baseUrl: string }>
 }

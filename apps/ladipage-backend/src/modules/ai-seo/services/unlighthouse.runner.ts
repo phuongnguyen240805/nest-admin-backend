@@ -77,10 +77,6 @@ export class UnlighthouseRunner {
         'UNLIGHTHOUSE_MODE=cli nhưng không tìm thấy unlighthouse-ci trong monorepo/PATH. ' +
           'Cài: pnpm add -w @unlighthouse/cli puppeteer (dùng Chrome máy: PUPPETEER_EXECUTABLE_PATH).',
       )
-      const fallback =
-        this.configService.get<string>('UNLIGHTHOUSE_FALLBACK_MOCK') === 'true' ||
-        this.configService.get<string>('UNLIGHTHOUSE_FALLBACK_MOCK') === '1'
-      return fallback
     }
     return false
   }
@@ -214,21 +210,6 @@ export class UnlighthouseRunner {
       this.logger.warn(
         `Unlighthouse CLI failed job=${payload.jobId} durationMs=${Date.now() - started}: ${message}`,
       )
-      const fallback =
-        this.configService.get<string>('UNLIGHTHOUSE_FALLBACK_MOCK') === 'true' ||
-        this.configService.get<string>('UNLIGHTHOUSE_FALLBACK_MOCK') === '1' ||
-        /enoent|not found|spawn/i.test(message)
-
-      if (fallback) {
-        this.logger.warn(`Lab FALLBACK mock job=${payload.jobId}`)
-        return normalizeUnlighthouseOutput({
-          raw: buildMockUnlighthouseRaw(payload.targetUrl),
-          targetUrl: payload.targetUrl,
-          device: payload.device,
-          mock: true,
-          lighthouseVersion: 'mock-fallback',
-        })
-      }
       throw error
     }
   }

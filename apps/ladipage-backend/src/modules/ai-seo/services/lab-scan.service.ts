@@ -240,7 +240,7 @@ export class LabScanService extends TenantScopedService {
       // Fail-soft: process inline so UX still works
       await this.processPayload({
         ...payload,
-        mock: mock || this.configService.get<string>('UNLIGHTHOUSE_FALLBACK_MOCK') === 'true',
+        mock,
       })
       const done = await this.taskRepository.findOne({
         where: { externalTaskId: jobId, seoProjectId: resolved.seoProjectId },

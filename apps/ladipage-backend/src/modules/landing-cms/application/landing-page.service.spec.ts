@@ -1,4 +1,4 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common'
 
 import { LandingPageService } from './landing-page.service'
 import { PageRegistryStore } from './page-registry.store'
@@ -88,6 +88,33 @@ describe('LandingPageService', () => {
     expect(client.ensurePage).not.toHaveBeenCalled()
   })
 
+  it('imports stored html into Instatic before opening a new editor mapping', async () => {
+    const { service, registry, importService } = createService()
+    jest.spyOn(registry, 'getImportSourceHtml').mockResolvedValue({
+      pageId: 'p1',
+      name: 'Stored',
+      slug: 'stored',
+      html: '<html><body><h1>Stored</h1></body></html>',
+    })
+
+    const session = await service.openEditorSession('p1', 7)
+
+    expect(session.engine).toBe('instatic')
+    expect(importService.materialize).toHaveBeenCalledWith({
+      pageId: 'p1',
+      workspaceKey: 'ws_7',
+      title: 'Stored',
+      html: '<html><body><h1>Stored</h1></body></html>',
+    })
+  })
+
+  it('rejects editor session when another Nest user owns the Instatic mapping', async () => {
+    const { service } = createService()
+    await service.openEditorSession('p1', 7)
+
+    await expect(service.openEditorSession('p1', 8)).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
   it('materializes html into instatic mapping', async () => {
     const { service, importService } = createService()
     const result = await service.materializeFromHtml({
@@ -100,6 +127,20 @@ describe('LandingPageService', () => {
     expect(result.engine).toBe('instatic')
     expect(result.externalSiteId).toBe('site_ws_7')
     expect(importService.materialize).toHaveBeenCalled()
+  })
+
+  it('ignores client supplied workspaceId when materializing html', async () => {
+    const { service, importService } = createService()
+    await service.materializeFromHtml({
+      pageId: 'p1',
+      html: '<h1>Hi</h1>',
+      workspaceId: 'ws_attacker',
+      actorUserId: 7,
+    })
+
+    expect(importService.materialize).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceKey: 'ws_7' }),
+    )
   })
 
   it('rejects empty html on materialize', async () => {
@@ -116,13 +157,14 @@ describe('LandingPageService', () => {
       html: '<h1>Hi</h1>',
       actorUserId: 7,
     })
-    const artifact = await service.getPublishedArtifact('p1')
+    const artifact = await service.getPublishedArtifact('p1', 7)
     expect(artifact.html).toContain('<html')
     expect(artifact.source).toBe('mock')
   })
 
   it('accepts publish intent with inline html', async () => {
-    const { service } = createService()
+    const { service, registry } = createService()
+    const persist = jest.spyOn(registry, 'persistPublishedArtifact')
     const result = await service.acceptPublishIntent({
       pageId: 'p1',
       html: '<html><body>x</body></html>',
@@ -130,6 +172,49 @@ describe('LandingPageService', () => {
     })
     expect(result.accepted).toBe(true)
     expect(result.artifact.meta.title).toBe('SEO')
+    expect(persist).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pageId: 'p1',
+        html: '<html><body>x</body></html>',
+        meta: expect.objectContaining({ title: 'SEO' }),
+      }),
+    )
+  })
+
+  it('accepts draft-saved intent without publishing', async () => {
+    const { service, registry } = createService()
+    const persist = jest.spyOn(registry, 'persistDraftArtifact')
+
+    const result = await service.acceptDraftSaved({
+      pageId: 'p1',
+      html: '<html><body>draft</body></html>',
+      seoTitle: 'Draft SEO',
+    })
+
+    expect(result).toEqual({ accepted: true, pageId: 'p1' })
+    expect(persist).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pageId: 'p1',
+        html: '<html><body>draft</body></html>',
+        meta: expect.objectContaining({ title: 'Draft SEO' }),
+      }),
+    )
+  })
+
+  it('rejects publish intent when externalPageId does not match mapping', async () => {
+    const { service } = createService()
+    await service.materializeFromHtml({
+      pageId: 'p1',
+      html: '<h1>Hi</h1>',
+      actorUserId: 7,
+    })
+
+    await expect(
+      service.acceptPublishIntent({
+        pageId: 'p1',
+        externalPageId: 'page_other',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException)
   })
 
   it('verifies bridge signature', () => {

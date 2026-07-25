@@ -50,4 +50,27 @@ export class InternalPublishController {
     this.landingPageService.verifyBridgeRequest(rawBody, timestamp, signature)
     return this.landingPageService.acceptPublishIntent(dto)
   }
+
+  @Post('draft-saved')
+  @HttpCode(HttpStatus.OK)
+  async draftSaved(
+    @Req() req: FastifyRequest & { rawBody?: string | Buffer },
+    @Body() dto: PublishIntentDto,
+    @Headers('x-lp-timestamp') timestamp: string,
+    @Headers('x-lp-signature') signature: string,
+  ) {
+    if (!timestamp || !signature) {
+      throw new UnauthorizedException('Missing bridge signature headers')
+    }
+
+    const rawBody =
+      typeof req.rawBody === 'string'
+        ? req.rawBody
+        : Buffer.isBuffer(req.rawBody)
+          ? req.rawBody.toString('utf8')
+          : JSON.stringify(dto)
+
+    this.landingPageService.verifyBridgeRequest(rawBody, timestamp, signature)
+    return this.landingPageService.acceptDraftSaved(dto)
+  }
 }

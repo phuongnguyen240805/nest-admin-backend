@@ -69,7 +69,7 @@ export class LandingCmsController {
 
   @Get('pages/:pageId/artifact')
   @ApiOperation({ summary: 'Fetch published HTML artifact from Instatic mapping' })
-  getArtifact(@Param('pageId') pageId: string, @AuthUser('uid') _uid: number) {
-    return this.landingPageService.getPublishedArtifact(pageId)
+  getArtifact(@Param('pageId') pageId: string, @AuthUser('uid') uid: number) {
+    return this.landingPageService.getPublishedArtifact(pageId, uid)
   }
 }
