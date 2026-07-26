@@ -657,12 +657,20 @@ export class AiSeoProjectService extends TenantScopedService {
       page.scanStatus = 'completed'
       page.lastScanJobId = jobId
       page.lastScannedAt = now
+
+      const existingScores = page.scores ?? {}
+      const hasPageLevelScores =
+        existingScores.contentScore !== undefined ||
+        existingScores.technicalScore !== undefined ||
+        existingScores.lighthouse !== undefined
+
       page.scores = {
-        ...(page.scores ?? {}),
-        graderScore: grader,
-        contentScore: scores.contentScore,
-        technicalScore: scores.technicalsScore,
-        uxScore: scores.uxScore,
+        ...existingScores,
+        // Only set domain fallback scores if page doesn't have its own page-level scores
+        graderScore: hasPageLevelScores ? (existingScores.graderScore ?? grader) : grader,
+        contentScore: hasPageLevelScores ? (existingScores.contentScore ?? scores.contentScore) : scores.contentScore,
+        technicalScore: hasPageLevelScores ? (existingScores.technicalScore ?? scores.technicalsScore) : scores.technicalsScore,
+        uxScore: hasPageLevelScores ? (existingScores.uxScore ?? scores.uxScore) : scores.uxScore,
         authorityScore: scores.authorityScore,
       }
     }

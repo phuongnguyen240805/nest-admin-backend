@@ -221,6 +221,12 @@ export class AiSeoPublishService extends TenantScopedService {
         this.logger.warn(`afterPublish lab soft-fail: ${labMessage}`)
       }
 
+      // Auto trigger project scan (Path B-lite HTML audit + tasks generation) in background — fail-soft
+      this.projectService.scan(dto.id, {}).catch((scanErr) => {
+        const scanMessage = scanErr instanceof Error ? scanErr.message : String(scanErr)
+        this.logger.warn(`afterPublish auto scan soft-fail project=${dto.id}: ${scanMessage}`)
+      })
+
       return {
         seoProjectId: dto.id,
         seoSyncStatus: 'ok',

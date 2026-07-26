@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Headers, Param, Post, UseGuards } from '@nestjs/common'
 import { ApiSecurity, ApiTags } from '@nestjs/swagger'
 import { SkipThrottle } from '@nestjs/throttler'
 
@@ -22,8 +22,11 @@ export class AiSeoLabScansController {
    */
   @Post()
   @RequestTimeoutMs(180_000)
-  start(@Body() dto: CreateLabScanDto) {
-    return this.labScanService.startLabScan(dto)
+  start(
+    @Body() dto: CreateLabScanDto,
+    @Headers('authorization') authorization?: string,
+  ) {
+    return this.labScanService.startLabScan(dto, authorization)
   }
 
   @Get(':jobId')

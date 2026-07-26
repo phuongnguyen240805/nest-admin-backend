@@ -215,12 +215,43 @@ export class UnlighthouseRunner {
   }
 
   /**
+   * Normalize a local scan origin (protocol/host/port) to LANDING_ORIGIN_BASE_URL.
+   * A stored pageUrl may carry a stale/wrong port (e.g. :3001) while the real FE
+   * runs on :3000 — that mismatch produces a 404 and blocks the scan.
+   */
+  private normalizeLocalOrigin(u: URL): void {
+    const host = u.hostname.toLowerCase()
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0'
+    if (!isLocal) return
+
+    const base =
+      this.configService.get<string>('LANDING_ORIGIN_BASE_URL')?.trim() ||
+      process.env.LANDING_ORIGIN_BASE_URL?.trim()
+    if (!base) return
+
+    try {
+      const baseUrl = new URL(base.split(',')[0].trim())
+      if (baseUrl.protocol !== u.protocol || baseUrl.host !== u.host) {
+        this.logger.log(
+          `Normalized local scan origin ${u.protocol}//${u.host} → ${baseUrl.protocol}//${baseUrl.host} (LANDING_ORIGIN_BASE_URL)`,
+        )
+        u.protocol = baseUrl.protocol
+        u.hostname = baseUrl.hostname
+        u.port = baseUrl.port
+      }
+    } catch {
+      // invalid base URL — keep original origin
+    }
+  }
+
+  /**
    * Inside Docker, Nest cannot reach host FE via localhost:3000.
    * Rewrite to host.docker.internal (Docker Desktop / compose extra_hosts).
    */
   private rewriteTargetUrlForRuntime(url: string): string {
     try {
       const u = new URL(url)
+      this.normalizeLocalOrigin(u)
       const host = u.hostname.toLowerCase()
       const inDocker =
         existsSync('/.dockerenv') ||
@@ -236,8 +267,8 @@ export class UnlighthouseRunner {
           'host.docker.internal'
         u.hostname = bridge
         this.logger.log(`Rewrote scan URL host localhost → ${bridge} (Docker)`)
-        return u.toString()
       }
+      return u.toString()
     } catch {
       // keep original
     }

@@ -132,8 +132,9 @@ export class AiSeoProjectsController {
     @Param('id') id: string,
     @Param('pageId') pageId: string,
     @Body() dto: ScanProjectDto,
+    @Headers('authorization') authorization?: string,
   ) {
-    return this.landingPageService.scan(id, pageId, dto)
+    return this.landingPageService.scan(id, pageId, dto, authorization)
   }
 
   @Get('projects/:id/landing-pages/:pageId/scores')

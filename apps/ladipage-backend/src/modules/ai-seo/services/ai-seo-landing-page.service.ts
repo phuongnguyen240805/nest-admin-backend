@@ -120,22 +120,30 @@ export class AiSeoLandingPageService extends TenantScopedService {
     return mapSeoProjectPageToDto(page, project, String(project.tenantId))
   }
 
-  async scan(projectId: string, pageId: string, dto: ScanProjectDto) {
+  async scan(
+    projectId: string,
+    pageId: string,
+    dto: ScanProjectDto,
+    authToken?: string | null,
+  ) {
     const page = await this.findPageOrFail(projectId, pageId)
     page.scanStatus = 'scanning'
     await this.pageRepository.save(page)
 
     // Path C: Unlighthouse lab (tenant-scoped). OpenSEO hybrid remains on project scan.
     try {
-      const lab = await this.labScanService.startLabScan({
-        trigger: 'list',
-        depth: dto.depth === 'full' ? 'full' : 'quick',
-        seoProjectId: projectId,
-        seoProjectPageId: page.id,
-        websitePageId: page.websitePageId ?? undefined,
-        targetUrl: page.pageUrl || undefined,
-        allowLocal: true,
-      })
+      const lab = await this.labScanService.startLabScan(
+        {
+          trigger: 'list',
+          depth: dto.depth === 'full' ? 'full' : 'quick',
+          seoProjectId: projectId,
+          seoProjectPageId: page.id,
+          websitePageId: page.websitePageId ?? undefined,
+          targetUrl: page.pageUrl || undefined,
+          allowLocal: true,
+        },
+        authToken,
+      )
       page.lastScanJobId = lab.jobId
       page.scanStatus =
         lab.status === 'success'
@@ -206,6 +214,7 @@ export class AiSeoLandingPageService extends TenantScopedService {
   }
 
   private legacyLinkedPage(project: SeoProjectEntity) {
+    const isScanned = Boolean(project.lastAnalysisAt)
     return {
       id: project.landingPageId!,
       organizationId: String(project.tenantId),
@@ -220,11 +229,11 @@ export class AiSeoLandingPageService extends TenantScopedService {
       lastScannedAt: project.lastAnalysisAt?.toISOString() ?? null,
       createdAt: project.createdAt.toISOString(),
       updatedAt: project.updatedAt.toISOString(),
-      graderScore: Number(project.holisticScores?.aiGradeOverall ?? 0),
-      contentScore: Number(project.holisticScores?.contentScore ?? 0),
-      technicalScore: Number(project.holisticScores?.technicalsScore ?? 0),
-      uxScore: Number(project.holisticScores?.uxScore ?? 0),
-      authorityScore: Number(project.holisticScores?.authorityScore ?? 0),
+      graderScore: isScanned ? Number(project.holisticScores?.aiGradeOverall ?? 0) : 0,
+      contentScore: isScanned ? Number(project.holisticScores?.contentScore ?? 0) : 0,
+      technicalScore: isScanned ? Number(project.holisticScores?.technicalsScore ?? 0) : 0,
+      uxScore: isScanned ? Number(project.holisticScores?.uxScore ?? 0) : 0,
+      authorityScore: isScanned ? Number(project.holisticScores?.authorityScore ?? 0) : 0,
     }
   }
 }

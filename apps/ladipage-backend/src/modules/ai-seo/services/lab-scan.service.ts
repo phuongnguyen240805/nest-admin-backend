@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config'
 import { InjectRepository } from '@nestjs/typeorm'
 import { BullMqEnqueueService, TenantContextService } from '@liora/nest-core'
 import { randomUUID } from 'crypto'
+import { existsSync } from 'fs'
 import { Repository } from 'typeorm'
 
 import {
@@ -60,7 +61,10 @@ export class LabScanService extends TenantScopedService {
     return jobId.startsWith(LAB_JOB_PREFIX)
   }
 
-  async startLabScan(dto: CreateLabScanDto): Promise<{
+  async startLabScan(
+    dto: CreateLabScanDto,
+    authToken?: string | null,
+  ): Promise<{
     jobId: string
     status: string
     targetUrl: string
@@ -88,7 +92,17 @@ export class LabScanService extends TenantScopedService {
       .map((s) => s.trim())
       .filter(Boolean)
 
-    const urlCheck = assertScanableUrl(resolved.targetUrl, {
+    // A published page is served at /p/{slug}; a draft is NOT — so a pre-publish
+    // scan of a local /p/{slug} would 404. Resolve a signed lab-preview URL from
+    // the FE (renders the current editor artifact, works for draft AND published).
+    const scanTargetUrl = await this.resolveScanUrl(
+      resolved.targetUrl,
+      resolved.websitePageId,
+      trigger,
+      authToken,
+    )
+
+    const urlCheck = assertScanableUrl(scanTargetUrl, {
       allowLocal,
       previewHostSuffixes: previewSuffixes,
     })
@@ -381,9 +395,10 @@ export class LabScanService extends TenantScopedService {
     if (/fs\/promises|named 'glob'|node\.js v20|node >= 22|cần node >= 22/i.test(message)) {
       return 'node_too_old'
     }
-    if (/enoent|not found|spawn unlighthouse/i.test(message)) return 'cli_missing'
-    if (/timeout|etimedout|killed/i.test(m)) return 'timeout'
+    // url_unreachable first: an HTTP "404 Not Found" must not fall into cli_missing via a bare "not found" match
     if (/target url unreachable|invalid response from url|http\s+[45]\d\d|econnrefused|enotfound|net::|navigation/i.test(m)) return 'url_unreachable'
+    if (/enoent|command not found|spawn unlighthouse/i.test(message)) return 'cli_missing'
+    if (/timeout|etimedout|killed/i.test(m)) return 'timeout'
     if (/chrome|chromium|puppeteer|browser/i.test(m)) return 'chrome_missing'
     return 'runner_error'
   }
@@ -618,10 +633,21 @@ export class LabScanService extends TenantScopedService {
         page.scanStatus = 'completed'
         page.lastScannedAt = new Date()
         page.lastScanJobId = payload.jobId
+        const lh = (primary?.scores ?? {}) as Record<string, number | null | undefined>
+        const parseNum = (v: unknown): number => {
+          const n = Number(v)
+          return Number.isFinite(n) ? n : 0
+        }
+        const tech = parseNum(lh.seo ?? page.scores?.technicalScore)
+        const ux = parseNum(lh.performance ?? page.scores?.uxScore)
+        const a11y = parseNum(lh.accessibility)
+        const bp = parseNum(lh['best-practices'])
+        const grader = Math.round((tech + ux + a11y + bp) / 4)
+
         page.scores = {
           ...(page.scores ?? {}),
           lighthouse: {
-            scores: primary?.scores ?? {},
+            scores: lh,
             metrics: primary?.metrics ?? {},
             issues: primary?.issues ?? [],
             fetchedAt: lab.fetchedAt,
@@ -630,8 +656,11 @@ export class LabScanService extends TenantScopedService {
             targetUrl: payload.targetUrl,
           },
           // Map for existing scorecards
-          technicalScore: primary?.scores.seo ?? page.scores?.technicalScore,
-          uxScore: primary?.scores.performance ?? page.scores?.uxScore,
+          graderScore: grader > 0 ? grader : (page.scores?.graderScore ?? 0),
+          technicalScore: tech,
+          uxScore: ux,
+          contentScore: bp > 0 ? bp : (page.scores?.contentScore ?? tech),
+          authorityScore: page.scores?.authorityScore ?? 0,
         }
         await this.pageRepository.save(page)
       }
@@ -677,6 +706,115 @@ export class LabScanService extends TenantScopedService {
           },
         }),
       )
+    }
+  }
+
+  /**
+   * A published landing page is served at /p/{slug}; a draft is not, so a
+   * pre-publish scan of a local /p/{slug} 404s. Resolve a signed lab-preview URL
+   * from the FE, which renders the current editor artifact for BOTH draft and
+   * published pages. Only local targets need this bridge — public URLs are
+   * scanned directly. Falls back to the original URL when a preview can't be built.
+   */
+  private async resolveScanUrl(
+    targetUrl: string,
+    websitePageId: string | null,
+    trigger: LabScanTrigger,
+    authToken?: string | null,
+  ): Promise<string> {
+    let host: string
+    try {
+      const withProtocol = /^https?:\/\//i.test(targetUrl) ? targetUrl : `https://${targetUrl}`
+      host = new URL(withProtocol).hostname.toLowerCase()
+    } catch {
+      return targetUrl
+    }
+
+    const isLocal =
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      host === 'host.docker.internal' ||
+      host.endsWith('.local')
+    if (!isLocal) return targetUrl
+    // Without page id + auth we cannot build a signed preview; keep original
+    // (a published /p/{slug} on localhost may still resolve).
+    if (!websitePageId || !authToken) return targetUrl
+
+    const preview = await this.fetchLabPreviewUrl(websitePageId, authToken)
+    if (preview) {
+      this.logger.log(
+        `Resolved lab-preview URL for page=${websitePageId} trigger=${trigger} (draft/published safe)`,
+      )
+      return preview
+    }
+    return targetUrl
+  }
+
+  private feBaseUrl(): string {
+    const base =
+      this.configService.get<string>('LANDING_ORIGIN_BASE_URL')?.trim() ||
+      process.env.LANDING_ORIGIN_BASE_URL?.trim() ||
+      'http://localhost:3000'
+    return base.split(',')[0].trim().replace(/\/$/, '')
+  }
+
+  /** Docker Nest reaches host FE via host.docker.internal, not container loopback. */
+  private rewriteFeOriginForRuntime(origin: string): string {
+    try {
+      const u = new URL(origin)
+      const host = u.hostname.toLowerCase()
+      const inDocker =
+        existsSync('/.dockerenv') ||
+        this.configService.get<string>('RUNNING_IN_DOCKER') === 'true' ||
+        process.env.RUNNING_IN_DOCKER === 'true'
+      if (
+        inDocker &&
+        (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0')
+      ) {
+        const bridge =
+          this.configService.get<string>('UNLIGHTHOUSE_HOST_BRIDGE')?.trim() ||
+          process.env.UNLIGHTHOUSE_HOST_BRIDGE?.trim() ||
+          'host.docker.internal'
+        u.hostname = bridge
+      }
+      return u.toString().replace(/\/$/, '')
+    } catch {
+      return origin
+    }
+  }
+
+  private async fetchLabPreviewUrl(
+    websitePageId: string,
+    authToken: string,
+  ): Promise<string | null> {
+    const origin = this.rewriteFeOriginForRuntime(this.feBaseUrl())
+    const url = `${origin}/api/landing-pages/${encodeURIComponent(websitePageId)}/lab-preview`
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15_000)
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+          Authorization: authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`,
+        },
+      })
+      if (!res.ok) {
+        this.logger.warn(
+          `lab-preview request failed HTTP ${res.status} for page=${websitePageId} (${url})`,
+        )
+        return null
+      }
+      const body = (await res.json().catch(() => null)) as { previewUrl?: unknown } | null
+      return typeof body?.previewUrl === 'string' ? body.previewUrl : null
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.warn(`lab-preview fetch error page=${websitePageId}: ${message}`)
+      return null
+    } finally {
+      clearTimeout(timeout)
     }
   }
 

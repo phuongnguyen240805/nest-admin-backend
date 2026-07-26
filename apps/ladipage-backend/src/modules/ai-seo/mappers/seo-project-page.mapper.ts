@@ -67,8 +67,8 @@ export function mapSeoProjectPageToDto(
   project: SeoProjectEntity,
   organizationId: string,
 ): AiSeoProjectPageDto {
-  const holistic = project.holisticScores ?? {}
   const pageScores = page.scores ?? {}
+  const isScanned = page.scanStatus === 'completed' || Boolean(page.lastScannedAt)
 
   return {
     id: page.id,
@@ -84,28 +84,28 @@ export function mapSeoProjectPageToDto(
     lastScannedAt: page.lastScannedAt?.toISOString() ?? null,
     createdAt: page.createdAt.toISOString(),
     updatedAt: page.updatedAt.toISOString(),
-    graderScore: score(pageScores.graderScore ?? holistic.aiGradeOverall),
-    contentScore: score(pageScores.contentScore ?? holistic.contentScore),
-    technicalScore: score(pageScores.technicalScore ?? holistic.technicalsScore),
-    uxScore: score(pageScores.uxScore ?? holistic.uxScore),
-    authorityScore: score(pageScores.authorityScore ?? holistic.authorityScore),
+    graderScore: isScanned ? score(pageScores.graderScore ?? pageScores.grader_score) : 0,
+    contentScore: isScanned ? score(pageScores.contentScore ?? pageScores.content_score) : 0,
+    technicalScore: isScanned ? score(pageScores.technicalScore ?? pageScores.technical_score) : 0,
+    uxScore: isScanned ? score(pageScores.uxScore ?? pageScores.ux_score) : 0,
+    authorityScore: isScanned ? score(pageScores.authorityScore ?? pageScores.authority_score) : 0,
     lighthouse: mapLighthouse(pageScores),
   }
 }
 
 export function mapLandingPageScores(page: SeoProjectPageEntity, project: SeoProjectEntity) {
-  const holistic = project.holisticScores ?? {}
   const pageScores = page.scores ?? {}
+  const isScanned = page.scanStatus === 'completed' || Boolean(page.lastScannedAt)
 
   return {
     id: page.id,
     organization_id: String(project.tenantId),
     ai_seo_project_page_id: page.id,
-    grader_score: score(pageScores.graderScore ?? holistic.aiGradeOverall),
-    content_score: score(pageScores.contentScore ?? holistic.contentScore),
-    technical_score: score(pageScores.technicalScore ?? holistic.technicalsScore),
-    ux_score: score(pageScores.uxScore ?? holistic.uxScore),
-    authority_score: score(pageScores.authorityScore ?? holistic.authorityScore),
+    grader_score: isScanned ? score(pageScores.graderScore ?? pageScores.grader_score) : 0,
+    content_score: isScanned ? score(pageScores.contentScore ?? pageScores.content_score) : 0,
+    technical_score: isScanned ? score(pageScores.technicalScore ?? pageScores.technical_score) : 0,
+    ux_score: isScanned ? score(pageScores.uxScore ?? pageScores.ux_score) : 0,
+    authority_score: isScanned ? score(pageScores.authorityScore ?? pageScores.authority_score) : 0,
     lighthouse: mapLighthouse(pageScores),
     updated_at: page.updatedAt.toISOString(),
   }
