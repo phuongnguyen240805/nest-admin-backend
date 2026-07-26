@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { TenantContextService } from '@liora/nest-core'
-import { Repository } from 'typeorm'
+import { In, Repository } from 'typeorm'
 
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 import { PageEntity } from '../../publish/entities'
@@ -36,17 +36,55 @@ export class AiSeoLandingPageService extends TenantScopedService {
   }
 
   async list(projectId: string) {
+    const tenantId = this.requireTenantId()
     const project = await this.projectService.findProjectOrFail(projectId)
     const pages = await this.pageRepository.find({
-      where: { seoProjectId: project.id, tenantId: this.requireTenantId() },
+      where: { seoProjectId: project.id, tenantId },
       order: { updatedAt: 'DESC' },
     })
 
     if (pages.length === 0 && project.landingPageId) {
-      return [this.legacyLinkedPage(project)]
+      return [await this.legacyLinkedPage(project)]
     }
 
-    return pages.map((page) => mapSeoProjectPageToDto(page, project, String(project.tenantId)))
+    const nameByWebsitePageId = await this.resolveBuilderPageNames(tenantId, pages)
+
+    return pages.map((page) =>
+      mapSeoProjectPageToDto(
+        page,
+        project,
+        String(project.tenantId),
+        page.websitePageId ? nameByWebsitePageId.get(page.websitePageId) : null,
+      ),
+    )
+  }
+
+  /**
+   * Resolve real builder page names (as named in the editor) for linked pages.
+   * Tenant-scoped: only reads lp_page rows owned by this tenant, so a page name
+   * never leaks across accounts. One query for the whole list (no N+1).
+   */
+  private async resolveBuilderPageNames(
+    tenantId: number,
+    pages: SeoProjectPageEntity[],
+  ): Promise<Map<string, string>> {
+    const result = new Map<string, string>()
+    if (!this.builderPageRepository) return result
+
+    const ids = Array.from(
+      new Set(pages.map((p) => p.websitePageId).filter((id): id is string => Boolean(id))),
+    )
+    if (ids.length === 0) return result
+
+    const builders = await this.builderPageRepository.find({
+      where: { tenantId, externalId: In(ids), isDelete: false },
+    })
+    for (const builder of builders) {
+      if (builder.name?.trim()) {
+        result.set(builder.externalId, builder.name.trim())
+      }
+    }
+    return result
   }
 
   async link(projectId: string, dto: LinkLandingPageDto) {
@@ -213,14 +251,31 @@ export class AiSeoLandingPageService extends TenantScopedService {
     return page
   }
 
-  private legacyLinkedPage(project: SeoProjectEntity) {
+  /** Tenant-scoped builder name for the legacy single-page link. */
+  private async resolveLegacyBuilderName(
+    project: SeoProjectEntity,
+  ): Promise<string | null> {
+    if (!this.builderPageRepository || !project.landingPageId) return null
+    const builder = await this.builderPageRepository.findOne({
+      where: {
+        tenantId: project.tenantId,
+        externalId: project.landingPageId,
+        isDelete: false,
+      },
+    })
+    return builder?.name?.trim() || null
+  }
+
+  private async legacyLinkedPage(project: SeoProjectEntity) {
     const isScanned = Boolean(project.lastAnalysisAt)
+    const name = await this.resolveLegacyBuilderName(project)
     return {
       id: project.landingPageId!,
       organizationId: String(project.tenantId),
       aiSeoProjectId: project.id,
       projectId: project.id,
       websitePageId: project.landingPageId,
+      name: name || project.name || project.hostname,
       pageUrl: project.hostname,
       pageType: 'landing_page',
       source: 'internal' as const,

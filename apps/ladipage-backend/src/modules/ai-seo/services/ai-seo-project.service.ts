@@ -8,7 +8,9 @@ import {
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { TenantContextService } from '@liora/nest-core'
-import { Repository } from 'typeorm'
+import { In, Repository } from 'typeorm'
+
+import type { SeoProjectDto } from '@liora/api-types'
 
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 import { PageEntity } from '../../publish/entities'
@@ -86,7 +88,13 @@ export class AiSeoProjectService extends TenantScopedService {
       .take(pageSize)
       .getMany()
 
-    return projects.map(mapSeoProjectToDto)
+    const aggregates = await this.aggregatePageScores(
+      tenantId,
+      projects.map((p) => p.id),
+    )
+    return projects.map((project) =>
+      this.applyPageAggregate(mapSeoProjectToDto(project), aggregates.get(project.id)),
+    )
   }
 
   async create(dto: CreateSeoProjectDto, storeId?: string) {
@@ -140,7 +148,9 @@ export class AiSeoProjectService extends TenantScopedService {
   }
 
   async detail(id: string) {
-    return mapSeoProjectToDto(await this.findProjectOrFail(id))
+    const project = await this.findProjectOrFail(id)
+    const aggregates = await this.aggregatePageScores(project.tenantId, [project.id])
+    return this.applyPageAggregate(mapSeoProjectToDto(project), aggregates.get(project.id))
   }
 
   async setup(id: string, body?: Record<string, unknown>) {
@@ -675,6 +685,122 @@ export class AiSeoProjectService extends TenantScopedService {
       }
     }
     await this.projectPageRepository.save(pages)
+  }
+
+  /**
+   * Aggregate page-level scores per project so the project card (outer view)
+   * matches the landing-page view (inner). Both must read ONE source: the
+   * scanned page scores. Mirrors FE AiSeoLandingPageScoreCards exactly —
+   * only pages with scanStatus='completed' AND graderScore>0 count toward the
+   * averages; healthy = graderScore>=80; totalPages = all linked pages.
+   * One query for all projects (no N+1).
+   */
+  private async aggregatePageScores(
+    tenantId: number,
+    projectIds: string[],
+  ): Promise<
+    Map<
+      string,
+      {
+        graderScore: number
+        contentScore: number
+        technicalScore: number
+        uxScore: number
+        authorityScore: number
+        healthyPages: number
+        totalPages: number
+      }
+    >
+  > {
+    const result = new Map<
+      string,
+      {
+        graderScore: number
+        contentScore: number
+        technicalScore: number
+        uxScore: number
+        authorityScore: number
+        healthyPages: number
+        totalPages: number
+      }
+    >()
+    if (projectIds.length === 0) return result
+
+    const pages = await this.projectPageRepository.find({
+      where: { tenantId, seoProjectId: In(projectIds) },
+    })
+
+    const grouped = new Map<string, SeoProjectPageEntity[]>()
+    for (const page of pages) {
+      const list = grouped.get(page.seoProjectId) ?? []
+      list.push(page)
+      grouped.set(page.seoProjectId, list)
+    }
+
+    const num = (v: unknown): number => {
+      const n = Number(v)
+      return Number.isFinite(n) ? n : 0
+    }
+
+    for (const [projectId, list] of grouped) {
+      const scanned = list.filter(
+        (p) => p.scanStatus === 'completed' && num(p.scores?.graderScore) > 0,
+      )
+      const count = scanned.length
+      if (count === 0) continue
+
+      const avg = (key: 'graderScore' | 'contentScore' | 'technicalScore' | 'uxScore' | 'authorityScore') =>
+        Math.round(scanned.reduce((sum, p) => sum + num(p.scores?.[key]), 0) / count)
+
+      result.set(projectId, {
+        graderScore: avg('graderScore'),
+        contentScore: avg('contentScore'),
+        technicalScore: avg('technicalScore'),
+        uxScore: avg('uxScore'),
+        authorityScore: avg('authorityScore'),
+        healthyPages: scanned.filter((p) => num(p.scores?.graderScore) >= 80).length,
+        totalPages: list.length,
+      })
+    }
+
+    return result
+  }
+
+  /**
+   * Overlay page-level aggregate onto the project DTO so the outer scorecards
+   * show the same numbers as the inner landing-page view. When a project has no
+   * scanned pages we keep the domain-level holistic scores untouched.
+   */
+  private applyPageAggregate(
+    dto: ReturnType<typeof mapSeoProjectToDto>,
+    agg:
+      | {
+          graderScore: number
+          contentScore: number
+          technicalScore: number
+          uxScore: number
+          authorityScore: number
+          healthyPages: number
+          totalPages: number
+        }
+      | undefined,
+  ): ReturnType<typeof mapSeoProjectToDto> {
+    if (!agg) return dto
+    return {
+      ...dto,
+      holisticScores: {
+        ...dto.holisticScores,
+        technicalsScore: agg.technicalScore,
+        uxScore: agg.uxScore,
+        authorityScore: agg.authorityScore,
+        contentScore: agg.contentScore,
+      },
+      aiGradeOverall: agg.graderScore,
+      afterSummary: {
+        healthyPages: agg.healthyPages,
+        totalPages: agg.totalPages,
+      },
+    }
   }
 
   /** Dedup issue tasks by code within recent window; create ON_PAGE/CONTENT/TECHNICAL rows. */

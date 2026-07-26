@@ -6,6 +6,7 @@ export type AiSeoProjectPageDto = {
   aiSeoProjectId: string
   projectId: string
   websitePageId: string | null
+  name: string
   pageUrl: string
   pageType: string
   source: 'internal' | 'external'
@@ -62,10 +63,26 @@ function mapLighthouse(pageScores: Record<string, unknown>) {
   }
 }
 
+function fallbackPageName(page: SeoProjectPageEntity): string {
+  const url = page.pageUrl?.trim()
+  if (url) {
+    try {
+      const parsed = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`)
+      const lastSegment = parsed.pathname.split('/').filter(Boolean).pop()
+      if (lastSegment) return decodeURIComponent(lastSegment)
+      if (parsed.hostname) return parsed.hostname
+    } catch {
+      return url
+    }
+  }
+  return page.source === 'internal' ? 'Trang Builder Landing Page' : 'Trang con bên ngoài'
+}
+
 export function mapSeoProjectPageToDto(
   page: SeoProjectPageEntity,
   project: SeoProjectEntity,
   organizationId: string,
+  pageName?: string | null,
 ): AiSeoProjectPageDto {
   const pageScores = page.scores ?? {}
   const isScanned = page.scanStatus === 'completed' || Boolean(page.lastScannedAt)
@@ -76,6 +93,7 @@ export function mapSeoProjectPageToDto(
     aiSeoProjectId: project.id,
     projectId: project.id,
     websitePageId: page.websitePageId,
+    name: pageName?.trim() || fallbackPageName(page),
     pageUrl: page.pageUrl,
     pageType: 'landing_page',
     source: page.source,

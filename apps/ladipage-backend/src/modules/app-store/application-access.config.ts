@@ -47,7 +47,7 @@ export const APP_ACCESS_RULES: Record<string, AppAccessRule> = {
   CloudPhone: {
     code: 'CloudPhone',
     permission: 'app:cloudphone:use',
-    minTier: 'pro',
+    minTier: 'free',
     priceVnd: 0,
   },
   OfferKit: {

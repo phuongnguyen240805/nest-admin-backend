@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { ApiSecurity, ApiTags } from '@nestjs/swagger'
+import { SkipThrottle } from '@nestjs/throttler'
 
 import { API_SECURITY_AUTH, TenantGuard } from '@liora/nest-core'
 
@@ -43,6 +44,9 @@ export class AiSeoProjectsController {
     return this.openSeoClient.healthCheck()
   }
 
+  // Polled by the dashboard (list refetch 15s + one landing-pages poll per card);
+  // read-only + tenant-scoped, so skip the 20/60s throttle to avoid 429 storms.
+  @SkipThrottle()
   @Get('projects')
   list(
     @Query() dto: ListSeoProjectsQueryDto,
@@ -90,6 +94,7 @@ export class AiSeoProjectsController {
     return this.projectService.scan(id, dto)
   }
 
+  @SkipThrottle()
   @Get('projects/:id/agent-status')
   agentStatus(@Param('id') id: string) {
     return this.projectService.agentStatus(id)
@@ -100,6 +105,8 @@ export class AiSeoProjectsController {
     return this.projectService.toggleAgentStatus(id)
   }
 
+  // Polled every 10s by each project card's stats — skip throttle (read-only, tenant-scoped).
+  @SkipThrottle()
   @Get('projects/:id/landing-pages')
   landingPages(@Param('id') id: string) {
     return this.landingPageService.list(id)
@@ -110,6 +117,7 @@ export class AiSeoProjectsController {
     return this.landingPageService.link(id, dto)
   }
 
+  @SkipThrottle()
   @Get('projects/:id/landing-pages/:pageId')
   landingPageDetail(
     @Param('id') id: string,
@@ -137,6 +145,7 @@ export class AiSeoProjectsController {
     return this.landingPageService.scan(id, pageId, dto, authorization)
   }
 
+  @SkipThrottle()
   @Get('projects/:id/landing-pages/:pageId/scores')
   landingPageScores(
     @Param('id') id: string,
