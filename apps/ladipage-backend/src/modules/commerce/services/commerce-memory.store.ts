@@ -65,7 +65,23 @@ export class CommerceMemoryStore {
     this.links.set(organizationId, link)
   }
 
+  /**
+   * Lazily seed a mock catalog/orders for an org on first access. In live mode
+   * the memory store is never touched; in mock mode this keeps the FE testable
+   * without a running Medusa or a provisioned link.
+   */
+  private ensureSeed(organizationId: string): void {
+    if (!this.products.has(organizationId)) {
+      const channelId = `sc_mock_lp_${organizationId.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 24)}`
+      this.products.set(organizationId, this.seedProducts(channelId))
+    }
+    if (!this.orders.has(organizationId)) {
+      this.orders.set(organizationId, this.seedOrders())
+    }
+  }
+
   listProducts(organizationId: string): CommerceProductDto[] {
+    this.ensureSeed(organizationId)
     return [...(this.products.get(organizationId) ?? [])].sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     )
@@ -130,6 +146,7 @@ export class CommerceMemoryStore {
   }
 
   listOrders(organizationId: string): CommerceOrderDto[] {
+    this.ensureSeed(organizationId)
     return [...(this.orders.get(organizationId) ?? [])]
   }
 

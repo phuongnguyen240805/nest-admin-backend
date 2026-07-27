@@ -5,7 +5,7 @@ import { Repository } from 'typeorm'
 
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 import { KeywordResearchDto } from '../dto/keyword-research.dto'
-import { SeoKeywordCacheEntity } from '../entities'
+import { SeoKeywordCacheEntity, SeoProjectEntity } from '../entities'
 import { AiSeoCacheService } from './ai-seo-cache.service'
 import { AiSeoQuotaService } from './ai-seo-quota.service'
 import { OpenSeoClientService } from './openseo-client.service'
@@ -16,6 +16,8 @@ export class AiSeoKeywordsService extends TenantScopedService {
     tenantContext: TenantContextService,
     @InjectRepository(SeoKeywordCacheEntity)
     private readonly cacheRepository: Repository<SeoKeywordCacheEntity>,
+    @InjectRepository(SeoProjectEntity)
+    private readonly projectRepository: Repository<SeoProjectEntity>,
     private readonly openSeoClient: OpenSeoClientService,
     private readonly cacheService: AiSeoCacheService,
     private readonly quotaService: AiSeoQuotaService,
@@ -59,6 +61,17 @@ export class AiSeoKeywordsService extends TenantScopedService {
 
   async listSaved(projectId?: string) {
     if (!projectId) return { keywords: [] }
-    return this.openSeoClient.callMcpTool('list_saved_keywords', { projectId })
+
+    const project = await this.findOneForTenantOrFail(
+      this.projectRepository,
+      { id: projectId },
+      'SEO project not found',
+    )
+
+    if (!project.openseoProjectId) return { keywords: [] }
+
+    return this.openSeoClient.callMcpTool('list_saved_keywords', {
+      projectId: project.openseoProjectId,
+    })
   }
 }

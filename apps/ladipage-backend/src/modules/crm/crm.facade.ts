@@ -148,6 +148,7 @@ export class CrmFacade {
       await this.customerService.remove(this.parseV1Id(id))
       return
     }
+    await this.personService.detail(id)
     await this.personRelationService.removeRelations(id)
     await this.personService.remove(id)
   }

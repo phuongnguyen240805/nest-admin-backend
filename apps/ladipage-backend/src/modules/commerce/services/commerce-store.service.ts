@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 
 import { getCommerceConfig } from '../commerce.config'
 import {
@@ -10,10 +10,19 @@ import type {
   CommerceStoreLinkDto,
   StorefrontSessionDto,
 } from '../types/commerce.types'
-import { commerceMemoryStore } from './commerce-memory.store'
+import type { CommerceStoreLinkEntity } from '../entities'
+import { CommerceStoreLinkService } from './commerce-store-link.service'
+import { MedusaProvisioningService } from './medusa-provisioning.service'
 
 @Injectable()
 export class CommerceStoreService {
+  private readonly logger = new Logger(CommerceStoreService.name)
+
+  constructor(
+    private readonly links: CommerceStoreLinkService,
+    private readonly provisioning: MedusaProvisioningService,
+  ) {}
+
   async health(): Promise<CommerceHealthDto> {
     const cfg = getCommerceConfig()
     if (!cfg.enabled) {
@@ -63,42 +72,82 @@ export class CommerceStoreService {
     }
   }
 
-  getStore(organizationId: string): CommerceStoreLinkDto | null {
-    return commerceMemoryStore.getLink(organizationId)
+  async getStore(organizationId: string): Promise<CommerceStoreLinkDto | null> {
+    const entity = await this.links.findByOrg(organizationId)
+    return entity ? this.toDto(entity) : null
   }
 
-  ensureStore(organizationId: string): CommerceStoreLinkDto {
-    const existing = commerceMemoryStore.getLink(organizationId)
-    if (existing) return existing
-
-    const cfg = getCommerceConfig()
-    const link = commerceMemoryStore.ensureLink(organizationId, {
-      regionId: cfg.defaultRegionId,
-      currencyCode: cfg.defaultCurrency,
-      publishableKey: cfg.publishableKey,
-    })
-
-    if (!cfg.mockMode) {
-      const liveLink: CommerceStoreLinkDto = {
-        ...link,
-        healthMessage: 'Live Medusa bridge link',
-        publishableKeyPreview: cfg.publishableKey
-          ? `${cfg.publishableKey.slice(0, 8)}...`
-          : undefined,
-      }
-      commerceMemoryStore.setLink(organizationId, liveLink)
-      return liveLink
+  /**
+   * Returns the org's store link, provisioning it on first use.
+   * In live mode this creates a real Medusa sales channel + publishable key
+   * (idempotent) so that catalog isolation is enforced by a channel that
+   * actually exists — not a fabricated local id.
+   */
+  async ensureStore(organizationId: string): Promise<CommerceStoreLinkDto> {
+    const existing = await this.links.findByOrg(organizationId)
+    if (existing && existing.status === 'active' && existing.salesChannelId) {
+      return this.toDto(existing)
     }
 
-    return link
+    const cfg = getCommerceConfig()
+
+    if (cfg.mockMode) {
+      const link = await this.links.upsert(organizationId, {
+        mode: 'hosted_shared',
+        salesChannelId:
+          existing?.salesChannelId
+          ?? `sc_mock_${MedusaProvisioningService.labelFor(organizationId)}`,
+        salesChannelName: `LadiPage — ${organizationId}`,
+        regionId: existing?.regionId ?? cfg.defaultRegionId,
+        currencyCode: cfg.defaultCurrency,
+        publishableKeyPreview: cfg.publishableKey
+          ? `${cfg.publishableKey.slice(0, 8)}…`
+          : 'mock_pk',
+        status: 'active',
+        healthMessage: 'Mock store link (no live Medusa)',
+        provisionedAt: existing?.provisionedAt ?? new Date(),
+      })
+      return this.toDto(link)
+    }
+
+    try {
+      const result = await this.provisioning.provision(organizationId)
+      const link = await this.links.upsert(organizationId, {
+        mode: 'hosted_shared',
+        salesChannelId: result.salesChannelId,
+        salesChannelName: result.salesChannelName,
+        publishableKeyId: result.publishableKeyId,
+        publishableKeyPreview: result.publishableKeyPreview,
+        regionId: result.regionId ?? cfg.defaultRegionId,
+        currencyCode: cfg.defaultCurrency,
+        status: 'active',
+        healthMessage: 'Live Medusa store link',
+        provisionedAt: new Date(),
+        lastHealthCheckAt: new Date(),
+      })
+      return this.toDto(link)
+    }
+    catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      this.logger.error(
+        `Provision failed org=${organizationId}: ${message}`,
+      )
+      const link = await this.links.upsert(organizationId, {
+        mode: 'hosted_shared',
+        currencyCode: cfg.defaultCurrency,
+        status: 'error',
+        healthMessage: `Provisioning failed: ${message}`.slice(0, 500),
+      })
+      return this.toDto(link)
+    }
   }
 
-  createStorefrontSession(
+  async createStorefrontSession(
     organizationId: string,
     pageId?: string,
-  ): StorefrontSessionDto {
+  ): Promise<StorefrontSessionDto> {
     const cfg = getCommerceConfig()
-    const link = this.ensureStore(organizationId)
+    const link = await this.ensureStore(organizationId)
 
     return {
       mockMode: cfg.mockMode,
@@ -108,6 +157,21 @@ export class CommerceStoreService {
       regionId: link.regionId,
       currencyCode: link.currencyCode,
       pageId,
+    }
+  }
+
+  private toDto(entity: CommerceStoreLinkEntity): CommerceStoreLinkDto {
+    return {
+      ladipageOrganizationId: entity.organizationId,
+      medusaOrganizationId: null,
+      salesChannelId: entity.salesChannelId ?? '',
+      salesChannelName: entity.salesChannelName ?? `LadiPage — ${entity.organizationId}`,
+      regionId: entity.regionId ?? '',
+      currencyCode: entity.currencyCode,
+      status: entity.status === 'active' ? 'active' : entity.status === 'error' ? 'error' : 'pending',
+      healthMessage: entity.healthMessage ?? undefined,
+      provisionedAt: entity.provisionedAt ? entity.provisionedAt.toISOString() : null,
+      publishableKeyPreview: entity.publishableKeyPreview ?? undefined,
     }
   }
 }

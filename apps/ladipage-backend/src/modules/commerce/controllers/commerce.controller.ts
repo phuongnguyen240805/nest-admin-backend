@@ -1,8 +1,8 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
-  Headers,
   Logger,
   Param,
   Patch,
@@ -12,22 +12,23 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { SkipThrottle } from '@nestjs/throttler'
 
-import { Public, TenantGuard } from '@liora/nest-core'
+import { GetOrgFromRequest, Public, TenantGuard } from '@liora/nest-core'
+import { Perm } from '@liora/nest-core/modules/auth/decorators/permission.decorator'
+import { Organization } from '@liora/nest-core/modules/billing/entities/organization.entity'
 
 import { getCommerceConfig } from '../commerce.config'
+import { CommercePermissions } from '../commerce.permissions'
 import { CreateCommerceProductDto } from '../dto/create-commerce-product.dto'
 import { CommerceAccessService } from '../services/commerce-access.service'
 import { CommerceOrderService } from '../services/commerce-order.service'
 import { CommerceProductService } from '../services/commerce-product.service'
 import { CommerceStoreService } from '../services/commerce-store.service'
 
-function resolveOrgId(headerOrg?: string): string {
-  return headerOrg?.trim() || 'default-org'
-}
-
 @ApiTags('Commerce')
 @SkipThrottle()
+@ApiBearerAuth()
 @Controller('commerce')
+@UseGuards(TenantGuard)
 export class CommerceController {
   private readonly logger = new Logger(CommerceController.name)
 
@@ -45,31 +46,28 @@ export class CommerceController {
     return this.storeService.health()
   }
 
-  @ApiBearerAuth()
-  @UseGuards(TenantGuard)
   @Get('store')
-  @ApiOperation({ summary: 'Get or provision store link for organization' })
-  getStore(@Headers('x-organization-id') orgHeader?: string) {
+  @Perm(CommercePermissions.STORE_MANAGE)
+  @ApiOperation({ summary: 'Get store link for organization' })
+  getStore(@GetOrgFromRequest() org: Organization) {
     this.access.assertEnabled()
-    return this.storeService.getStore(resolveOrgId(orgHeader))
+    return this.storeService.getStore(org.id)
   }
 
-  @ApiBearerAuth()
-  @UseGuards(TenantGuard)
   @Post('store/provision')
+  @Perm(CommercePermissions.STORE_MANAGE)
   @ApiOperation({ summary: 'Ensure sales channel / store link for org' })
-  provision(@Headers('x-organization-id') orgHeader?: string) {
+  provision(@GetOrgFromRequest() org: Organization) {
     this.access.assertEnabled()
-    return this.storeService.ensureStore(resolveOrgId(orgHeader))
+    return this.storeService.ensureStore(org.id)
   }
 
-  @ApiBearerAuth()
-  @UseGuards(TenantGuard)
   @Get('products')
+  @Perm(CommercePermissions.PRODUCT_READ)
   @ApiOperation({ summary: 'List commerce products' })
-  async listProducts(@Headers('x-organization-id') orgHeader?: string) {
+  async listProducts(@GetOrgFromRequest() org: Organization) {
     this.access.assertEnabled()
-    const items = await this.productService.list(resolveOrgId(orgHeader))
+    const items = await this.productService.list(org.id)
     const cfg = getCommerceConfig()
     return {
       items,
@@ -79,33 +77,30 @@ export class CommerceController {
     }
   }
 
-  @ApiBearerAuth()
-  @UseGuards(TenantGuard)
   @Get('products/:id')
+  @Perm(CommercePermissions.PRODUCT_READ)
   @ApiOperation({ summary: 'Get product by id' })
   getProduct(
     @Param('id') id: string,
-    @Headers('x-organization-id') orgHeader?: string,
+    @GetOrgFromRequest() org: Organization,
   ) {
     this.access.assertEnabled()
-    return this.productService.get(resolveOrgId(orgHeader), id)
+    return this.productService.get(org.id, id)
   }
 
-  @ApiBearerAuth()
-  @UseGuards(TenantGuard)
   @Post('products')
+  @Perm(CommercePermissions.PRODUCT_WRITE)
   @ApiOperation({ summary: 'Create commerce product (writes to Medusa when not mock)' })
   async createProduct(
     @Body() dto: CreateCommerceProductDto,
-    @Headers('x-organization-id') orgHeader?: string,
+    @GetOrgFromRequest() org: Organization,
   ) {
     this.access.assertEnabled()
-    const orgId = resolveOrgId(orgHeader)
     const cfg = getCommerceConfig()
     this.logger.log(
-      `POST /commerce/products org=${orgId} mock=${cfg.mockMode} title=${dto.title}`,
+      `POST /commerce/products org=${org.id} mock=${cfg.mockMode} title=${dto.title}`,
     )
-    const product = await this.productService.create(orgId, dto)
+    const product = await this.productService.create(org.id, dto)
     return {
       ...product,
       mockMode: cfg.mockMode,
@@ -113,42 +108,38 @@ export class CommerceController {
     }
   }
 
-  @ApiBearerAuth()
-  @UseGuards(TenantGuard)
   @Patch('products/:id/status')
+  @Perm(CommercePermissions.PRODUCT_WRITE)
   @ApiOperation({ summary: 'Update product status' })
   updateStatus(
     @Param('id') id: string,
     @Body() body: { status: 'published' | 'draft' | 'archived' },
-    @Headers('x-organization-id') orgHeader?: string,
+    @GetOrgFromRequest() org: Organization,
   ) {
     this.access.assertEnabled()
-    return this.productService.updateStatus(
-      resolveOrgId(orgHeader),
-      id,
-      body.status,
-    )
+    return this.productService.updateStatus(org.id, id, body.status)
   }
 
-  @ApiBearerAuth()
-  @UseGuards(TenantGuard)
   @Get('orders')
+  @Perm(CommercePermissions.ORDER_READ)
   @ApiOperation({ summary: 'List online commerce orders' })
-  listOrders(@Headers('x-organization-id') orgHeader?: string) {
+  async listOrders(@GetOrgFromRequest() org: Organization) {
     this.access.assertEnabled()
-    const items = this.orderService.list(resolveOrgId(orgHeader))
+    const items = await this.orderService.list(org.id)
     return { items, total: items.length }
   }
 
   @Public()
   @Post('storefront/session')
-  @ApiOperation({ summary: 'Bootstrap storefront session' })
+  @ApiOperation({ summary: 'Bootstrap storefront session (public runtime)' })
   storefrontSession(
     @Body() body: { organizationId?: string; pageId?: string },
-    @Headers('x-organization-id') orgHeader?: string,
   ) {
     this.access.assertEnabled()
-    const orgId = body.organizationId || resolveOrgId(orgHeader)
+    const orgId = body.organizationId?.trim()
+    if (!orgId) {
+      throw new BadRequestException('organizationId is required')
+    }
     return this.storeService.createStorefrontSession(orgId, body.pageId)
   }
 }

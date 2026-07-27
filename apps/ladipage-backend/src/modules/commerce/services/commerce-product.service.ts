@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -14,6 +15,7 @@ import {
 import type {
   CommerceProductDto,
   CommerceProductStatus,
+  CommerceStoreLinkDto,
   CreateCommerceProductInput,
 } from '../types/commerce.types'
 import { commerceMemoryStore } from './commerce-memory.store'
@@ -29,10 +31,18 @@ function slugify(title: string): string {
     title
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '') || `product-${Date.now()}`
   )
+}
+
+/** True when the product lists the given sales channel among its channels. */
+function productInChannel(
+  product: MedusaAdminProduct,
+  salesChannelId: string,
+): boolean {
+  return (product.sales_channels ?? []).some((c) => c?.id === salesChannelId)
 }
 
 @Injectable()
@@ -43,15 +53,18 @@ export class CommerceProductService {
 
   async list(organizationId: string): Promise<CommerceProductDto[]> {
     const cfg = getCommerceConfig()
-    const link = this.storeService.ensureStore(organizationId)
+    const link = await this.storeService.ensureStore(organizationId)
 
     if (cfg.mockMode) {
       return commerceMemoryStore.listProducts(organizationId)
     }
 
+    const channelId = this.requireChannel(link)
     const admin = MedusaHttpClient.fromConfig('admin')
+    // Cross-tenant isolation: scope the Admin query to this org's sales
+    // channel so an org can only ever see its own catalog (ADR-005).
     const result = await admin.get<MedusaProductEnvelope>(
-      '/admin/products?limit=100',
+      `/admin/products?limit=100&sales_channel_id[]=${encodeURIComponent(channelId)}`,
     )
 
     if (!result.ok) {
@@ -63,17 +76,18 @@ export class CommerceProductService {
       )
     }
 
-    return (result.data?.products ?? []).map((product) =>
-      mapMedusaProductToDto(product, link.salesChannelId, link.currencyCode),
-    )
+    // Defense in depth: drop anything not actually in the channel, in case a
+    // Medusa version ignores the filter param.
+    return (result.data?.products ?? [])
+      .filter((product) => productInChannel(product, channelId))
+      .map((product) =>
+        mapMedusaProductToDto(product, channelId, link.currencyCode),
+      )
   }
 
-  async get(
-    organizationId: string,
-    id: string,
-  ): Promise<CommerceProductDto> {
+  async get(organizationId: string, id: string): Promise<CommerceProductDto> {
     const cfg = getCommerceConfig()
-    const link = this.storeService.ensureStore(organizationId)
+    const link = await this.storeService.ensureStore(organizationId)
 
     if (cfg.mockMode) {
       const product = commerceMemoryStore.getProduct(organizationId, id)
@@ -81,16 +95,24 @@ export class CommerceProductService {
       return product
     }
 
+    const channelId = this.requireChannel(link)
     const admin = MedusaHttpClient.fromConfig('admin')
-    const result = await admin.get<MedusaProductEnvelope>(`/admin/products/${id}`)
+    const result = await admin.get<MedusaProductEnvelope>(
+      `/admin/products/${id}?fields=*sales_channels`,
+    )
 
     if (!result.ok || !result.data?.product) {
       throw new NotFoundException(result.error ?? 'Commerce product not found')
     }
 
+    // Cross-tenant isolation: never return a product from another org's channel.
+    if (!productInChannel(result.data.product, channelId)) {
+      throw new NotFoundException('Commerce product not found')
+    }
+
     return mapMedusaProductToDto(
       result.data.product,
-      link.salesChannelId,
+      channelId,
       link.currencyCode,
     )
   }
@@ -100,7 +122,7 @@ export class CommerceProductService {
     input: CreateCommerceProductInput,
   ): Promise<CommerceProductDto> {
     const cfg = getCommerceConfig()
-    const link = this.storeService.ensureStore(organizationId)
+    const link = await this.storeService.ensureStore(organizationId)
 
     if (cfg.mockMode) {
       this.logger.log(
@@ -117,7 +139,7 @@ export class CommerceProductService {
     return this.createOnMedusa(
       organizationId,
       input,
-      link.salesChannelId,
+      this.requireChannel(link),
       link.currencyCode,
     )
   }
@@ -128,13 +150,18 @@ export class CommerceProductService {
     status: CommerceProductStatus,
   ): Promise<CommerceProductDto> {
     const cfg = getCommerceConfig()
-    const link = this.storeService.ensureStore(organizationId)
+    const link = await this.storeService.ensureStore(organizationId)
 
     if (cfg.mockMode) {
       const updated = commerceMemoryStore.updateStatus(organizationId, id, status)
       if (!updated) throw new NotFoundException('Commerce product not found')
       return updated
     }
+
+    const channelId = this.requireChannel(link)
+    // Verify ownership before mutating — get() throws 404 if the product is
+    // not in this org's channel, preventing cross-tenant writes.
+    await this.get(organizationId, id)
 
     const admin = MedusaHttpClient.fromConfig('admin')
     const result = await admin.request<MedusaProductEnvelope>(
@@ -151,7 +178,7 @@ export class CommerceProductService {
 
     return mapMedusaProductToDto(
       result.data.product,
-      link.salesChannelId,
+      channelId,
       link.currencyCode,
     )
   }
@@ -223,6 +250,19 @@ export class CommerceProductService {
       salesChannelId,
       currencyCode,
     )
+  }
+
+  /**
+   * A live store link must carry a real sales channel id; without it we
+   * cannot enforce isolation, so we refuse rather than query unscoped.
+   */
+  private requireChannel(link: CommerceStoreLinkDto): string {
+    if (!link.salesChannelId) {
+      throw new ForbiddenException(
+        'Store is not provisioned yet (no sales channel). Provision the store first.',
+      )
+    }
+    return link.salesChannelId
   }
 
   private toMedusaStatus(status: CommerceProductStatus): string {
