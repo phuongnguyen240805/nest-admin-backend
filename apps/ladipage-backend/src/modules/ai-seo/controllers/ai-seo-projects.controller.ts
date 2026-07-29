@@ -17,6 +17,7 @@ import { API_SECURITY_AUTH, TenantGuard } from '@liora/nest-core'
 
 import { CreateSeoProjectDto } from '../dto/create-seo-project.dto'
 import { LinkLandingPageDto } from '../dto/link-landing-page.dto'
+import { ListSeoDashboardProjectsQueryDto } from '../dto/list-seo-dashboard-projects-query.dto'
 import { ListSeoProjectsQueryDto } from '../dto/list-seo-projects-query.dto'
 import { ScanProjectDto } from '../dto/scan-project.dto'
 import { UpdateSeoProjectDto } from '../dto/update-seo-project.dto'
@@ -42,6 +43,19 @@ export class AiSeoProjectsController {
   @Get('health')
   health() {
     return this.openSeoClient.healthCheck()
+  }
+
+  /**
+   * Read-only dashboard projection. It deliberately uses persisted SEO/task/
+   * traffic data and never starts a scan or provisions an Umami website.
+   */
+  @SkipThrottle()
+  @Get('dashboard/projects')
+  dashboardProjects(
+    @Query() dto: ListSeoDashboardProjectsQueryDto,
+    @Headers('store-id') storeId?: string,
+  ) {
+    return this.projectService.listDashboard(dto, storeId)
   }
 
   // Polled by the dashboard (list refetch 15s + one landing-pages poll per card);

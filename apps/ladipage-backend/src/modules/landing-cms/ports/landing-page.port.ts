@@ -72,6 +72,12 @@ export interface PublishIntentResult {
   accepted: boolean
   pageId: string
   artifact: PublishedArtifact
+  aiSeo?: {
+    projectId: string | null
+    status: 'ok' | 'skipped' | 'failed'
+    autoLinked: boolean
+    message?: string
+  }
 }
 
 export interface DraftSavedResult {

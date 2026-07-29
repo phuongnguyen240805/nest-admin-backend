@@ -1,7 +1,9 @@
-import { Module } from '@nestjs/common'
+import { Module, forwardRef } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { SupabaseModule } from '@liora/supabase'
+import { TenantModule } from '@liora/nest-core/modules/tenant/tenant.module'
 
+import { AiSeoModule } from '../ai-seo/ai-seo.module'
 import { LandingPageService } from './application/landing-page.service'
 import { PageRegistryStore } from './application/page-registry.store'
 import { InstaticArtifactService } from './instatic/instatic-artifact.service'
@@ -20,6 +22,8 @@ import { LANDING_PAGE_PORT } from './ports/landing-page.port'
   imports: [
     ConfigModule.forFeature(LandingCmsConfig),
     SupabaseModule,
+    TenantModule,
+    forwardRef(() => AiSeoModule),
   ],
   controllers: [
     LandingCmsHealthController,

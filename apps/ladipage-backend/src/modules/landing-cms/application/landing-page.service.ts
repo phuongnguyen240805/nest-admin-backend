@@ -1,12 +1,17 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common'
 import { Inject } from '@nestjs/common'
 import { createHash } from 'node:crypto'
+import { OrganizationProvisioningService } from '@liora/nest-core/modules/tenant/organization-provisioning.service'
+import { TenantContextService } from '@liora/nest-core/modules/tenant/tenant-context.service'
 
+import { AiSeoPublishService } from '../../ai-seo/services/ai-seo-publish.service'
 import { ILandingCmsConfig, LandingCmsConfig } from '../landing-cms.config'
 import { InstaticArtifactService } from '../instatic/instatic-artifact.service'
 import { verifyBridgeSignature } from '../instatic/instatic-hmac'
@@ -27,6 +32,8 @@ import { PageRegistryStore } from './page-registry.store'
 
 @Injectable()
 export class LandingPageService implements LandingPagePort {
+  private readonly logger = new Logger(LandingPageService.name)
+
   constructor(
     @Inject(LandingCmsConfig.KEY)
     private readonly config: ILandingCmsConfig,
@@ -35,6 +42,12 @@ export class LandingPageService implements LandingPagePort {
     private readonly importService: InstaticImportService,
     private readonly artifactService: InstaticArtifactService,
     private readonly client: InstaticClient,
+    @Optional()
+    private readonly tenantContext?: TenantContextService,
+    @Optional()
+    private readonly organizationProvisioning?: OrganizationProvisioningService,
+    @Optional()
+    private readonly aiSeoPublishService?: AiSeoPublishService,
   ) {}
 
   /**
@@ -161,11 +174,11 @@ export class LandingPageService implements LandingPagePort {
       throw new BadRequestException('pageId is required')
     }
 
+    const record = await this.registry.get(input.pageId)
     let artifact: PublishedArtifact
     let artifactExternalPageId = input.externalPageId ?? null
 
     if (input.html?.trim()) {
-      const record = await this.registry.get(input.pageId)
       if (
         record?.externalPageId &&
         input.externalPageId &&
@@ -187,7 +200,6 @@ export class LandingPageService implements LandingPagePort {
       }
     }
     else {
-      const record = await this.registry.get(input.pageId)
       if (!record?.externalSiteId || !record.externalPageId) {
         throw new NotFoundException(`No Instatic mapping for page ${input.pageId}`)
       }
@@ -205,6 +217,19 @@ export class LandingPageService implements LandingPagePort {
       if (input.seoDescription) artifact.meta.description = input.seoDescription
     }
 
+    const aiSeo = await this.syncAiSeoAfterInstaticPublish({
+      pageId: input.pageId,
+      html: artifact.html,
+      record,
+    })
+    if (aiSeo.html && aiSeo.html !== artifact.html) {
+      artifact = {
+        ...artifact,
+        html: aiSeo.html,
+        etag: createHash('sha256').update(aiSeo.html).digest('hex').slice(0, 16),
+      }
+    }
+
     await this.registry.persistPublishedArtifact({
       pageId: input.pageId,
       externalPageId: artifactExternalPageId,
@@ -217,6 +242,105 @@ export class LandingPageService implements LandingPagePort {
       accepted: true,
       pageId: input.pageId,
       artifact,
+      aiSeo: {
+        projectId: aiSeo.projectId,
+        status: aiSeo.status,
+        autoLinked: aiSeo.autoLinked,
+        ...(aiSeo.message ? { message: aiSeo.message } : {}),
+      },
+    }
+  }
+
+  /**
+   * Instatic publishes arrive through a public HMAC bridge, so they do not
+   * carry the user's JWT/TenantGuard context. Rebuild that context from the
+   * server-owned page mapping before invoking the same AI-SEO automation used
+   * by the Visual Editor publish path.
+   */
+  private async syncAiSeoAfterInstaticPublish(input: {
+    pageId: string
+    html: string
+    record: Awaited<ReturnType<PageRegistryStore['get']>>
+  }): Promise<{
+    html: string
+    projectId: string | null
+    status: 'ok' | 'skipped' | 'failed'
+    autoLinked: boolean
+    message?: string
+  }> {
+    const skipped = (message: string) => ({
+      html: input.html,
+      projectId: null,
+      status: 'skipped' as const,
+      autoLinked: false,
+      message,
+    })
+
+    if (
+      !this.tenantContext ||
+      !this.organizationProvisioning ||
+      !this.aiSeoPublishService
+    ) {
+      return skipped('AI-SEO publish automation is not available')
+    }
+
+    const workspaceOwner = input.record?.externalWorkspaceId?.match(/^ws_(\d+)$/)?.[1]
+    const ownerUserId =
+      input.record?.ownerUserId ??
+      (workspaceOwner ? Number(workspaceOwner) : null)
+    if (!ownerUserId || !Number.isFinite(ownerUserId)) {
+      return skipped('Instatic page mapping has no Nest owner')
+    }
+
+    try {
+      const workspace =
+        await this.organizationProvisioning.ensureWorkspaceForUser(ownerUserId)
+      this.tenantContext.setContext({
+        tenantId: workspace.tenantId,
+        organizationId: workspace.organizationId,
+        appCode: workspace.appCode,
+        organization: workspace.organization,
+      })
+
+      const after = await this.aiSeoPublishService.afterPublish(input.pageId, {
+        name: input.record?.name ?? input.pageId,
+        slug: input.record?.slug ?? input.pageId,
+      })
+      if (!after.seoProjectId) {
+        return {
+          html: input.html,
+          projectId: null,
+          status: after.seoSyncStatus === 'failed' ? 'failed' : 'skipped',
+          autoLinked: after.linked,
+          message: after.message ?? 'AI-SEO project was not created',
+        }
+      }
+
+      const prepared = await this.aiSeoPublishService.preparePublishedHtml(
+        input.pageId,
+        input.html,
+      )
+      return {
+        html: prepared.html ?? input.html,
+        projectId: after.seoProjectId,
+        status:
+          prepared.seoSyncStatus === 'failed' ? 'failed' : after.seoSyncStatus,
+        autoLinked: after.linked,
+        message: prepared.message ?? after.message,
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'AI-SEO publish sync failed'
+      this.logger.warn(
+        `Instatic AI-SEO sync soft-fail page=${input.pageId}: ${message}`,
+      )
+      return {
+        html: input.html,
+        projectId: null,
+        status: 'failed',
+        autoLinked: false,
+        message,
+      }
     }
   }
 

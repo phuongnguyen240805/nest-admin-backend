@@ -10,11 +10,21 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { TenantContextService } from '@liora/nest-core'
 import { In, Repository } from 'typeorm'
 
-import type { SeoProjectDto } from '@liora/api-types'
+import type {
+  SeoDashboardIssueSummaryDto,
+  SeoDashboardProjectsResponseDto,
+  SeoProjectDto,
+  SeoTrafficStatsDto,
+} from '@liora/api-types'
 
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 import { PageEntity } from '../../publish/entities'
 import { CreateSeoProjectDto } from '../dto/create-seo-project.dto'
+import {
+  ListSeoDashboardProjectsQueryDto,
+  SeoDashboardProjectSort,
+  SeoDashboardProjectStatus,
+} from '../dto/list-seo-dashboard-projects-query.dto'
 import { ListSeoProjectsQueryDto } from '../dto/list-seo-projects-query.dto'
 import { ScanDepth, ScanProjectDto } from '../dto/scan-project.dto'
 import { UpdateSeoProjectDto } from '../dto/update-seo-project.dto'
@@ -95,6 +105,128 @@ export class AiSeoProjectService extends TenantScopedService {
     return projects.map((project) =>
       this.applyPageAggregate(mapSeoProjectToDto(project), aggregates.get(project.id)),
     )
+  }
+
+  async listDashboard(
+    dto: ListSeoDashboardProjectsQueryDto,
+    storeId?: string,
+  ): Promise<SeoDashboardProjectsResponseDto> {
+    const tenantId = this.requireTenantId()
+    const page = this.positiveNumber(dto.page, 1)
+    const pageSize = 10
+    const query = this.projectRepository
+      .createQueryBuilder('project')
+      .where('project.tenantId = :tenantId', { tenantId })
+      .andWhere('project.status != :archived', { archived: 'archived' })
+
+    if (storeId) {
+      query.andWhere('project.storeId = :storeId', { storeId })
+    }
+
+    if (dto.search?.trim()) {
+      query.andWhere('(project.name ILIKE :search OR project.hostname ILIKE :search)', {
+        search: `%${dto.search.trim()}%`,
+      })
+    }
+
+    if (dto.status === SeoDashboardProjectStatus.SCANNING) {
+      query.andWhere('project.taskStatus = :running', { running: 'running' })
+    } else if (dto.status === SeoDashboardProjectStatus.NOT_INSTALLED) {
+      query.andWhere('project.pixelTagState != :installed', { installed: 'installed' })
+    } else if (dto.status === SeoDashboardProjectStatus.READY) {
+      query
+        .andWhere('project.taskStatus = :done', { done: 'done' })
+        .andWhere('project.pixelTagState = :installed', { installed: 'installed' })
+    }
+
+    if (dto.sort === SeoDashboardProjectSort.FAVORITES) {
+      query
+        .orderBy('project.isFavorite', 'DESC')
+        .addOrderBy('project.updatedAt', 'DESC')
+    } else {
+      const direction =
+        dto.sort === SeoDashboardProjectSort.UPDATED_ASC ? 'ASC' : 'DESC'
+      query.orderBy('project.updatedAt', direction)
+    }
+
+    const [projects, totalItems] = await query
+      .skip((page - 1) * pageSize)
+      .take(pageSize)
+      .getManyAndCount()
+
+    const projectIds = projects.map((project) => project.id)
+    const [aggregates, issueSummaries] = await Promise.all([
+      this.aggregatePageScores(tenantId, projectIds),
+      this.aggregateDashboardIssues(projectIds),
+    ])
+
+    const items = projects.map((project) => {
+      const mapped = this.applyPageAggregate(
+        mapSeoProjectToDto(project),
+        aggregates.get(project.id),
+      )
+      const snapshot = (project.trafficSnapshot ?? {}) as Partial<SeoTrafficStatsDto>
+      const hasTraffic = ['pageviews', 'visitors', 'visits'].some(
+        (key) => {
+          const value = snapshot[key as keyof SeoTrafficStatsDto]
+          return value != null && Number.isFinite(Number(value))
+        },
+      )
+      const trafficNumber = (value: unknown): number | null => {
+        if (value == null) return null
+        const parsed = Number(value)
+        return Number.isFinite(parsed) ? parsed : null
+      }
+
+      return {
+        id: project.id,
+        projectId: project.id,
+        name: project.name,
+        hostname: project.hostname,
+        status: project.status,
+        taskStatus: project.taskStatus,
+        pixelTagState: project.pixelTagState,
+        isFavorite: project.isFavorite,
+        scores: {
+          overall: mapped.aiGradeOverall,
+          technical: mapped.holisticScores.technicalsScore,
+          content: mapped.holisticScores.contentScore,
+          authority: mapped.holisticScores.authorityScore,
+          ux: mapped.holisticScores.uxScore,
+          healthyPages: mapped.afterSummary.healthyPages,
+          totalPages: mapped.afterSummary.totalPages,
+        },
+        issues: issueSummaries.get(project.id) ?? {
+          critical: 0,
+          warning: 0,
+          info: 0,
+        },
+        traffic: {
+          status: hasTraffic
+            ? 'ok' as const
+            : project.umamiWebsiteId
+              ? 'degraded' as const
+              : 'not_configured' as const,
+          stale: false,
+          pageviews: hasTraffic ? trafficNumber(snapshot.pageviews) : null,
+          visitors: hasTraffic ? trafficNumber(snapshot.visitors) : null,
+          visits: hasTraffic ? trafficNumber(snapshot.visits) : null,
+          syncedAt: project.trafficSyncedAt?.toISOString() ?? null,
+        },
+        lastAnalysis: mapped.lastAnalysis,
+        updatedAt: mapped.updatedAt,
+      }
+    })
+
+    return {
+      items,
+      pagination: {
+        page,
+        pageSize,
+        totalItems,
+        totalPages: Math.max(1, Math.ceil(totalItems / pageSize)),
+      },
+    }
   }
 
   async create(dto: CreateSeoProjectDto, storeId?: string) {
@@ -849,6 +981,54 @@ export class AiSeoProjectService extends TenantScopedService {
         }),
       ),
     )
+  }
+
+  /**
+   * Dashboard severity convention:
+   * error = critical, warning = warning, info = info.
+   * Legacy priority is only a fallback for rows created before severity existed.
+   */
+  private async aggregateDashboardIssues(
+    projectIds: string[],
+  ): Promise<Map<string, SeoDashboardIssueSummaryDto>> {
+    const result = new Map<string, SeoDashboardIssueSummaryDto>()
+    if (projectIds.length === 0) return result
+
+    const tasks = await this.taskRepository
+      .createQueryBuilder('task')
+      .where('task.seoProjectId IN (:...projectIds)', { projectIds })
+      .andWhere('task.type IN (:...types)', {
+        types: ['ON_PAGE', 'CONTENT', 'TECHNICAL'],
+      })
+      .andWhere('task.status = :pending', { pending: 'pending' })
+      .getMany()
+
+    for (const task of tasks) {
+      const summary = result.get(task.seoProjectId) ?? {
+        critical: 0,
+        warning: 0,
+        info: 0,
+      }
+      const payload = task.payload ?? {}
+      const severity = String(payload.severity ?? '').toLowerCase()
+      const legacyPriority = String(
+        payload.priority ?? payload.importance ?? '',
+      ).toLowerCase()
+
+      if (severity === 'error' || (!severity && legacyPriority === 'high')) {
+        summary.critical += 1
+      } else if (
+        severity === 'warning'
+        || (!severity && legacyPriority === 'medium')
+      ) {
+        summary.warning += 1
+      } else {
+        summary.info += 1
+      }
+      result.set(task.seoProjectId, summary)
+    }
+
+    return result
   }
 
   private positiveNumber(value: unknown, fallback: number): number {

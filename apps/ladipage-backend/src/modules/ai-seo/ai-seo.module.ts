@@ -6,6 +6,7 @@ import { BullMqModule, TenantModule } from '@liora/nest-core'
 import { isBullMqEnabled } from '../../config/bullmq.app.config'
 import { PageEntity } from '../publish/entities'
 import { PublishModule } from '../publish/publish.module'
+import { LandingAiSharedModule } from '../landing-ai/landing-ai.shared.module'
 import { AiSeoAgentsController } from './controllers/ai-seo-agents.controller'
 import { AiSeoIntegrationsController } from './controllers/ai-seo-integrations.controller'
 import { AiSeoJobsController } from './controllers/ai-seo-jobs.controller'
@@ -23,6 +24,7 @@ import {
   SeoTaskEntity,
 } from './entities'
 import { AI_SEO_QUEUES } from './queues/constants'
+import { AiSeoAiImprovementService } from './services/ai-seo-ai-improvement.service'
 import { AiSeoCacheService } from './services/ai-seo-cache.service'
 import { AiSeoIntegrationService } from './services/ai-seo-integration.service'
 import { AiSeoJobsService } from './services/ai-seo-jobs.service'
@@ -55,6 +57,7 @@ const lighthouseQueueImports = isBullMqEnabled()
 @Module({
   imports: [
     TenantModule,
+    LandingAiSharedModule,
     forwardRef(() => PublishModule),
     TypeOrmModule.forFeature([
       SeoProjectEntity,
@@ -82,6 +85,7 @@ const lighthouseQueueImports = isBullMqEnabled()
     AiSeoLandingPageService,
     AiSeoWebsiteService,
     AiSeoTaskService,
+    AiSeoAiImprovementService,
     AiSeoIntegrationService,
     AiSeoJobsService,
     AiSeoKeywordsService,

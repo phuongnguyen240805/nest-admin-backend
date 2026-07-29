@@ -56,6 +56,11 @@ export class AiSeoTasksController {
     return this.taskService.deploy(id, dto)
   }
 
+  @Post('seo-tasks/:id/improve')
+  improveWithAi(@Param('id') id: string) {
+    return this.taskService.improveWithAi(id)
+  }
+
   @Patch('seo-tasks/:id')
   update(@Param('id') id: string, @Body() dto: UpdateSeoTaskDto) {
     return this.taskService.updateFeStatus(id, dto.status)

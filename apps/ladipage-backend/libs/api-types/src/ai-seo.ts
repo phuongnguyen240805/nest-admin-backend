@@ -99,3 +99,50 @@ export interface SeoTrafficProvisionDto {
   umamiWebsiteId: string | null
   message?: string
 }
+
+export interface SeoDashboardIssueSummaryDto {
+  critical: number
+  warning: number
+  info: number
+}
+
+export interface SeoDashboardProjectDto {
+  id: string
+  projectId: string
+  name: string
+  hostname: string
+  status: string
+  taskStatus: string
+  pixelTagState: string
+  isFavorite: boolean
+  scores: {
+    overall: number
+    technical: number
+    content: number
+    authority: number
+    ux: number
+    healthyPages: number
+    totalPages: number
+  }
+  issues: SeoDashboardIssueSummaryDto
+  traffic: {
+    status: SeoTrafficStatus
+    stale: boolean
+    pageviews: number | null
+    visitors: number | null
+    visits: number | null
+    syncedAt: string | null
+  }
+  lastAnalysis: string | null
+  updatedAt: string
+}
+
+export interface SeoDashboardProjectsResponseDto {
+  items: SeoDashboardProjectDto[]
+  pagination: {
+    page: number
+    pageSize: number
+    totalItems: number
+    totalPages: number
+  }
+}

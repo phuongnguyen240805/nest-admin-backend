@@ -4,6 +4,19 @@ import { LandingPageService } from './landing-page.service'
 import { PageRegistryStore } from './page-registry.store'
 import { signBridgePayload } from '../instatic/instatic-hmac'
 
+jest.mock(
+  '@liora/nest-core/modules/tenant/organization-provisioning.service',
+  () => ({ OrganizationProvisioningService: class OrganizationProvisioningService {} }),
+)
+jest.mock(
+  '@liora/nest-core/modules/tenant/tenant-context.service',
+  () => ({ TenantContextService: class TenantContextService {} }),
+)
+jest.mock(
+  '../../ai-seo/services/ai-seo-publish.service',
+  () => ({ AiSeoPublishService: class AiSeoPublishService {} }),
+)
+
 describe('LandingPageService', () => {
   const config = {
     mock: true,
@@ -30,7 +43,14 @@ describe('LandingPageService', () => {
     }),
   }
 
-  function createService() {
+  function createService(aiSeoAutomation?: {
+    tenantContext: { setContext: jest.Mock }
+    organizationProvisioning: { ensureWorkspaceForUser: jest.Mock }
+    aiSeoPublishService: {
+      afterPublish: jest.Mock
+      preparePublishedHtml: jest.Mock
+    }
+  }) {
     const supabaseService = {
       hasAdminClient: () => false,
       getAdminClient: () => {
@@ -70,6 +90,9 @@ describe('LandingPageService', () => {
       importService as never,
       artifactService as never,
       client as never,
+      aiSeoAutomation?.tenantContext as never,
+      aiSeoAutomation?.organizationProvisioning as never,
+      aiSeoAutomation?.aiSeoPublishService as never,
     )
 
     return { service, registry, sso, importService, artifactService }
@@ -177,6 +200,73 @@ describe('LandingPageService', () => {
         pageId: 'p1',
         html: '<html><body>x</body></html>',
         meta: expect.objectContaining({ title: 'SEO' }),
+      }),
+    )
+  })
+
+  it('creates and links an AI-SEO project when Instatic publishes', async () => {
+    const tenantContext = { setContext: jest.fn() }
+    const organizationProvisioning = {
+      ensureWorkspaceForUser: jest.fn().mockResolvedValue({
+        tenantId: 17,
+        organizationId: 'org-17',
+        appCode: 'ladipage',
+        organization: {},
+      }),
+    }
+    const aiSeoPublishService = {
+      afterPublish: jest.fn().mockResolvedValue({
+        seoProjectId: 'seo-p1',
+        seoSyncStatus: 'ok',
+        trafficSyncStatus: 'ok',
+        linked: true,
+      }),
+      preparePublishedHtml: jest.fn().mockResolvedValue({
+        html: '<html><head><script data-liora-ai-seo-project="seo-p1"></script></head><body>x</body></html>',
+        seoProjectId: 'seo-p1',
+        seoSyncStatus: 'ok',
+        trafficSyncStatus: 'ok',
+        scriptsInjected: { seoPixel: true, umami: false },
+      }),
+    }
+    const { service, registry } = createService({
+      tenantContext,
+      organizationProvisioning,
+      aiSeoPublishService,
+    })
+    await service.openEditorSession('p1', 7)
+    const persist = jest.spyOn(registry, 'persistPublishedArtifact')
+
+    const result = await service.acceptPublishIntent({
+      pageId: 'p1',
+      html: '<html><body>x</body></html>',
+    })
+
+    expect(organizationProvisioning.ensureWorkspaceForUser).toHaveBeenCalledWith(7)
+    expect(tenantContext.setContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 17,
+        organizationId: 'org-17',
+        appCode: 'ladipage',
+      }),
+    )
+    expect(aiSeoPublishService.afterPublish).toHaveBeenCalledWith('p1', {
+      name: 'p1',
+      slug: 'p1',
+    })
+    expect(aiSeoPublishService.preparePublishedHtml).toHaveBeenCalledWith(
+      'p1',
+      '<html><body>x</body></html>',
+    )
+    expect(result.aiSeo).toEqual({
+      projectId: 'seo-p1',
+      status: 'ok',
+      autoLinked: true,
+    })
+    expect(persist).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pageId: 'p1',
+        html: expect.stringContaining('data-liora-ai-seo-project="seo-p1"'),
       }),
     )
   })

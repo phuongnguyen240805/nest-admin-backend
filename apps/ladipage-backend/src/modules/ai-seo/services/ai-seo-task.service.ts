@@ -6,6 +6,7 @@ import { Repository } from 'typeorm'
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 import { SeoTaskActionDto } from '../dto/seo-task-action.dto'
 import { SeoProjectEntity, SeoProjectPageEntity, SeoTaskEntity } from '../entities'
+import { AiSeoAiImprovementService } from './ai-seo-ai-improvement.service'
 
 @Injectable()
 export class AiSeoTaskService extends TenantScopedService {
@@ -17,6 +18,7 @@ export class AiSeoTaskService extends TenantScopedService {
     private readonly projectRepository: Repository<SeoProjectEntity>,
     @InjectRepository(SeoProjectPageEntity)
     private readonly projectPageRepository: Repository<SeoProjectPageEntity>,
+    private readonly aiImprovementService: AiSeoAiImprovementService,
   ) {
     super(tenantContext)
   }
@@ -44,6 +46,18 @@ export class AiSeoTaskService extends TenantScopedService {
 
   reject(id: string, dto: SeoTaskActionDto) {
     return this.updateStatus(id, 'rejected', dto)
+  }
+
+  async improveWithAi(id: string) {
+    const task = await this.findTaskOrFail(id)
+    const aiImprovement = await this.aiImprovementService.generate(task.project, task)
+
+    task.result = {
+      ...(task.result ?? {}),
+      aiImprovement,
+    }
+
+    return this.mapTask(await this.taskRepository.save(task))
   }
 
   async updateFeStatus(id: string, status: 'todo' | 'in_progress' | 'completed') {
