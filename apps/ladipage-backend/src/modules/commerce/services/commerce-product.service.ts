@@ -183,6 +183,60 @@ export class CommerceProductService {
     )
   }
 
+  async updateStock(
+    organizationId: string,
+    id: string,
+    stock: number,
+  ): Promise<CommerceProductDto> {
+    const cfg = getCommerceConfig()
+    const link = await this.storeService.ensureStore(organizationId)
+    const normalized = Math.max(0, Math.trunc(stock))
+    if (cfg.mockMode) {
+      const updated = commerceMemoryStore.updateStock(
+        organizationId,
+        id,
+        normalized,
+      )
+      if (!updated) throw new NotFoundException('Commerce product not found')
+      return updated
+    }
+
+    const current = await this.get(organizationId, id)
+    const result = await MedusaHttpClient.fromConfig('admin').post<
+      MedusaProductEnvelope
+    >(`/admin/products/${encodeURIComponent(id)}`, {
+      metadata: { stock: normalized },
+    })
+    if (!result.ok || !result.data?.product) {
+      throw new InternalServerErrorException(
+        result.error ?? 'Unable to update Medusa product stock',
+      )
+    }
+    return mapMedusaProductToDto(
+      result.data.product,
+      this.requireChannel(link),
+      current.currencyCode,
+    )
+  }
+
+  async remove(organizationId: string, id: string) {
+    const cfg = getCommerceConfig()
+    await this.get(organizationId, id)
+    if (cfg.mockMode) {
+      commerceMemoryStore.deleteProduct(organizationId, id)
+      return { id, deleted: true }
+    }
+    const result = await MedusaHttpClient.fromConfig('admin').delete(
+      `/admin/products/${encodeURIComponent(id)}`,
+    )
+    if (!result.ok) {
+      throw new InternalServerErrorException(
+        result.error ?? 'Unable to delete Medusa product',
+      )
+    }
+    return { id, deleted: true }
+  }
+
   private async createOnMedusa(
     organizationId: string,
     input: CreateCommerceProductInput,

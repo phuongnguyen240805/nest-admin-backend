@@ -74,6 +74,7 @@ import { LandingCmsModule } from '../modules/landing-cms/landing-cms.module';
 import { LandingCmsConfig } from '../modules/landing-cms/landing-cms.config';
 import { McpLandingModule } from '../modules/mcp-landing/mcp-landing.module';
 import { CommerceModule } from '../modules/commerce/commerce.module';
+import { CloudPhoneModule } from '../modules/cloud-phone/cloud-phone.module';
 
 const bullMqImports = isBullMqEnabled()
   ? [
@@ -130,6 +131,7 @@ const bullMqImports = isBullMqEnabled()
     CrmModule,
     EcomStoreModule,
     CommerceModule,
+    CloudPhoneModule,
     DomainModule,
     PublishModule,
     LandingCmsModule,

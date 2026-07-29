@@ -6,6 +6,7 @@ import { TenantModule } from '@liora/nest-core'
 import { CommerceController } from './controllers/commerce.controller'
 import { CommerceStoreLinkEntity } from './entities'
 import { CommerceAccessService } from './services/commerce-access.service'
+import { CommerceAdminResourceService } from './services/commerce-admin-resource.service'
 import { CommerceOrderService } from './services/commerce-order.service'
 import { CommerceProductService } from './services/commerce-product.service'
 import { CommerceStoreService } from './services/commerce-store.service'
@@ -26,6 +27,7 @@ import { MedusaProvisioningService } from './services/medusa-provisioning.servic
   controllers: [CommerceController],
   providers: [
     CommerceAccessService,
+    CommerceAdminResourceService,
     CommerceStoreLinkService,
     MedusaProvisioningService,
     CommerceStoreService,

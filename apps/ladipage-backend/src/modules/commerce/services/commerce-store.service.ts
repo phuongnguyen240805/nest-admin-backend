@@ -142,6 +142,42 @@ export class CommerceStoreService {
     }
   }
 
+  async updateStore(
+    organizationId: string,
+    patch: {
+      salesChannelName?: string
+      regionId?: string
+      currencyCode?: string
+      healthMessage?: string
+    },
+  ): Promise<CommerceStoreLinkDto> {
+    const current = await this.ensureStore(organizationId)
+    const salesChannelName =
+      patch.salesChannelName?.trim() || current.salesChannelName
+
+    if (!getCommerceConfig().mockMode && salesChannelName !== current.salesChannelName) {
+      const result = await MedusaHttpClient.fromConfig('admin').post(
+        `/admin/sales-channels/${encodeURIComponent(current.salesChannelId)}`,
+        { name: salesChannelName },
+      )
+      if (!result.ok) {
+        throw new Error(result.error ?? 'Unable to update Medusa sales channel')
+      }
+    }
+
+    const entity = await this.links.upsert(organizationId, {
+      salesChannelName,
+      regionId: patch.regionId?.trim() || current.regionId,
+      currencyCode:
+        patch.currencyCode?.trim().toLowerCase() || current.currencyCode,
+      healthMessage:
+        patch.healthMessage === undefined
+          ? current.healthMessage
+          : patch.healthMessage.trim() || null,
+    })
+    return this.toDto(entity)
+  }
+
   async createStorefrontSession(
     organizationId: string,
     pageId?: string,

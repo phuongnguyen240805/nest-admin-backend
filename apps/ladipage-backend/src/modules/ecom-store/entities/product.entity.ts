@@ -28,7 +28,7 @@ export class ProductEntity extends TenantScopedEntity {
   @Column({ type: 'int', nullable: true })
   categoryId: number | null
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
+  @Column({ type: 'text', nullable: true })
   imageUrl: string | null
 
   @Column({ type: 'varchar', length: 50, default: 'physical' })

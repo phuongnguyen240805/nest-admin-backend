@@ -249,4 +249,8 @@ export class MedusaHttpClient {
   post<T = unknown>(path: string, body?: unknown) {
     return this.request<T>('POST', path, body)
   }
+
+  delete<T = unknown>(path: string) {
+    return this.request<T>('DELETE', path)
+  }
 }

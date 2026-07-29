@@ -145,6 +145,32 @@ export class CommerceMemoryStore {
     return list[idx]
   }
 
+  updateStock(
+    organizationId: string,
+    id: string,
+    stock: number,
+  ): CommerceProductDto | null {
+    const list = this.products.get(organizationId)
+    if (!list) return null
+    const idx = list.findIndex(product => product.id === id)
+    if (idx < 0) return null
+    list[idx] = {
+      ...list[idx],
+      stock: Math.max(0, Math.trunc(stock)),
+      updatedAt: new Date().toISOString(),
+    }
+    return list[idx]
+  }
+
+  deleteProduct(organizationId: string, id: string): boolean {
+    const list = this.products.get(organizationId)
+    if (!list) return false
+    const next = list.filter(product => product.id !== id)
+    if (next.length === list.length) return false
+    this.products.set(organizationId, next)
+    return true
+  }
+
   listOrders(organizationId: string): CommerceOrderDto[] {
     this.ensureSeed(organizationId)
     return [...(this.orders.get(organizationId) ?? [])]

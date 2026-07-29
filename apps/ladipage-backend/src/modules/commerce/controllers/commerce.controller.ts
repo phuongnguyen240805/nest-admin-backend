@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Logger,
   Param,
@@ -20,6 +21,10 @@ import { getCommerceConfig } from '../commerce.config'
 import { CommercePermissions } from '../commerce.permissions'
 import { CreateCommerceProductDto } from '../dto/create-commerce-product.dto'
 import { CommerceAccessService } from '../services/commerce-access.service'
+import {
+  CommerceAdminResourceService,
+  type CommerceResourceKind,
+} from '../services/commerce-admin-resource.service'
 import { CommerceOrderService } from '../services/commerce-order.service'
 import { CommerceProductService } from '../services/commerce-product.service'
 import { CommerceStoreService } from '../services/commerce-store.service'
@@ -34,6 +39,7 @@ export class CommerceController {
 
   constructor(
     private readonly access: CommerceAccessService,
+    private readonly adminResources: CommerceAdminResourceService,
     private readonly storeService: CommerceStoreService,
     private readonly productService: CommerceProductService,
     private readonly orderService: CommerceOrderService,
@@ -60,6 +66,72 @@ export class CommerceController {
   provision(@GetOrgFromRequest() org: Organization) {
     this.access.assertEnabled()
     return this.storeService.ensureStore(org.id)
+  }
+
+  @Patch('store')
+  @Perm(CommercePermissions.STORE_MANAGE)
+  @ApiOperation({ summary: 'Update this organization commerce store settings' })
+  updateStore(
+    @Body()
+    body: {
+      salesChannelName?: string
+      regionId?: string
+      currencyCode?: string
+      healthMessage?: string
+    },
+    @GetOrgFromRequest() org: Organization,
+  ) {
+    this.access.assertEnabled()
+    return this.storeService.updateStore(org.id, body)
+  }
+
+  @Get('admin/:kind')
+  @Perm(CommercePermissions.STORE_MANAGE)
+  listAdminResources(
+    @Param('kind') kind: string,
+    @GetOrgFromRequest() org: Organization,
+  ) {
+    this.access.assertEnabled()
+    return this.adminResources.list(this.resourceKind(kind), org.id)
+  }
+
+  @Post('admin/:kind')
+  @Perm(CommercePermissions.STORE_MANAGE)
+  createAdminResource(
+    @Param('kind') kind: string,
+    @Body() body: Record<string, unknown>,
+    @GetOrgFromRequest() org: Organization,
+  ) {
+    this.access.assertEnabled()
+    return this.adminResources.create(this.resourceKind(kind), org.id, body)
+  }
+
+  @Patch('admin/:kind/:id')
+  @Perm(CommercePermissions.STORE_MANAGE)
+  updateAdminResource(
+    @Param('kind') kind: string,
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @GetOrgFromRequest() org: Organization,
+  ) {
+    this.access.assertEnabled()
+    return this.adminResources.update(
+      this.resourceKind(kind),
+      org.id,
+      id,
+      body,
+    )
+  }
+
+  @Delete('admin/:kind/:id')
+  @Perm(CommercePermissions.STORE_MANAGE)
+  deleteAdminResource(
+    @Param('kind') kind: string,
+    @Param('id') id: string,
+    @GetOrgFromRequest() org: Organization,
+  ) {
+    this.access.assertEnabled()
+    return this.adminResources.remove(this.resourceKind(kind), org.id, id)
   }
 
   @Get('products')
@@ -120,6 +192,32 @@ export class CommerceController {
     return this.productService.updateStatus(org.id, id, body.status)
   }
 
+  @Patch('products/:id/stock')
+  @Perm(CommercePermissions.PRODUCT_WRITE)
+  @ApiOperation({ summary: 'Update product stock for the organization channel' })
+  updateStock(
+    @Param('id') id: string,
+    @Body() body: { stock: number },
+    @GetOrgFromRequest() org: Organization,
+  ) {
+    this.access.assertEnabled()
+    if (!Number.isFinite(body.stock) || body.stock < 0) {
+      throw new BadRequestException('stock must be a non-negative number')
+    }
+    return this.productService.updateStock(org.id, id, body.stock)
+  }
+
+  @Delete('products/:id')
+  @Perm(CommercePermissions.PRODUCT_WRITE)
+  @ApiOperation({ summary: 'Delete a product owned by this organization channel' })
+  deleteProduct(
+    @Param('id') id: string,
+    @GetOrgFromRequest() org: Organization,
+  ) {
+    this.access.assertEnabled()
+    return this.productService.remove(org.id, id)
+  }
+
   @Get('orders')
   @Perm(CommercePermissions.ORDER_READ)
   @ApiOperation({ summary: 'List online commerce orders' })
@@ -141,5 +239,17 @@ export class CommerceController {
       throw new BadRequestException('organizationId is required')
     }
     return this.storeService.createStorefrontSession(orgId, body.pageId)
+  }
+
+  private resourceKind(value: string): CommerceResourceKind {
+    if (
+      value === 'categories'
+      || value === 'product-tags'
+      || value === 'customers'
+      || value === 'promotions'
+    ) {
+      return value
+    }
+    throw new BadRequestException('Unsupported commerce resource')
   }
 }
