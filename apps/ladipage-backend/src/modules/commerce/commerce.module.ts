@@ -4,11 +4,15 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import { TenantModule } from '@liora/nest-core'
 
 import { CommerceController } from './controllers/commerce.controller'
-import { CommerceStoreLinkEntity } from './entities'
+import {
+  CommerceResourceOwnershipEntity,
+  CommerceStoreLinkEntity,
+} from './entities'
 import { CommerceAccessService } from './services/commerce-access.service'
 import { CommerceAdminResourceService } from './services/commerce-admin-resource.service'
 import { CommerceOrderService } from './services/commerce-order.service'
 import { CommerceProductService } from './services/commerce-product.service'
+import { CommerceResourceOwnershipService } from './services/commerce-resource-ownership.service'
 import { CommerceStoreService } from './services/commerce-store.service'
 import { CommerceStoreLinkService } from './services/commerce-store-link.service'
 import { MedusaProvisioningService } from './services/medusa-provisioning.service'
@@ -22,12 +26,16 @@ import { MedusaProvisioningService } from './services/medusa-provisioning.servic
 @Module({
   imports: [
     TenantModule,
-    TypeOrmModule.forFeature([CommerceStoreLinkEntity]),
+    TypeOrmModule.forFeature([
+      CommerceStoreLinkEntity,
+      CommerceResourceOwnershipEntity,
+    ]),
   ],
   controllers: [CommerceController],
   providers: [
     CommerceAccessService,
     CommerceAdminResourceService,
+    CommerceResourceOwnershipService,
     CommerceStoreLinkService,
     MedusaProvisioningService,
     CommerceStoreService,

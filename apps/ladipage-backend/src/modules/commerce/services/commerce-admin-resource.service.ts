@@ -6,6 +6,7 @@ import {
 
 import { getCommerceConfig } from '../commerce.config'
 import { MedusaHttpClient } from '../clients/medusa-http.client'
+import { CommerceResourceOwnershipService } from './commerce-resource-ownership.service'
 
 export type CommerceResourceKind =
   | 'categories'
@@ -52,9 +53,19 @@ const CONFIG: Record<
 export class CommerceAdminResourceService {
   private readonly mock = new Map<string, ResourceRecord[]>()
 
+  constructor(
+    private readonly ownership: CommerceResourceOwnershipService,
+  ) {}
+
   async list(kind: CommerceResourceKind, organizationId: string) {
+    const ownedIds = new Set(
+      await this.ownership.listExternalIds(organizationId, kind),
+    )
+    if (ownedIds.size === 0) return []
+
     if (getCommerceConfig().mockMode) {
-      return [...(this.mock.get(this.key(kind, organizationId)) ?? [])]
+      return (this.mock.get(this.key(kind, organizationId)) ?? [])
+        .filter(item => ownedIds.has(item.id))
     }
 
     const cfg = CONFIG[kind]
@@ -63,7 +74,7 @@ export class CommerceAdminResourceService {
     >(`${cfg.path}?limit=100`)
     this.assertOk(result.ok, result.error)
     const items = (result.data?.[cfg.envelope] ?? []) as ResourceRecord[]
-    return items.filter(item => this.belongsTo(item, organizationId))
+    return items.filter(item => ownedIds.has(item.id))
   }
 
   async create(
@@ -79,6 +90,16 @@ export class CommerceAdminResourceService {
       } as ResourceRecord
       const key = this.key(kind, organizationId)
       this.mock.set(key, [item, ...(this.mock.get(key) ?? [])])
+      try {
+        await this.ownership.claim(organizationId, kind, item.id)
+      }
+      catch (error) {
+        this.mock.set(
+          key,
+          (this.mock.get(key) ?? []).filter(candidate => candidate.id !== item.id),
+        )
+        throw error
+      }
       return item
     }
 
@@ -87,7 +108,22 @@ export class CommerceAdminResourceService {
       Record<string, unknown>
     >(cfg.path, payload)
     this.assertOk(result.ok, result.error)
-    return result.data?.[cfg.singular] as ResourceRecord
+    const item = result.data?.[cfg.singular] as ResourceRecord
+    if (!item?.id) {
+      throw new InternalServerErrorException(
+        'Medusa did not return the created resource id',
+      )
+    }
+    try {
+      await this.ownership.claim(organizationId, kind, item.id)
+    }
+    catch (error) {
+      await MedusaHttpClient.fromConfig('admin').delete(
+        `${cfg.path}/${encodeURIComponent(item.id)}`,
+      )
+      throw error
+    }
+    return item
   }
 
   async update(
@@ -132,6 +168,7 @@ export class CommerceAdminResourceService {
         key,
         (this.mock.get(key) ?? []).filter(item => item.id !== id),
       )
+      await this.ownership.release(organizationId, kind, id)
       return { id, deleted: true }
     }
 
@@ -140,6 +177,7 @@ export class CommerceAdminResourceService {
       `${cfg.path}/${encodeURIComponent(id)}`,
     )
     this.assertOk(result.ok, result.error)
+    await this.ownership.release(organizationId, kind, id)
     return { id, deleted: true }
   }
 
@@ -148,16 +186,17 @@ export class CommerceAdminResourceService {
     organizationId: string,
     id: string,
   ) {
+    const owned = await this.ownership.owns(
+      organizationId,
+      kind,
+      id,
+    )
+    if (!owned) throw new NotFoundException('Commerce resource not found')
     const item = (await this.list(kind, organizationId)).find(
       candidate => candidate.id === id,
     )
     if (!item) throw new NotFoundException('Commerce resource not found')
     return item
-  }
-
-  private belongsTo(item: ResourceRecord, organizationId: string) {
-    const metadata = item.metadata as Record<string, unknown> | undefined
-    return metadata?.ladipage_organization_id === organizationId
   }
 
   private withTenantMetadata(

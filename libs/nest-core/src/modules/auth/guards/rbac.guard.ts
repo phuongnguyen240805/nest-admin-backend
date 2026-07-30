@@ -19,55 +19,47 @@ export class RbacGuard implements CanActivate {
     private authService: AuthService,
   ) {}
 
-  async canActivate(context: ExecutionContext): Promise<any> {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ])
-
-    if (isPublic)
-      return true
+    if (isPublic) return true
 
     const request = context.switchToHttp().getRequest<FastifyRequest>()
-
     const { user } = request
-    if (!user)
-      throw new BusinessException(ErrorEnum.INVALID_LOGIN)
+    if (!user) throw new BusinessException(ErrorEnum.INVALID_LOGIN)
 
-    // allowAnon 是需要登录后可访问(无需权限), Public 则是无需登录也可访问.
     const allowAnon = this.reflector.get<boolean>(
       ALLOW_ANON_KEY,
       context.getHandler(),
     )
-    if (allowAnon)
-      return true
+    if (allowAnon) return true
 
-    const payloadPermission = this.reflector.getAllAndOverride<
-      string | string[]
-    >(PERMISSION_KEY, [context.getHandler(), context.getClass()])
+    const required = this.reflector.getAllAndOverride<string | string[]>(
+      PERMISSION_KEY,
+      [context.getHandler(), context.getClass()],
+    )
+    if (!required) return true
+    if (user.roles.includes(Roles.ADMIN)) return true
 
-    // 控制器没有设置接口权限，则默认通过
-    if (!payloadPermission)
-      return true
-
-    // 管理员放开所有权限
-    if (user.roles.includes(Roles.ADMIN))
-      return true
-
-    const allPermissions = await this.authService.getPermissionsCache(user.uid) ?? await this.authService.getPermissions(user.uid)
-    // console.log(allPermissions)
-    let canNext = false
-
-    // handle permission strings
-    if (Array.isArray(payloadPermission)) {
-      // 只要有一个权限满足即可
-      canNext = payloadPermission.every(i => allPermissions.includes(i))
+    const hasRequired = (permissions: string[]): boolean => {
+      const values = Array.isArray(required) ? required : [required]
+      return values.every(permission => permissions.includes(permission))
     }
 
-    if (typeof payloadPermission === 'string')
-      canNext = allPermissions.includes(payloadPermission)
+    let permissions =
+      await this.authService.getPermissionsCache(user.uid)
+      ?? await this.authService.getPermissions(user.uid)
 
-    if (!canNext)
+    // Permission migrations or role edits can leave an active Redis session
+    // stale. Refresh once from PostgreSQL before returning a denial.
+    if (!hasRequired(permissions)) {
+      permissions = await this.authService.getPermissions(user.uid)
+      await this.authService.setPermissionsCache(user.uid, permissions)
+    }
+
+    if (!hasRequired(permissions))
       throw new BusinessException(ErrorEnum.NO_PERMISSION)
 
     return true

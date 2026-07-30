@@ -10,7 +10,10 @@ require('ts-node').register({
 })
 
 async function main() {
-  const dataSource = require('../../libs/database/src/data-source.ts')
+  // Running authored migrations does not require entity discovery. Use the
+  // migration-only source so Nest/Swagger application imports cannot block
+  // database upgrades.
+  const dataSource = require('../../libs/database/src/migration-data-source.ts')
   const ds = dataSource.default || dataSource
 
   await ds.initialize()
