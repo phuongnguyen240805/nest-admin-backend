@@ -1,6 +1,8 @@
 /**
  * TypeORM CLI entrypoint — CommonJS exports for Node CLI compatibility.
  */
+export {}
+
 require('dotenv/config')
 require('../../../scripts/db/resolve-migration-env').resolveMigrationEnv()
 

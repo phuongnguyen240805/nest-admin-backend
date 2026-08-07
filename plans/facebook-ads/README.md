@@ -1,5 +1,12 @@
 # Facebook Ads Manager
 
+## Hai kế hoạch triển khai mới
+
+- [Plan 1 — Hoàn thiện UI Facebook Ads và khai thác Next.js fullstack](./PLAN-1-FE-UI-NEXTJS-FULLSTACK.md)
+- [Plan 2 — Backend Facebook Ads chặt chẽ với AdsMeta, extension và LadiPage FE](./PLAN-2-BE-ADSMETA-LADIPAGE-INTEGRATION.md)
+
+Hai plan trên cụ thể hóa và cập nhật các tài liệu nền `PLAN-FE.md`, `PLAN-BE.md` và extension pilot. Khi có khác biệt, ưu tiên nguyên tắc: Meta OAuth/Marketing API ở backend là nguồn production chuẩn; Next.js chỉ làm UI/BFF an toàn; extension là nguồn context bổ sung, không chuyển credential Facebook về web/backend.
+
 Tài liệu triển khai tính năng quản lý và chạy quảng cáo Meta cho hệ thống LadiPage.
 
 ## Phạm vi

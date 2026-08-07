@@ -6,6 +6,8 @@
  * from Nest/Swagger runtime packages and prevents unrelated application
  * imports from blocking database upgrades.
  */
+export {}
+
 require('dotenv/config')
 require('../../../scripts/db/resolve-migration-env').resolveMigrationEnv()
 

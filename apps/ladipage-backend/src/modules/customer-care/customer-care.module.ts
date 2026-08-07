@@ -1,0 +1,17 @@
+import { Module } from '@nestjs/common'
+import { TypeOrmModule } from '@nestjs/typeorm'
+import { AuthModule, TenantModule } from '@liora/nest-core'
+
+import { CustomerCareController, CustomerCareInternalController } from './customer-care.controller'
+import { CUSTOMER_CARE_ENTITIES } from './customer-care.entities'
+import { CustomerCareGateway } from './customer-care.gateway'
+import { LibreDeskClient, ZaloConnectorClient } from './customer-care.clients'
+import { CustomerCareService } from './customer-care.service'
+
+@Module({
+  imports: [TypeOrmModule.forFeature(CUSTOMER_CARE_ENTITIES), AuthModule, TenantModule],
+  controllers: [CustomerCareController, CustomerCareInternalController],
+  providers: [CustomerCareGateway, LibreDeskClient, ZaloConnectorClient, CustomerCareService],
+  exports: [CustomerCareService],
+})
+export class CustomerCareModule {}

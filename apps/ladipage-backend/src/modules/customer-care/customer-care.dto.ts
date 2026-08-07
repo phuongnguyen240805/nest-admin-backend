@@ -1,0 +1,77 @@
+import { IsArray, IsBoolean, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator'
+import { Type } from 'class-transformer'
+
+export class ConversationQueryDto {
+  @IsOptional() @IsString() cursor?: string
+  @IsOptional() @IsString() search?: string
+  @IsOptional() @IsString() status?: string
+  @IsOptional() @IsString() channel?: string
+  @IsOptional() @IsString() assigneeId?: string
+  @IsOptional() @IsString() tagId?: string
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) limit = 50
+}
+
+export class MessageQueryDto {
+  @IsOptional() @IsString() cursor?: string
+  @IsOptional() @IsString() before?: string
+  @IsOptional() @IsString() afterSequence?: string
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) limit = 100
+}
+
+export class SendMessageDto {
+  @IsUUID() clientMessageId!: string
+  @IsOptional() @IsIn(['text', 'image', 'file', 'sticker']) type = 'text'
+  @IsString() @MaxLength(10000) content!: string
+  @IsOptional() @IsArray() attachments?: unknown[]
+  @IsOptional() @IsUUID() replyToMessageId?: string
+}
+
+export class ConversationPatchDto {
+  @IsOptional() @IsString() status?: string
+  @IsOptional() @IsString() priority?: string
+  @IsOptional() @IsBoolean() pinned?: boolean
+  @IsOptional() @IsBoolean() muted?: boolean
+  @IsOptional() @IsBoolean() archived?: boolean
+}
+
+export class AssignDto { @Type(() => Number) @IsInt() assigneeId!: number }
+export class TeamDto { @Type(() => Number) @IsInt() teamId!: number }
+export class TagsDto { @IsArray() tags!: Array<string | number>; @IsOptional() @IsIn(['set', 'add', 'remove']) action = 'set' }
+export class DraftDto { @IsString() content!: string; @IsOptional() @IsArray() attachments?: unknown[] }
+export class ForwardDto { @IsUUID() targetConversationId!: string; @IsOptional() @IsString() content?: string }
+export class ReactionDto { @IsString() emoji!: string }
+
+export class ContactPatchDto {
+  @IsOptional() @IsString() displayName?: string
+  @IsOptional() @IsString() phone?: string
+  @IsOptional() @IsString() email?: string
+  @IsOptional() @IsString() note?: string
+  @IsOptional() @IsArray() tags?: Array<{ id: string; name: string; color?: string }>
+}
+
+export class CreateConversationDto {
+  @IsString() externalThreadId!: string
+  @IsString() externalContactId!: string
+  @IsString() displayName!: string
+  @IsOptional() @IsString() avatarUrl?: string
+  @IsOptional() @IsIn(['user', 'group']) threadType = 'user'
+  @IsOptional() @IsString() initialMessage?: string
+}
+
+export class SyncQueryDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) afterSequence = 0
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) limit = 500
+}
+
+export class ZaloInboundDto {
+  @Type(() => Number) @IsInt() @Min(1) tenant_id!: number
+  @IsString() event_id!: string
+  @IsString() provider!: string
+  @IsString() account_id!: string
+  @IsString() external_thread_id!: string
+  @IsString() external_message_id!: string
+  @IsOptional() @IsIn(['user', 'group']) thread_type = 'user'
+  @IsString() occurred_at!: string
+  @IsObject() sender!: { external_id: string; display_name: string; avatar_url?: string }
+  @IsObject() message!: { type: string; text: string }
+}

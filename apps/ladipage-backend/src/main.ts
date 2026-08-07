@@ -26,6 +26,7 @@ async function bootstrap() {
       bufferLogs: true,
       // Professional logger can be injected later via SharedModule + LoggerService (winston)
       // Example: const winstonLogger = app.get(LoggerService); app.useLogger(winstonLogger);
+      rawBody: true,
     }
   );
 
@@ -37,7 +38,7 @@ async function bootstrap() {
     origin: "*",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept", "Idempotency-Key", "X-Customer-Care-Timestamp", "X-Customer-Care-Signature"],
   });
 
   // Global Prefix
