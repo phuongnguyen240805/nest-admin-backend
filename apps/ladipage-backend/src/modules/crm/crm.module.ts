@@ -91,6 +91,6 @@ import { PersonRelationService } from './services/person-relation.service'
     ErrorLogService,
     PersonRelationService,
   ],
-  exports: [CustomerService, TypeOrmModule],
+  exports: [CrmFacade, CustomerService, TypeOrmModule],
 })
 export class CrmModule {}

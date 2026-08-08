@@ -8,6 +8,15 @@ export interface ExternalResponse<T> {
   error?: string
 }
 
+export interface LibreDeskMedia {
+  id: number
+  uuid: string
+  filename: string
+  content_type: string
+  size: number
+  url?: string
+}
+
 function normalizeBase(value: string, fallback: string) {
   return (value || fallback).replace(/\/$/, '')
 }
@@ -53,6 +62,13 @@ export class LibreDeskClient {
       throw new BadGatewayException(message)
     }
     return (payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload) as T
+  }
+
+  async upload(file: { filename: string; mimetype: string; toBuffer(): Promise<Buffer> }): Promise<LibreDeskMedia> {
+    const bytes = await file.toBuffer()
+    const form = new FormData()
+    form.append('files', new Blob([bytes], { type: file.mimetype || 'application/octet-stream' }), file.filename)
+    return this.request<LibreDeskMedia>('/media', { method: 'POST', body: form })
   }
 
   async inbound<T>(payload: Record<string, unknown>): Promise<T> {

@@ -1,4 +1,4 @@
-import { IsArray, IsBoolean, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator'
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator'
 import { Type } from 'class-transformer'
 
 export class ConversationQueryDto {
@@ -22,7 +22,7 @@ export class SendMessageDto {
   @IsUUID() clientMessageId!: string
   @IsOptional() @IsIn(['text', 'image', 'file', 'sticker']) type = 'text'
   @IsString() @MaxLength(10000) content!: string
-  @IsOptional() @IsArray() attachments?: unknown[]
+  @IsOptional() @IsArray() @ArrayMaxSize(5) @IsInt({ each: true }) attachments?: number[]
   @IsOptional() @IsUUID() replyToMessageId?: string
 }
 
@@ -47,6 +47,7 @@ export class ContactPatchDto {
   @IsOptional() @IsString() email?: string
   @IsOptional() @IsString() note?: string
   @IsOptional() @IsArray() tags?: Array<{ id: string; name: string; color?: string }>
+  @IsOptional() @IsString() crmContactId?: string
 }
 
 export class CreateConversationDto {
@@ -64,10 +65,12 @@ export class SyncQueryDto {
 }
 
 export class ZaloInboundDto {
-  @Type(() => Number) @IsInt() @Min(1) tenant_id!: number
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) tenant_id?: number
   @IsString() event_id!: string
   @IsString() provider!: string
   @IsString() account_id!: string
+  @IsIn(['incoming', 'outgoing']) direction: 'incoming' | 'outgoing' = 'incoming'
+  @IsBoolean() is_self = false
   @IsString() external_thread_id!: string
   @IsString() external_message_id!: string
   @IsOptional() @IsIn(['user', 'group']) thread_type = 'user'

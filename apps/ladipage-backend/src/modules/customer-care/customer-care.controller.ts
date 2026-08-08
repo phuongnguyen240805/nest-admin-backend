@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   Delete,
   Get,
@@ -18,6 +19,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { SkipThrottle } from '@nestjs/throttler';
 import { CurrentUser, Public, TenantGuard } from '@liora/nest-core';
 import { Bypass } from '@liora/nest-core/common/decorators/bypass.decorator';
 
@@ -45,6 +47,7 @@ function uid(user: any) {
 @ApiBearerAuth()
 @Controller('customer-care')
 @UseGuards(TenantGuard)
+@SkipThrottle()
 export class CustomerCareController {
   constructor(private readonly service: CustomerCareService) {}
 
@@ -188,6 +191,14 @@ export class CustomerCareController {
       dto.clientMessageId = idempotencyKey;
     return this.service.sendMessage(id, dto, uid(user));
   }
+  @Post('media')
+  async uploadMedia(@Req() req: FastifyRequest) {
+    if (!(req as any).isMultipart())
+      throw new BadRequestException('Request must be multipart/form-data');
+    const file = await (req as any).file();
+    if (!file) throw new BadRequestException('File is required');
+    return this.service.uploadMedia(file);
+  }
   @Get('conversations/:id/messages/:messageId') message(
     @Param('id') id: string,
     @Param('messageId') messageId: string,
@@ -284,6 +295,7 @@ export class CustomerCareController {
 
 @Public()
 @Controller('internal/customer-care')
+@SkipThrottle()
 export class CustomerCareInternalController {
   constructor(private readonly service: CustomerCareService) {}
 

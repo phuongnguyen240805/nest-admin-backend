@@ -68,6 +68,9 @@ export class CustomerCareContactIdentityEntity extends CustomerCareTenantEntity 
   @Column({ name: 'crm_customer_id', type: 'int', nullable: true })
   crmCustomerId!: number | null
 
+  @Column({ name: 'crm_person_id', type: 'uuid', nullable: true })
+  crmPersonId!: string | null
+
   @Column({ type: 'jsonb', default: () => "'[]'::jsonb" })
   tags!: Array<{ id: string; name: string; color?: string }>
 

@@ -1,14 +1,14 @@
-import FastifyCookie from '@fastify/cookie'
-import FastifyMultipart from '@fastify/multipart'
-import { FastifyAdapter } from '@nestjs/platform-fastify'
+import FastifyCookie from '@fastify/cookie';
+import FastifyMultipart from '@fastify/multipart';
+import { FastifyAdapter } from '@nestjs/platform-fastify';
 
 const app: FastifyAdapter = new FastifyAdapter({
   // @see https://www.fastify.io/docs/latest/Reference/Server/#trustproxy
   trustProxy: true,
   logger: false,
   // forceCloseConnections: true,
-})
-export { app as fastifyApp }
+});
+export { app as fastifyApp };
 
 app.register(FastifyMultipart as any, {
   limits: {
@@ -16,11 +16,11 @@ app.register(FastifyMultipart as any, {
     fileSize: 1024 * 1024 * 6, // limit size 6M
     files: 5, // Max number of file fields
   },
-})
+});
 
 app.register(FastifyCookie as any, {
   secret: 'cookie-secret', // è¿™ä¸ª secret ä¸å¤ªé‡è¦ï¼Œä¸å­˜é‰´æƒç›¸å…³ï¼Œæ— å…³ç´§è¦
-})
+});
 
 // Raw body support for Stripe webhooks (must be Buffer for signature verification).
 // The webhook controller (billing/stripe) expects request.rawBody to be present.
@@ -43,28 +43,29 @@ app.register(FastifyCookie as any, {
 //   }
 // })
 
-app.getInstance().addHook('onRequest', async (request, reply): Promise<void> => {
-  // set undefined origin
-  const { origin } = request.headers
-  if (!origin) {
-    request.headers.origin = request.headers.host as string
-  }
+app
+  .getInstance()
+  .addHook('onRequest', async (request, reply): Promise<void> => {
+    // set undefined origin
+    const { origin } = request.headers;
+    if (!origin) {
+      request.headers.origin = request.headers.host as string;
+    }
 
-  // forbidden php
-  const { url } = request
-  if (url.endsWith('.php')) {
-    reply.raw.statusMessage =
-      'Eh. PHP is not support on this machine. Yep, I also think PHP is bestest programming language. But for me it is beyond my reach.'
+    // forbidden php
+    const { url } = request;
+    if (url.endsWith('.php')) {
+      reply.raw.statusMessage =
+        'Eh. PHP is not support on this machine. Yep, I also think PHP is bestest programming language. But for me it is beyond my reach.';
 
-    return reply.code(418).send()   // early return OK
-  }
+      return reply.code(418).send(); // early return OK
+    }
 
-  // skip favicon request
-  if (url.match(/favicon.ico$/) || url.match(/manifest.json$/)) {
-    return reply.code(204).send()   // early return OK
-  }
-
-})
+    // skip favicon request
+    if (url.match(/favicon.ico$/) || url.match(/manifest.json$/)) {
+      return reply.code(204).send(); // early return OK
+    }
+  });
 
 // app.getInstance().addHook('onRequest', (request, reply, done) => {
 //   // set undefined origin
