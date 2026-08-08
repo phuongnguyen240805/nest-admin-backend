@@ -31,6 +31,7 @@ import {
   CreateConversationDto,
   DraftDto,
   ForwardDto,
+  FacebookLoginDto,
   MessageQueryDto,
   SendMessageDto,
   SyncQueryDto,
@@ -85,6 +86,14 @@ export class CustomerCareController {
   @Delete('channels/:id/session')
   disconnectChannel(@Param('id', ParseIntPipe) id: number) {
     return this.service.disconnectChannel(id);
+  }
+  @Post('channels/:id/facebook/session')
+  @HttpCode(HttpStatus.OK)
+  loginFacebook(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: FacebookLoginDto,
+  ) {
+    return this.service.loginFacebook(id, dto.cookie);
   }
 
   @Get('conversations') listConversations(
@@ -313,6 +322,24 @@ export class CustomerCareInternalController {
         : Buffer.isBuffer(req.rawBody)
           ? req.rawBody.toString('utf8')
           : JSON.stringify(dto);
+    this.service.verifyWebhook(rawBody, timestamp, signature);
+    return this.service.inbound(dto);
+  }
+
+
+  @Post('events')
+  @HttpCode(HttpStatus.OK)
+  async connectorEvent(
+    @Req() req: FastifyRequest & { rawBody?: string | Buffer },
+    @Body() dto: ZaloInboundDto,
+    @Headers('x-customer-care-timestamp') timestamp: string,
+    @Headers('x-customer-care-signature') signature: string,
+  ) {
+    const rawBody = typeof req.rawBody === 'string'
+      ? req.rawBody
+      : Buffer.isBuffer(req.rawBody)
+        ? req.rawBody.toString('utf8')
+        : JSON.stringify(dto);
     this.service.verifyWebhook(rawBody, timestamp, signature);
     return this.service.inbound(dto);
   }

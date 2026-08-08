@@ -250,6 +250,10 @@ services:
       target: development
     container_name: liora-ladipage-dev
     restart: unless-stopped
+    # Dependencies are already installed in the development image. Skipping
+    # the startup install avoids pnpm trying to replace the read-only bind
+    # mounted lockfile on Docker Desktop for Windows (EBUSY restart loop).
+    entrypoint: []
     ports:
       - "7002:7002"
     env_file:

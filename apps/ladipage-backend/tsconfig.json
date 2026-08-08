@@ -29,7 +29,9 @@
       "@liora/api-types": ["./libs/api-types/src/index.ts"],
       "@liora/api-types/*": ["./libs/api-types/src/*"],
       "@liora/ladipage-types": ["./libs/ladipage-types/src/index.ts"],
-      "@liora/ladipage-types/*": ["./libs/ladipage-types/src/*"]
+      "@liora/ladipage-types/*": ["./libs/ladipage-types/src/*"],
+      "@liora/ads-contracts": ["../../libs/ads-contracts/src/index.ts"],
+      "@liora/ads-contracts/*": ["../../libs/ads-contracts/src/*"]
     },
     "esModuleInterop": true
   }

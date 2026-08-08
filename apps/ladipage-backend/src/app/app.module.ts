@@ -76,6 +76,7 @@ import { McpLandingModule } from '../modules/mcp-landing/mcp-landing.module';
 import { CommerceModule } from '../modules/commerce/commerce.module';
 import { CloudPhoneModule } from '../modules/cloud-phone/cloud-phone.module';
 import { CustomerCareModule } from '../modules/customer-care/customer-care.module';
+import { AdsPlatformModule } from '../modules/ads-platform/ads-platform.module';
 
 const bullMqImports = isBullMqEnabled()
   ? [
@@ -134,6 +135,7 @@ const bullMqImports = isBullMqEnabled()
     CommerceModule,
     CloudPhoneModule,
     CustomerCareModule,
+    AdsPlatformModule,
     DomainModule,
     PublishModule,
     LandingCmsModule,

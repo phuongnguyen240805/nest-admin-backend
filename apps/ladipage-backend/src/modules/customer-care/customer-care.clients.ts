@@ -71,15 +71,19 @@ export class LibreDeskClient {
     return this.request<LibreDeskMedia>('/media', { method: 'POST', body: form })
   }
 
-  async inbound<T>(payload: Record<string, unknown>): Promise<T> {
-    const { baseUrl, connectorToken } = this.settings()
-    if (!connectorToken) throw new ServiceUnavailableException('Zalo connector token is not configured')
-    const response = await fetch(`${baseUrl}/channels/zalo/inbound`, {
+  async inbound<T>(payload: Record<string, unknown>, provider = 'zalo_personal'): Promise<T> {
+    const { baseUrl, connectorToken: zaloToken } = this.settings()
+    const facebook = provider === 'facebook_personal'
+    const connectorToken = facebook
+      ? this.config.get<string>('CUSTOMER_CARE_FACEBOOK_CONNECTOR_TOKEN') || zaloToken
+      : zaloToken
+    if (!connectorToken) throw new ServiceUnavailableException(`${facebook ? 'Facebook' : 'Zalo'} connector token is not configured`)
+    const response = await fetch(`${baseUrl}/channels/${facebook ? 'facebook' : 'zalo'}/inbound`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
-        'X-Zalo-Connector-Token': connectorToken,
+        [facebook ? 'X-Facebook-Connector-Token' : 'X-Zalo-Connector-Token']: connectorToken,
       },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(30_000),
@@ -90,6 +94,44 @@ export class LibreDeskClient {
       throw new BadGatewayException(parsed?.message || `LibreDesk inbound returned HTTP ${response.status}`)
     }
     return (parsed?.data ?? parsed) as T
+  }
+}
+
+@Injectable()
+export class FacebookConnectorClient {
+  constructor(private readonly config: ConfigService) {}
+
+  private settings() {
+    const baseUrl = normalizeBase(
+      this.config.get<string>('CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL') || '',
+      'http://127.0.0.1:3200',
+    )
+    const token = this.config.get<string>('CUSTOMER_CARE_FACEBOOK_CONNECTOR_TOKEN')
+      || this.config.get<string>('CUSTOMER_CARE_ZALO_CONNECTOR_TOKEN') || ''
+    return { baseUrl, token }
+  }
+
+  async json<T>(path: string, init: RequestInit = {}, requireToken = true): Promise<T> {
+    const { baseUrl, token } = this.settings()
+    if (requireToken && !token) throw new ServiceUnavailableException('Facebook connector token is not configured')
+    const headers = new Headers(init.headers)
+    headers.set('Accept', 'application/json')
+    if (init.body) headers.set('Content-Type', 'application/json')
+    if (requireToken) headers.set('x-facebook-connector-token', token)
+    let response: Response
+    try {
+      response = await fetch(`${baseUrl}${path}`, {
+        ...init,
+        headers,
+        signal: init.signal || AbortSignal.timeout(30_000),
+      })
+    } catch (error) {
+      throw new BadGatewayException(`Cannot connect to Facebook connector: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    const raw = await response.text()
+    const payload = raw ? safeJson(raw) : null
+    if (!response.ok) throw new BadGatewayException(payload?.error || payload?.message || `Facebook connector returned HTTP ${response.status}`)
+    return payload as T
   }
 }
 

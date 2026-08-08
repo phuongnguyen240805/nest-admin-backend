@@ -78,3 +78,7 @@ export class ZaloInboundDto {
   @IsObject() sender!: { external_id: string; display_name: string; avatar_url?: string }
   @IsObject() message!: { type: string; text: string }
 }
+
+export class FacebookLoginDto {
+  @IsString() @MaxLength(65536) cookie!: string
+}

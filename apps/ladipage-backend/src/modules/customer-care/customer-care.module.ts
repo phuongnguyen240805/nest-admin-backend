@@ -8,7 +8,7 @@ import { EcomStoreModule } from '../ecom-store/ecom-store.module'
 import { CustomerCareController, CustomerCareInternalController } from './customer-care.controller'
 import { CUSTOMER_CARE_ENTITIES } from './customer-care.entities'
 import { CustomerCareGateway } from './customer-care.gateway'
-import { LibreDeskClient, ZaloConnectorClient } from './customer-care.clients'
+import { FacebookConnectorClient, LibreDeskClient, ZaloConnectorClient } from './customer-care.clients'
 import { CustomerCareService } from './customer-care.service'
 
 @Module({
@@ -20,7 +20,7 @@ import { CustomerCareService } from './customer-care.service'
     EcomStoreModule,
   ],
   controllers: [CustomerCareController, CustomerCareInternalController],
-  providers: [CustomerCareGateway, LibreDeskClient, ZaloConnectorClient, CustomerCareService],
+  providers: [CustomerCareGateway, LibreDeskClient, ZaloConnectorClient, FacebookConnectorClient, CustomerCareService],
   exports: [CustomerCareService],
 })
 export class CustomerCareModule {}

@@ -43,7 +43,9 @@
       "@liora/supabase": ["libs/supabase/src/index.ts"],
       "@liora/supabase/*": ["libs/supabase/src/*"],
       "@liora/crm-core": ["libs/crm-core/src/index.ts"],
-      "@liora/crm-core/*": ["libs/crm-core/src/*"]
+      "@liora/crm-core/*": ["libs/crm-core/src/*"],
+      "@liora/ads-contracts": ["libs/ads-contracts/src/index.ts"],
+      "@liora/ads-contracts/*": ["libs/ads-contracts/src/*"]
     }
   },
   "include": ["src/types/**/*.d.ts", "**/*.d.ts"],

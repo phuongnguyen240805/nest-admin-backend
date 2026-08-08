@@ -25,7 +25,7 @@ import { CrmFacade } from '../crm/crm.facade';
 import { OrderEntity } from '../ecom-store/entities/order.entity';
 import { OrderItemEntity } from '../ecom-store/entities/order-item.entity';
 
-import { LibreDeskClient, ZaloConnectorClient } from './customer-care.clients';
+import { FacebookConnectorClient, LibreDeskClient, ZaloConnectorClient } from './customer-care.clients';
 import {
   ContactPatchDto,
   ConversationPatchDto,
@@ -117,6 +117,7 @@ export class CustomerCareService {
     private readonly cls: ClsService,
     private readonly libreDesk: LibreDeskClient,
     private readonly zalo: ZaloConnectorClient,
+    private readonly facebook: FacebookConnectorClient,
     private readonly gateway: CustomerCareGateway,
     private readonly crm: CrmFacade,
     @InjectRepository(CustomerCareChannelAccountEntity)
@@ -184,6 +185,29 @@ export class CustomerCareService {
     return channel;
   }
 
+  private async ensureFacebookChannel(tenantId = this.getTenantId()) {
+    const provider = 'facebook_personal';
+    const externalAccountId =
+      this.config.get<string>('CUSTOMER_CARE_FACEBOOK_ACCOUNT_ID') ||
+      'demo-facebook';
+    let channel = await this.channels.findOne({
+      where: { tenantId, provider, externalAccountId },
+    });
+    if (!channel) {
+      channel = await this.channels.save(
+        this.channels.create({
+          tenantId,
+          provider,
+          externalAccountId,
+          name: 'Facebook cá nhân',
+          enabled: true,
+          metadata: {},
+        }),
+      );
+    }
+    return channel;
+  }
+
   capabilities() {
     return {
       messages: {
@@ -240,22 +264,21 @@ export class CustomerCareService {
 
   async listChannels() {
     const tenantId = this.getTenantId();
-    await this.ensureDefaultChannel(tenantId);
+    await Promise.all([
+      this.ensureDefaultChannel(tenantId),
+      this.ensureFacebookChannel(tenantId),
+    ]);
     const rows = await this.channels.find({
       where: { tenantId },
       order: { id: 'ASC' },
     });
     const statuses = await Promise.all(
       rows.map(async (row) => {
-        const status =
-          row.provider === 'zalo_personal'
-            ? await this.zalo
-                .json<Record<string, unknown>>('/status')
-                .catch((error) => ({
-                  phase: 'error',
-                  last_error: String(error),
-                }))
-            : {};
+        const client = row.provider === 'facebook_personal' ? this.facebook : this.zalo;
+        const status = ['zalo_personal', 'facebook_personal'].includes(row.provider)
+          ? await client.json<Record<string, unknown>>('/status', {}, row.provider === 'facebook_personal')
+              .catch((error) => ({ phase: 'error', last_error: String(error) }))
+          : {};
         return this.mapChannel(row, status);
       }),
     );
@@ -271,12 +294,16 @@ export class CustomerCareService {
 
   async getChannelStatus(id: number) {
     const row = await this.getChannel(id);
-    const status = await this.zalo.json<Record<string, unknown>>('/status');
+    const status = row.provider === 'facebook_personal'
+      ? await this.facebook.json<Record<string, unknown>>('/status')
+      : await this.zalo.json<Record<string, unknown>>('/status');
     return this.mapChannel(row, status);
   }
 
   async resetChannel(id: number) {
     const row = await this.getChannel(id);
+    if (row.provider !== 'zalo_personal')
+      throw new BadRequestException('Facebook does not support QR session reset');
     const status = await this.zalo.json<Record<string, unknown>>(
       '/session/reset',
       { method: 'POST' },
@@ -291,7 +318,8 @@ export class CustomerCareService {
 
   async disconnectChannel(id: number) {
     const row = await this.getChannel(id);
-    const status = await this.zalo.json<Record<string, unknown>>(
+    const client = row.provider === 'facebook_personal' ? this.facebook : this.zalo;
+    const status = await client.json<Record<string, unknown>>(
       '/session',
       { method: 'DELETE' },
       true,
@@ -305,8 +333,27 @@ export class CustomerCareService {
   }
 
   async getChannelQr(id: number) {
-    await this.getChannel(id);
+    const row = await this.getChannel(id);
+    if (row.provider !== 'zalo_personal')
+      throw new BadRequestException('QR login is only available for Zalo');
     return this.zalo.qr();
+  }
+
+  async loginFacebook(id: number, cookie: string) {
+    const row = await this.getChannel(id);
+    if (row.provider !== 'facebook_personal')
+      throw new BadRequestException('This channel is not a Facebook account');
+    if (!/(?:^|;\s*)c_user=/.test(cookie) || !/(?:^|;\s*)xs=/.test(cookie))
+      throw new BadRequestException('Facebook cookie must contain c_user and xs');
+    const status = await this.facebook.json<Record<string, unknown>>('/session', {
+      method: 'POST',
+      body: JSON.stringify({ cookie }),
+    });
+    await this.publish(row.tenantId, 'channel.status.changed', String(row.id), {
+      channelId: String(row.id),
+      ...status,
+    });
+    return status;
   }
 
   private mapChannel(
@@ -659,7 +706,7 @@ export class CustomerCareService {
     action = 'set',
   ) {
     const tenantId = this.getTenantId();
-    await this.requireConversationLink(conversationId, tenantId);
+    const conversationLink = await this.requireConversationLink(conversationId, tenantId);
 
     // LibreDesk mutates conversation tags by tag name, while the public Nest
     // contract accepts either stable IDs or names. Resolve IDs here so the FE
@@ -688,6 +735,32 @@ export class CustomerCareService {
         body: JSON.stringify({ tags: tagNames, action }),
       },
     );
+    if (conversationLink.contactIdentityId) {
+      const contact = await this.contacts.findOne({
+        where: { id: conversationLink.contactIdentityId, tenantId },
+      });
+      if (contact) {
+        const selected = tagNames.map((name) => {
+          const providerTag = available.find((tag) => tag.name === name);
+          return {
+            id: String(providerTag?.id ?? name),
+            name,
+            color: customerCareTagColor(name),
+          };
+        });
+        const selectedNames = new Set(selected.map((tag) => tag.name));
+        const current = contact.tags || [];
+        contact.tags = action === 'set'
+          ? selected
+          : action === 'remove'
+            ? current.filter((tag) => !selectedNames.has(tag.name))
+            : [...current.filter((tag) => !selectedNames.has(tag.name)), ...selected];
+        await this.contacts.save(contact);
+        await this.publish(tenantId, 'contact.updated', String(contact.id), {
+          contact: this.mapContact(contact),
+        });
+      }
+    }
     await this.publish(tenantId, 'conversation.updated', conversationId, {
       conversationId,
       tags: tagNames,
@@ -1317,8 +1390,24 @@ export class CustomerCareService {
     return this.libreDesk.request('/teams');
   }
 
-  tags() {
-    return this.libreDesk.request('/tags');
+  async tags() {
+    const desired = [
+      'Công việc', 'Bạn bè', 'Trả lời sau', 'Đồng nghiệp',
+      'Kiểm hàng', 'Câu hỏi', 'Mua hàng', 'Đã gửi',
+      'Hết hàng', 'Trả hàng', 'Khách hàng', 'Gia đình',
+    ];
+    let available = await this.libreDesk.request<Array<{ id: number; name: string }>>('/tags');
+    const names = new Set(available.map((tag) => tag.name.toLocaleLowerCase('vi')));
+    for (const name of desired) {
+      if (names.has(name.toLocaleLowerCase('vi'))) continue;
+      await this.libreDesk.request('/tags', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      });
+    }
+    if (available.length !== desired.length || desired.some((name) => !names.has(name.toLocaleLowerCase('vi'))))
+      available = await this.libreDesk.request<Array<{ id: number; name: string }>>('/tags');
+    return available;
   }
 
   async sync(query: SyncQueryDto) {
@@ -1451,19 +1540,22 @@ export class CustomerCareService {
       });
 
       if (!channel) {
-        const configuredAccountId =
-          this.config.get<string>('CUSTOMER_CARE_ZALO_ACCOUNT_ID') ||
-          'demo-zalo';
+        const facebook = dto.provider === 'facebook_personal';
+        const configuredAccountId = facebook
+          ? this.config.get<string>('CUSTOMER_CARE_FACEBOOK_ACCOUNT_ID') || 'demo-facebook'
+          : this.config.get<string>('CUSTOMER_CARE_ZALO_ACCOUNT_ID') || 'demo-zalo';
 
         if (
           dto.account_id !== configuredAccountId
         ) {
           throw new NotFoundException(
-            'No tenant channel account is registered for this Zalo account',
+            `No tenant channel account is registered for this ${facebook ? 'Facebook' : 'Zalo'} account`,
           );
         }
 
-        channel = await this.ensureDefaultChannel(tenantId);
+        channel = facebook
+          ? await this.ensureFacebookChannel(tenantId)
+          : await this.ensureDefaultChannel(tenantId);
       }
 
       ingressEvent.payload = {
@@ -1582,7 +1674,7 @@ export class CustomerCareService {
       occurred_at: dto.occurred_at,
       sender: dto.sender,
       message: dto.message,
-    });
+    }, dto.provider);
     const isNewConversation = !link;
 
     const occurredAt = new Date(dto.occurred_at);
@@ -1685,7 +1777,9 @@ export class CustomerCareService {
           provider: dto.provider,
           externalAccountId: dto.account_id,
         },
-      })) || (await this.ensureDefaultChannel(tenantId));
+      })) || (dto.provider === 'facebook_personal'
+        ? await this.ensureFacebookChannel(tenantId)
+        : await this.ensureDefaultChannel(tenantId));
     const duplicate = await this.inboundEvents.findOne({
       where: { tenantId, provider: dto.provider, eventId: dto.event_id },
     });
@@ -1753,7 +1847,7 @@ export class CustomerCareService {
         occurred_at: dto.occurred_at,
         sender: dto.sender,
         message: dto.message,
-      });
+      }, dto.provider);
       if (!link)
         link = this.conversations.create({
           tenantId,
@@ -2114,6 +2208,16 @@ function normalize(value?: string | null) {
     .trim()
     .toLocaleLowerCase('en')
     .replace(/[\s-]+/g, '_');
+}
+
+function customerCareTagColor(name: string) {
+  const colors: Record<string, string> = {
+    'công việc': '#92501f', 'bạn bè': '#8a7418', 'trả lời sau': '#357058',
+    'đồng nghiệp': '#245493', 'kiểm hàng': '#354156', 'câu hỏi': '#583475',
+    'mua hàng': '#24549a', 'đã gửi': '#08623d', 'hết hàng': '#175775',
+    'trả hàng': '#9b3432', 'khách hàng': '#8d2735', 'gia đình': '#87205f',
+  };
+  return colors[name.toLocaleLowerCase('vi')] || '#65a30d';
 }
 
 function mapChannel(value: string) {
