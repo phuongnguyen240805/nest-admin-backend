@@ -20,6 +20,12 @@ export class ShipmentEntity extends TenantScopedEntity {
   @Column({ type: 'varchar', length: 120, nullable: true })
   trackingCode: string | null
 
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  providerOrderId: string | null
+
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  idempotencyKey: string | null
+
   @Column({ type: 'varchar', length: 80, nullable: true })
   serviceCode: string | null
 
@@ -28,6 +34,9 @@ export class ShipmentEntity extends TenantScopedEntity {
 
   @Column({ type: 'varchar', length: 50, default: 'CREATED' })
   status: string
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  providerStatus: string | null
 
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
   fee: number
@@ -58,4 +67,7 @@ export class ShipmentEntity extends TenantScopedEntity {
 
   @Column({ type: 'timestamptz', nullable: true })
   lastTrackedAt: Date | null
+
+  @Column({ type: 'timestamptz', nullable: true })
+  estimatedDeliveryAt: Date | null
 }

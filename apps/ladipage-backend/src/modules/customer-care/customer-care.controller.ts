@@ -28,6 +28,7 @@ import {
   ContactPatchDto,
   ConversationPatchDto,
   ConversationQueryDto,
+  CreateChannelDto,
   CreateConversationDto,
   DraftDto,
   ForwardDto,
@@ -62,6 +63,14 @@ export class CustomerCareController {
 
   @Get('channels') channels() {
     return this.service.listChannels();
+  }
+  @Post('channels')
+  createChannel(@Body() dto: CreateChannelDto) {
+    return this.service.createChannel(dto);
+  }
+  @Delete('channels/:id')
+  deleteChannel(@Param('id', ParseIntPipe) id: number) {
+    return this.service.deleteChannel(id);
   }
   @Get('channels/:id/status')
   channelStatus(@Param('id', ParseIntPipe) id: number) {
@@ -308,28 +317,10 @@ export class CustomerCareController {
 export class CustomerCareInternalController {
   constructor(private readonly service: CustomerCareService) {}
 
-  @Post('zalo/events')
-  @HttpCode(HttpStatus.OK)
-  async zaloEvent(
-    @Req() req: FastifyRequest & { rawBody?: string | Buffer },
-    @Body() dto: ZaloInboundDto,
-    @Headers('x-customer-care-timestamp') timestamp: string,
-    @Headers('x-customer-care-signature') signature: string,
-  ) {
-    const rawBody =
-      typeof req.rawBody === 'string'
-        ? req.rawBody
-        : Buffer.isBuffer(req.rawBody)
-          ? req.rawBody.toString('utf8')
-          : JSON.stringify(dto);
-    this.service.verifyWebhook(rawBody, timestamp, signature);
-    return this.service.inbound(dto);
-  }
-
-
-  @Post('events')
+  @Post('channels/:connectionKey/events')
   @HttpCode(HttpStatus.OK)
   async connectorEvent(
+    @Param('connectionKey') connectionKey: string,
     @Req() req: FastifyRequest & { rawBody?: string | Buffer },
     @Body() dto: ZaloInboundDto,
     @Headers('x-customer-care-timestamp') timestamp: string,
@@ -340,7 +331,7 @@ export class CustomerCareInternalController {
       : Buffer.isBuffer(req.rawBody)
         ? req.rawBody.toString('utf8')
         : JSON.stringify(dto);
-    this.service.verifyWebhook(rawBody, timestamp, signature);
-    return this.service.inbound(dto);
+    this.service.verifyWebhook(rawBody, timestamp, signature, connectionKey);
+    return this.service.inbound(connectionKey, dto);
   }
 }

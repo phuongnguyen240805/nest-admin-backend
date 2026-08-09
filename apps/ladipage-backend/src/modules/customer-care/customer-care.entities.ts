@@ -25,6 +25,10 @@ abstract class CustomerCareTenantEntity {
 @Entity({ name: 'cc_channel_account' })
 @Index(['tenantId', 'provider', 'externalAccountId'], { unique: true })
 export class CustomerCareChannelAccountEntity extends CustomerCareTenantEntity {
+  @Index({ unique: true })
+  @Column({ name: 'connection_key', type: 'uuid', default: () => 'gen_random_uuid()' })
+  connectionKey!: string
+
   @Column({ type: 'varchar', length: 40, default: 'zalo_personal' })
   provider!: string
 
@@ -42,8 +46,11 @@ export class CustomerCareChannelAccountEntity extends CustomerCareTenantEntity {
 }
 
 @Entity({ name: 'cc_contact_identity' })
-@Index(['tenantId', 'provider', 'externalId'], { unique: true })
+@Index(['tenantId', 'channelAccountId', 'provider', 'externalId'], { unique: true })
 export class CustomerCareContactIdentityEntity extends CustomerCareTenantEntity {
+  @Column({ name: 'channel_account_id', type: 'int', nullable: true })
+  channelAccountId!: number | null
+
   @Column({ type: 'varchar', length: 40 })
   provider!: string
 
@@ -79,7 +86,7 @@ export class CustomerCareContactIdentityEntity extends CustomerCareTenantEntity 
 }
 
 @Entity({ name: 'cc_conversation_link' })
-@Index(['tenantId', 'provider', 'externalThreadId'], { unique: true })
+@Index(['tenantId', 'channelAccountId', 'provider', 'externalThreadId'], { unique: true })
 @Index(['tenantId', 'libreDeskConversationUuid'], { unique: true })
 export class CustomerCareConversationLinkEntity extends CustomerCareTenantEntity {
   @Column({ name: 'channel_account_id', type: 'int' })
@@ -111,10 +118,13 @@ export class CustomerCareConversationLinkEntity extends CustomerCareTenantEntity
 }
 
 @Entity({ name: 'cc_message_link' })
-@Index(['tenantId', 'provider', 'externalMessageId'], { unique: true, where: 'external_message_id IS NOT NULL' })
+@Index(['tenantId', 'channelAccountId', 'provider', 'externalMessageId'], { unique: true, where: 'external_message_id IS NOT NULL' })
 @Index(['tenantId', 'clientMessageId'], { unique: true, where: 'client_message_id IS NOT NULL' })
 @Index(['tenantId', 'libreDeskMessageUuid'], { unique: true, where: 'libredesk_message_uuid IS NOT NULL' })
 export class CustomerCareMessageLinkEntity extends CustomerCareTenantEntity {
+  @Column({ name: 'channel_account_id', type: 'int', nullable: true })
+  channelAccountId!: number | null
+
   @Column({ name: 'conversation_link_id', type: 'int', nullable: true })
   conversationLinkId!: number | null
 
@@ -163,8 +173,11 @@ export class CustomerCareConversationPreferenceEntity extends CustomerCareTenant
 }
 
 @Entity({ name: 'cc_inbound_event' })
-@Index(['tenantId', 'provider', 'eventId'], { unique: true })
+@Index(['tenantId', 'channelAccountId', 'provider', 'eventId'], { unique: true })
 export class CustomerCareInboundEventEntity extends CustomerCareTenantEntity {
+  @Column({ name: 'channel_account_id', type: 'int', nullable: true })
+  channelAccountId!: number | null
+
   @Column({ name: 'event_id', type: 'varchar', length: 260 })
   eventId!: string
 

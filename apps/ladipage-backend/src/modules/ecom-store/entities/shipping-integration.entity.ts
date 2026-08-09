@@ -2,7 +2,9 @@ import { Column, Entity, Index } from 'typeorm'
 
 import { TenantScopedEntity } from '@liora/nest-core/common/entities/tenant-scoped.entity'
 
-export type ShippingProvider = 'ghn' | 'ghtk'
+import type { ShippingProvider } from '../shipping/core'
+
+export type { ShippingProvider } from '../shipping/core'
 
 @Entity('lp_shipping_integration')
 @Index(['tenantId', 'provider'], { unique: true })

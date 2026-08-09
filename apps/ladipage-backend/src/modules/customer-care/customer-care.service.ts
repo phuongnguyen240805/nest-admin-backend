@@ -32,6 +32,7 @@ import {
   ContactPatchDto,
   ConversationPatchDto,
   ConversationQueryDto,
+  CreateChannelDto,
   CreateConversationDto,
   DraftDto,
   MessageQueryDto,
@@ -121,8 +122,6 @@ interface InboundResult {
 @Injectable()
 export class CustomerCareService {
   private readonly logger = new Logger(CustomerCareService.name);
-  private readonly facebookBackfills = new Map<number, Promise<void>>();
-  private readonly facebookBackfillAt = new Map<number, number>();
 
   constructor(
     private readonly config: ConfigService,
@@ -168,154 +167,12 @@ export class CustomerCareService {
     conversationId: string,
     tenantId = this.getTenantId(),
   ) {
-    let link = await this.conversations.findOne({
+    const link = await this.conversations.findOne({
       where: { tenantId, libreDeskConversationUuid: conversationId },
     });
-    if (!link) {
-      await this.syncFacebookConversationLinks(tenantId);
-      link = await this.conversations.findOne({
-        where: { tenantId, libreDeskConversationUuid: conversationId },
-      });
-    }
     if (!link)
       throw new NotFoundException('Customer Care conversation not found');
     return link;
-  }
-
-  private async ensureDefaultChannel(tenantId = this.getTenantId()) {
-    const provider = 'zalo_personal';
-    const externalAccountId =
-      this.config.get<string>('CUSTOMER_CARE_ZALO_ACCOUNT_ID') || 'demo-zalo';
-    let channel = await this.channels.findOne({
-      where: { tenantId, provider, externalAccountId },
-    });
-    if (!channel) {
-      channel = this.channels.create({
-        tenantId,
-        provider,
-        externalAccountId,
-        name:
-          this.config.get<string>('CUSTOMER_CARE_CHANNEL_NAME') ||
-          'Zalo cá nhân',
-        enabled: true,
-        metadata: {},
-      });
-      channel = await this.channels.save(channel);
-    }
-    return channel;
-  }
-
-  private async ensureFacebookChannel(tenantId = this.getTenantId()) {
-    const provider = 'facebook_personal';
-    const externalAccountId =
-      this.config.get<string>('CUSTOMER_CARE_FACEBOOK_ACCOUNT_ID') ||
-      'demo-facebook';
-    let channel = await this.channels.findOne({
-      where: { tenantId, provider, externalAccountId },
-    });
-    if (!channel) {
-      channel = await this.channels.save(
-        this.channels.create({
-          tenantId,
-          provider,
-          externalAccountId,
-          name: 'Facebook cá nhân',
-          enabled: true,
-          metadata: {},
-        }),
-      );
-    }
-    return channel;
-  }
-
-  private async syncFacebookConversationLinks(tenantId: number) {
-    if (Date.now() - (this.facebookBackfillAt.get(tenantId) || 0) < 60_000)
-      return;
-    const running = this.facebookBackfills.get(tenantId);
-    if (running) return running;
-    const task = this.performFacebookConversationBackfill(tenantId)
-      .catch((error) =>
-        this.logger.warn(
-          `Facebook conversation backfill failed: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-      )
-      .finally(() => this.facebookBackfills.delete(tenantId));
-    this.facebookBackfills.set(tenantId, task);
-    await task;
-  }
-
-  private async performFacebookConversationBackfill(tenantId: number) {
-    const page = await this.libreDesk.request<LibreDeskPage<LibreDeskConversation>>(
-      '/conversations/all?page=1&page_size=100',
-    );
-    const conversations = Array.isArray(page?.results) ? page.results : [];
-    const facebookRows = conversations.filter(
-      (item) => item.inbox_channel === 'facebook_personal' && item.meta?.facebook?.external_thread_id,
-    );
-    if (!facebookRows.length) {
-      this.facebookBackfillAt.set(tenantId, Date.now());
-      return;
-    }
-
-    const channel = await this.ensureFacebookChannel(tenantId);
-    for (const item of facebookRows) {
-      const externalId = String(item.meta!.facebook!.external_thread_id);
-      const profile = await this.facebook
-        .json<{ name?: string; avatarUrl?: string }>(
-          `/profiles/${encodeURIComponent(externalId)}`,
-        )
-        .catch(() => undefined);
-      const fallbackName = fullName(
-        item.contact?.first_name,
-        item.contact?.last_name,
-      );
-      let contact = await this.contacts.findOne({
-        where: { tenantId, provider: 'facebook_personal', externalId },
-      });
-      if (!contact)
-        contact = this.contacts.create({
-          tenantId,
-          provider: 'facebook_personal',
-          externalId,
-          displayName: profile?.name || fallbackName,
-          avatarUrl: profile?.avatarUrl || item.contact?.avatar_url || null,
-          phone: null,
-          email: item.contact?.email || null,
-          note: null,
-          crmCustomerId: null,
-          crmPersonId: null,
-          tags: (item.tags || []).map(normalizeConversationTag),
-          metadata: {},
-        });
-      else {
-        if (profile?.name) contact.displayName = profile.name;
-        if (profile?.avatarUrl) contact.avatarUrl = profile.avatarUrl;
-      }
-      contact = await this.contacts.save(contact);
-
-      let link = await this.conversations.findOne({
-        where: { tenantId, provider: 'facebook_personal', externalThreadId: externalId },
-      });
-      if (!link)
-        link = this.conversations.create({
-          tenantId,
-          channelAccountId: channel.id,
-          contactIdentityId: contact.id,
-          provider: 'facebook_personal',
-          externalThreadId: externalId,
-          threadType: item.meta?.facebook?.thread_type || 'user',
-          libreDeskConversationUuid: item.uuid,
-          lastExternalMessageId: null,
-          lastMessageAt: item.last_message_at ? new Date(item.last_message_at) : new Date(item.updated_at),
-          metadata: {},
-        });
-      else {
-        link.contactIdentityId = contact.id;
-        link.libreDeskConversationUuid = item.uuid;
-      }
-      await this.conversations.save(link);
-    }
-    this.facebookBackfillAt.set(tenantId, Date.now());
   }
 
   capabilities() {
@@ -349,35 +206,90 @@ export class CustomerCareService {
   }
 
   async health() {
-    const channel = await this.ensureDefaultChannel();
-    const [zaloStatus, libreDeskHealth] = await Promise.allSettled([
-      this.zalo.json('/status'),
-      this.libreDesk.request('/conversations/all?page=1&page_size=1'),
+    const tenantId = this.getTenantId();
+    const channelCount = await this.channels.count({ where: { tenantId } });
+    const libreDeskHealth = await Promise.allSettled([
+      this.libreDesk.request('/conversations?page=1&page_size=1'),
     ]);
     return {
-      status:
-        zaloStatus.status === 'fulfilled' &&
-        libreDeskHealth.status === 'fulfilled'
-          ? 'ok'
-          : 'degraded',
-      channel,
-      zalo:
-        zaloStatus.status === 'fulfilled'
-          ? zaloStatus.value
-          : { error: String(zaloStatus.reason) },
+      status: libreDeskHealth[0].status === 'fulfilled' ? 'ok' : 'degraded',
+      channelCount,
       libredesk:
-        libreDeskHealth.status === 'fulfilled'
+        libreDeskHealth[0].status === 'fulfilled'
           ? { connected: true }
-          : { connected: false, error: String(libreDeskHealth.reason) },
+          : { connected: false, error: String(libreDeskHealth[0].reason) },
     };
+  }
+
+  async createChannel(dto: CreateChannelDto) {
+    const tenantId = this.getTenantId();
+    const connectionKey = randomUUID();
+    const row = await this.channels.save(this.channels.create({
+      tenantId,
+      connectionKey,
+      provider: dto.provider,
+      externalAccountId: `pending:${connectionKey}`,
+      name: dto.name?.trim() || (dto.provider === 'facebook_personal' ? 'Facebook cá nhân' : 'Zalo cá nhân'),
+      enabled: true,
+      metadata: {},
+    }));
+    try {
+      await this.ensureLibreDeskInbox(row);
+      return this.mapChannel(row, { phase: 'disconnected' });
+    } catch (error) {
+      await this.channels.remove(row).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async deleteChannel(id: number) {
+    const row = await this.getChannel(id);
+    await this.disconnectChannel(id).catch(() => undefined);
+    const inboxId = row.metadata?.libreDeskInboxId;
+    if (typeof inboxId === 'number' || typeof inboxId === 'string') {
+      await this.libreDesk.request(`/inboxes/${encodeURIComponent(String(inboxId))}`, { method: 'DELETE' }).catch(() => undefined);
+    }
+    await this.channels.remove(row);
+    return { deleted: true };
+  }
+
+  private async ensureLibreDeskInbox(row: CustomerCareChannelAccountEntity) {
+    if (row.metadata?.libreDeskInboxId) return;
+    const facebook = row.provider === 'facebook_personal';
+    const connectorToken = this.config.get<string>(facebook
+      ? 'CUSTOMER_CARE_FACEBOOK_CONNECTOR_TOKEN'
+      : 'CUSTOMER_CARE_ZALO_CONNECTOR_TOKEN') || '';
+    if (!connectorToken) throw new ServiceUnavailableException('Customer Care connector token is not configured');
+    const connectorUrl = this.config.get<string>(facebook
+      ? 'CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL'
+      : 'CUSTOMER_CARE_ZALO_CONNECTOR_URL') || (facebook
+      ? 'http://facebook-connector:3200'
+      : 'http://zalo-connector:3100');
+    const inbox = await this.libreDesk.request<Record<string, unknown>>('/inboxes', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: row.name,
+        channel: row.provider,
+        enabled: true,
+        csat_enabled: false,
+        prompt_tags_on_reply: false,
+        from: '',
+        from_name_template: '',
+        config: {
+          channel_connection_key: row.connectionKey,
+          connector_url: connectorUrl,
+          connector_token: connectorToken,
+          account_id: row.externalAccountId,
+          request_timeout: facebook ? '30s' : '15s',
+        },
+      }),
+    });
+    row.metadata = { ...row.metadata, libreDeskInboxId: inbox.id };
+    await this.channels.save(row);
   }
 
   async listChannels() {
     const tenantId = this.getTenantId();
-    await Promise.all([
-      this.ensureDefaultChannel(tenantId),
-      this.ensureFacebookChannel(tenantId),
-    ]);
     const rows = await this.channels.find({
       where: { tenantId },
       order: { id: 'ASC' },
@@ -386,7 +298,7 @@ export class CustomerCareService {
       rows.map(async (row) => {
         const client = row.provider === 'facebook_personal' ? this.facebook : this.zalo;
         const status = ['zalo_personal', 'facebook_personal'].includes(row.provider)
-          ? await client.json<Record<string, unknown>>('/status', {}, row.provider === 'facebook_personal')
+          ? await client.json<Record<string, unknown>>(`/sessions/${row.connectionKey}/status`, {}, true)
               .catch((error) => ({ phase: 'error', last_error: String(error) }))
           : {};
         return this.mapChannel(row, status);
@@ -404,9 +316,13 @@ export class CustomerCareService {
 
   async getChannelStatus(id: number) {
     const row = await this.getChannel(id);
-    const status = row.provider === 'facebook_personal'
-      ? await this.facebook.json<Record<string, unknown>>('/status')
-      : await this.zalo.json<Record<string, unknown>>('/status');
+    const client = row.provider === 'facebook_personal' ? this.facebook : this.zalo;
+    const status = await client.json<Record<string, unknown>>(`/sessions/${row.connectionKey}/status`, {}, true);
+    const accountId = typeof status.account_id === 'string' ? status.account_id.trim() : '';
+    if (accountId && accountId !== row.externalAccountId) {
+      row.externalAccountId = accountId;
+      await this.channels.save(row);
+    }
     return this.mapChannel(row, status);
   }
 
@@ -414,8 +330,9 @@ export class CustomerCareService {
     const row = await this.getChannel(id);
     if (row.provider !== 'zalo_personal')
       throw new BadRequestException('Facebook does not support QR session reset');
+    await this.ensureLibreDeskInbox(row);
     const status = await this.zalo.json<Record<string, unknown>>(
-      '/session/reset',
+      `/sessions/${row.connectionKey}/reset`,
       { method: 'POST' },
       true,
     );
@@ -430,7 +347,7 @@ export class CustomerCareService {
     const row = await this.getChannel(id);
     const client = row.provider === 'facebook_personal' ? this.facebook : this.zalo;
     const status = await client.json<Record<string, unknown>>(
-      '/session',
+      `/sessions/${row.connectionKey}`,
       { method: 'DELETE' },
       true,
     );
@@ -446,7 +363,7 @@ export class CustomerCareService {
     const row = await this.getChannel(id);
     if (row.provider !== 'zalo_personal')
       throw new BadRequestException('QR login is only available for Zalo');
-    return this.zalo.qr();
+    return this.zalo.qr(row.connectionKey);
   }
 
   async loginFacebook(id: number, cookie: string) {
@@ -455,10 +372,16 @@ export class CustomerCareService {
       throw new BadRequestException('This channel is not a Facebook account');
     if (!/(?:^|;\s*)c_user=/.test(cookie) || !/(?:^|;\s*)xs=/.test(cookie))
       throw new BadRequestException('Facebook cookie must contain c_user and xs');
-    const status = await this.facebook.json<Record<string, unknown>>('/session', {
+    await this.ensureLibreDeskInbox(row);
+    const status = await this.facebook.json<Record<string, unknown>>(`/sessions/${row.connectionKey}`, {
       method: 'POST',
       body: JSON.stringify({ cookie }),
     });
+    const accountId = typeof status.account_id === 'string' ? status.account_id.trim() : '';
+    if (accountId) {
+      row.externalAccountId = accountId;
+      await this.channels.save(row);
+    }
     await this.publish(row.tenantId, 'channel.status.changed', String(row.id), {
       channelId: String(row.id),
       ...status,
@@ -482,13 +405,11 @@ export class CustomerCareService {
 
   async listConversations(query: ConversationQueryDto, userId: number) {
     const tenantId = this.getTenantId();
-    await this.ensureDefaultChannel(tenantId);
-    await this.syncFacebookConversationLinks(tenantId);
     const page = Math.max(1, Number(query.cursor || 1));
     const pageSize = Math.min(100, query.limit || 50);
     const [links, agents] = await Promise.all([
       this.conversations.find({
-        where: { tenantId },
+        where: query.channelAccountId ? { tenantId, channelAccountId: query.channelAccountId } : { tenantId },
         order: { lastMessageAt: 'DESC' },
       }),
       this.getAgentsRaw().catch(() => []),
@@ -612,11 +533,12 @@ export class CustomerCareService {
 
   async createConversation(dto: CreateConversationDto) {
     const tenantId = this.getTenantId();
-    const channel = await this.ensureDefaultChannel(tenantId);
+    const channel = await this.getChannel(dto.channelAccountId);
 
     const existing = await this.conversations.findOne({
       where: {
         tenantId,
+        channelAccountId: channel.id,
         provider: channel.provider,
         externalThreadId: dto.externalThreadId,
       },
@@ -655,7 +577,7 @@ export class CustomerCareService {
       },
     };
 
-    const result = await this.processInbound(inbound, tenantId);
+    const result = await this.processInbound(inbound, tenantId, channel);
 
     return {
       id: result.conversation_uuid,
@@ -1174,6 +1096,7 @@ export class CustomerCareService {
         messageLink = await this.messages.save(
           this.messages.create({
             tenantId,
+            channelAccountId: conversationLink.channelAccountId,
             conversationLinkId: conversationLink.id,
             provider: conversationLink.provider,
             externalMessageId: null,
@@ -1644,17 +1567,20 @@ export class CustomerCareService {
     };
   }
 
-  verifyWebhook(rawBody: string, timestamp: string, signature: string) {
-    const secret =
+  verifyWebhook(rawBody: string, timestamp: string, signature: string, connectionKey: string) {
+    const masterSecret =
       this.config.get<string>('CUSTOMER_CARE_WEBHOOK_SECRET') || '';
-    if (!secret)
+    if (!masterSecret)
       throw new ServiceUnavailableException(
         'Customer Care webhook secret is not configured',
       );
     const ts = Number(timestamp);
     if (!Number.isFinite(ts) || Math.abs(Date.now() - ts) > 5 * 60_000)
       throw new BadRequestException('Expired webhook timestamp');
-    const expected = createHmac('sha256', secret)
+    const channelSecret = createHmac('sha256', masterSecret)
+      .update(`customer-care-channel:${connectionKey}`)
+      .digest('hex');
+    const expected = createHmac('sha256', channelSecret)
       .update(`${timestamp}.${rawBody}`)
       .digest('hex');
     const left = Buffer.from(expected);
@@ -1663,23 +1589,23 @@ export class CustomerCareService {
       throw new BadRequestException('Invalid webhook signature');
   }
 
-  async inbound(dto: ZaloInboundDto) {
-    // The signed connector account registration is authoritative. Never let a
-    // webhook payload choose an arbitrary tenant.
-    const configuredTenantId = Number(
-      this.config.get<string>('CUSTOMER_CARE_DEFAULT_TENANT_ID') || 0,
-    );
-    const tenantId = configuredTenantId || dto.tenant_id;
-    if (!tenantId) {
-      throw new ServiceUnavailableException(
-        'Customer Care tenant is not configured',
-      );
+  async inbound(connectionKey: string, dto: ZaloInboundDto) {
+    const channel = await this.channels.findOne({ where: { connectionKey, enabled: true } });
+    if (!channel) throw new NotFoundException('Customer Care channel session not found');
+    if (channel.provider !== dto.provider)
+      throw new BadRequestException('Webhook provider does not match channel session');
+    if (!channel.externalAccountId.startsWith('pending:') && channel.externalAccountId !== dto.account_id)
+      throw new BadRequestException('Webhook account does not match channel session');
+    if (channel.externalAccountId.startsWith('pending:')) {
+      channel.externalAccountId = dto.account_id;
+      await this.channels.save(channel);
     }
+    const tenantId = channel.tenantId;
 
     // Persist immediately after webhook HMAC + DTO validation. This makes
     // connector -> Nest failures observable even if channel/LibreDesk fails.
     let ingressEvent = await this.inboundEvents.findOne({
-      where: { tenantId, provider: dto.provider, eventId: dto.event_id },
+      where: { tenantId, channelAccountId: channel.id, provider: dto.provider, eventId: dto.event_id },
     });
 
     if (ingressEvent?.status === 'processed') {
@@ -1691,6 +1617,7 @@ export class CustomerCareService {
       ingressEvent = await this.inboundEvents.save(
         this.inboundEvents.create({
           tenantId,
+          channelAccountId: channel.id,
           provider: dto.provider,
           eventId: dto.event_id,
           status: 'received',
@@ -1714,34 +1641,6 @@ export class CustomerCareService {
     }
 
     try {
-      let channel = await this.channels.findOne({
-        where: {
-          tenantId,
-          provider: dto.provider,
-          externalAccountId: dto.account_id,
-          enabled: true,
-        },
-      });
-
-      if (!channel) {
-        const facebook = dto.provider === 'facebook_personal';
-        const configuredAccountId = facebook
-          ? this.config.get<string>('CUSTOMER_CARE_FACEBOOK_ACCOUNT_ID') || 'demo-facebook'
-          : this.config.get<string>('CUSTOMER_CARE_ZALO_ACCOUNT_ID') || 'demo-zalo';
-
-        if (
-          dto.account_id !== configuredAccountId
-        ) {
-          throw new NotFoundException(
-            `No tenant channel account is registered for this ${facebook ? 'Facebook' : 'Zalo'} account`,
-          );
-        }
-
-        channel = facebook
-          ? await this.ensureFacebookChannel(tenantId)
-          : await this.ensureDefaultChannel(tenantId);
-      }
-
       ingressEvent.payload = {
         ...(ingressEvent.payload || {}),
         debug_stage: 'channel_resolved',
@@ -1787,6 +1686,7 @@ export class CustomerCareService {
     const existingMessage = await this.messages.findOne({
       where: {
         tenantId,
+        channelAccountId: channel.id,
         provider: dto.provider,
         externalMessageId: dto.external_message_id,
       },
@@ -1795,6 +1695,7 @@ export class CustomerCareService {
     let link = await this.conversations.findOne({
       where: {
         tenantId,
+        channelAccountId: channel.id,
         provider: dto.provider,
         externalThreadId: dto.external_thread_id,
       },
@@ -1834,6 +1735,7 @@ export class CustomerCareService {
       const candidates = await this.messages.find({
         where: {
           tenantId,
+          channelAccountId: channel.id,
           provider: dto.provider,
           conversationLinkId: link.id,
           externalMessageId: IsNull(),
@@ -1894,6 +1796,7 @@ export class CustomerCareService {
     let contact = await this.contacts.findOne({
       where: {
         tenantId,
+        channelAccountId: channel.id,
         provider: dto.provider,
         externalId: dto.sender.external_id,
       },
@@ -1902,6 +1805,7 @@ export class CustomerCareService {
       contact = await this.contacts.save(
         this.contacts.create({
           tenantId,
+          channelAccountId: channel.id,
           provider: dto.provider,
           externalId: dto.sender.external_id,
           displayName: dto.sender.display_name,
@@ -1920,6 +1824,8 @@ export class CustomerCareService {
     // Persist through LibreDesk as well so its conversation list/preview is
     // updated. The local message link below overrides its direction to outgoing.
     const result = await this.libreDesk.inbound<InboundResult>({
+      tenant_key: String(tenantId),
+      channel_connection_key: channel.connectionKey,
       account_id: dto.account_id,
       external_thread_id: dto.external_thread_id,
       external_message_id: dto.external_message_id,
@@ -1953,6 +1859,7 @@ export class CustomerCareService {
     await this.messages.save(
       this.messages.create({
         tenantId,
+        channelAccountId: channel.id,
         conversationLinkId: link.id,
         provider: dto.provider,
         externalMessageId: dto.external_message_id,
@@ -2017,20 +1924,10 @@ export class CustomerCareService {
   private async processInbound(
     dto: ZaloInboundDto,
     tenantId: number,
-    channel?: CustomerCareChannelAccountEntity,
+    channel: CustomerCareChannelAccountEntity,
   ) {
-    channel ||=
-      (await this.channels.findOne({
-        where: {
-          tenantId,
-          provider: dto.provider,
-          externalAccountId: dto.account_id,
-        },
-      })) || (dto.provider === 'facebook_personal'
-        ? await this.ensureFacebookChannel(tenantId)
-        : await this.ensureDefaultChannel(tenantId));
     const duplicate = await this.inboundEvents.findOne({
-      where: { tenantId, provider: dto.provider, eventId: dto.event_id },
+      where: { tenantId, channelAccountId: channel.id, provider: dto.provider, eventId: dto.event_id },
     });
     if (duplicate?.status === 'processed') {
       const data = duplicate.payload?.result as unknown as InboundResult;
@@ -2041,6 +1938,7 @@ export class CustomerCareService {
       duplicate ||
       this.inboundEvents.create({
         tenantId,
+        channelAccountId: channel.id,
         provider: dto.provider,
         eventId: dto.event_id,
         status: 'received',
@@ -2053,6 +1951,7 @@ export class CustomerCareService {
       let contact = await this.contacts.findOne({
         where: {
           tenantId,
+          channelAccountId: channel.id,
           provider: dto.provider,
           externalId: dto.sender.external_id,
         },
@@ -2060,6 +1959,7 @@ export class CustomerCareService {
       if (!contact)
         contact = this.contacts.create({
           tenantId,
+          channelAccountId: channel.id,
           provider: dto.provider,
           externalId: dto.sender.external_id,
           displayName:
@@ -2082,12 +1982,15 @@ export class CustomerCareService {
       let link = await this.conversations.findOne({
         where: {
           tenantId,
+          channelAccountId: channel.id,
           provider: dto.provider,
           externalThreadId: dto.external_thread_id,
         },
       });
       const isNewConversation = !link;
       const result = await this.libreDesk.inbound<InboundResult>({
+        tenant_key: String(tenantId),
+        channel_connection_key: channel.connectionKey,
         account_id: dto.account_id,
         external_thread_id: dto.external_thread_id,
         external_message_id: dto.external_message_id,
@@ -2119,6 +2022,7 @@ export class CustomerCareService {
       const existingMessage = await this.messages.findOne({
         where: {
           tenantId,
+          channelAccountId: channel.id,
           provider: dto.provider,
           externalMessageId: dto.external_message_id,
         },
@@ -2127,6 +2031,7 @@ export class CustomerCareService {
         await this.messages.save(
           this.messages.create({
             tenantId,
+            channelAccountId: channel.id,
             conversationLinkId: link.id,
             provider: dto.provider,
             externalMessageId: dto.external_message_id,

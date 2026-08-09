@@ -29,6 +29,7 @@ import {
   ProductTagEntity,
   ProductTagMapEntity,
   ShipmentEntity,
+  ShipmentEventEntity,
   ShippingIntegrationEntity,
 } from './entities'
 import { CategoryService } from './services/category.service'
@@ -40,6 +41,7 @@ import { OrderService } from './services/order.service'
 import { ProductService } from './services/product.service'
 import { ReviewService } from './services/review.service'
 import { EcomTagService } from './services/tag.service'
+import { ShippingAdapterRegistry } from './shipping/shipping-adapter.registry'
 import { ShippingCredentialVaultService } from './shipping/shipping-credential-vault.service'
 import { ShippingIntegrationService } from './shipping/shipping-integration.service'
 import { ShippingService } from './shipping/shipping.service'
@@ -63,6 +65,7 @@ import { ShippingService } from './shipping/shipping.service'
       CustomFieldEntity,
       ShippingIntegrationEntity,
       ShipmentEntity,
+      ShipmentEventEntity,
     ]),
   ],
   controllers: [
@@ -87,6 +90,7 @@ import { ShippingService } from './shipping/shipping.service'
     ReviewService,
     EcomCustomFieldService,
     DeliveryNoteService,
+    ShippingAdapterRegistry,
     ShippingCredentialVaultService,
     ShippingIntegrationService,
     ShippingService,

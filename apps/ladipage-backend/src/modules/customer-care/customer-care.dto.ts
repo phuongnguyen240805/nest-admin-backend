@@ -6,9 +6,15 @@ export class ConversationQueryDto {
   @IsOptional() @IsString() search?: string
   @IsOptional() @IsString() status?: string
   @IsOptional() @IsString() channel?: string
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) channelAccountId?: number
   @IsOptional() @IsString() assigneeId?: string
   @IsOptional() @IsString() tagId?: string
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) limit = 50
+}
+
+export class CreateChannelDto {
+  @IsIn(['zalo_personal', 'facebook_personal']) provider!: 'zalo_personal' | 'facebook_personal'
+  @IsOptional() @IsString() @MaxLength(255) name?: string
 }
 
 export class MessageQueryDto {
@@ -51,6 +57,7 @@ export class ContactPatchDto {
 }
 
 export class CreateConversationDto {
+  @Type(() => Number) @IsInt() @Min(1) channelAccountId!: number
   @IsString() externalThreadId!: string
   @IsString() externalContactId!: string
   @IsString() displayName!: string

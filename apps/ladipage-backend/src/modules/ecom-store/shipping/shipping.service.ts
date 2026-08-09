@@ -14,9 +14,14 @@ import {
   OrderEntity,
   OrderItemEntity,
   ShipmentEntity,
+  ShipmentEventEntity,
   ShippingIntegrationEntity,
   ShippingProvider,
 } from '../entities'
+import {
+  normalizeShipmentStatus,
+  ShipmentStatus,
+} from './core'
 import { ShippingIntegrationService } from './shipping-integration.service'
 
 @Injectable()
@@ -29,6 +34,8 @@ export class ShippingService extends TenantScopedService {
     private readonly orderItems: Repository<OrderItemEntity>,
     @InjectRepository(ShipmentEntity)
     private readonly shipments: Repository<ShipmentEntity>,
+    @InjectRepository(ShipmentEventEntity)
+    private readonly shipmentEvents: Repository<ShipmentEventEntity>,
     @InjectRepository(ShippingIntegrationEntity)
     private readonly integrations: Repository<ShippingIntegrationEntity>,
     private readonly integrationService: ShippingIntegrationService,
@@ -98,6 +105,12 @@ export class ShippingService extends TenantScopedService {
 
   async create(orderId: number, dto: CreateShipmentDto) {
     const tenantId = this.requireTenantId()
+    if (dto.idempotencyKey) {
+      const retried = await this.shipments.findOne({
+        where: { tenantId, idempotencyKey: dto.idempotencyKey },
+      })
+      if (retried) return this.toResponse(retried)
+    }
     const existing = await this.shipments.findOne({
       where: { tenantId, orderId },
     })
@@ -128,6 +141,14 @@ export class ShippingService extends TenantScopedService {
         providerOrder.tracking_id ??
         '',
     )
+    const providerOrderId = String(
+      providerOrder.order_id ??
+        providerOrder.partner_id ??
+        providerOrder.id ??
+        trackingCode,
+    )
+    const providerStatus = String(providerOrder.status ?? 'CREATED')
+    const normalizedStatus = normalizeShipmentStatus(providerStatus, dto.provider)
     const shipment = this.shipments.create({
       ...(existing ?? {}),
       tenantId,
@@ -135,13 +156,16 @@ export class ShippingService extends TenantScopedService {
       integrationId: integration.id,
       provider: dto.provider,
       trackingCode: trackingCode || null,
+      providerOrderId: providerOrderId || null,
+      idempotencyKey: dto.idempotencyKey?.trim() || null,
       serviceCode: dto.serviceId
         ? String(dto.serviceId)
         : dto.serviceTypeId
           ? String(dto.serviceTypeId)
           : null,
       serviceName: dto.serviceName ?? null,
-      status: String(providerOrder.status ?? 'CREATED').toUpperCase(),
+      status: normalizedStatus,
+      providerStatus,
       fee: Number(dto.fee ?? providerOrder.total_fee ?? providerOrder.fee ?? 0),
       codAmount: Number(dto.codAmount ?? order.total),
       recipientName: dto.recipientName,
@@ -152,8 +176,10 @@ export class ShippingService extends TenantScopedService {
       ward: dto.address.ward,
       providerPayload: providerOrder,
       lastTrackedAt: new Date(),
+      estimatedDeliveryAt: null,
     })
     await this.shipments.save(shipment)
+    await this.recordEvent(shipment, providerStatus, normalizedStatus, providerOrder)
     order.status =
       order.status === OrderStatus.COMPLETED ? order.status : OrderStatus.SHIPPED
     await this.orders.save(order)
@@ -173,15 +199,22 @@ export class ShippingService extends TenantScopedService {
         : { trackingCode: shipment.trackingCode },
     )
     const tracking = (result.tracking ?? result) as Record<string, unknown>
-    shipment.status = String(
-      tracking.status ?? tracking.current_status ?? shipment.status,
-    ).toUpperCase()
+    const providerStatus = String(
+      tracking.status ?? tracking.current_status ?? shipment.providerStatus ?? shipment.status,
+    )
+    const normalizedStatus = normalizeShipmentStatus(
+      providerStatus,
+      shipment.provider,
+    )
+    shipment.providerStatus = providerStatus
+    shipment.status = normalizedStatus
     shipment.providerPayload = {
       ...shipment.providerPayload,
       tracking,
     }
     shipment.lastTrackedAt = new Date()
     await this.shipments.save(shipment)
+    await this.recordEvent(shipment, providerStatus, normalizedStatus, tracking)
     return this.toResponse(shipment)
   }
 
@@ -197,10 +230,25 @@ export class ShippingService extends TenantScopedService {
         ? { orderCode: shipment.trackingCode }
         : { trackingCode: shipment.trackingCode },
     )
-    shipment.status = 'CANCELLED'
+    shipment.providerStatus = 'CANCELLED'
+    shipment.status = ShipmentStatus.CANCELLED
     shipment.lastTrackedAt = new Date()
     await this.shipments.save(shipment)
+    await this.recordEvent(
+      shipment,
+      'CANCELLED',
+      ShipmentStatus.CANCELLED,
+      { source: 'manual' },
+    )
     return this.toResponse(shipment)
+  }
+
+  async events(orderId: number) {
+    const shipment = await this.requireShipment(orderId)
+    return this.shipmentEvents.find({
+      where: { tenantId: this.requireTenantId(), shipmentId: shipment.id },
+      order: { occurredAt: 'DESC' },
+    })
   }
 
   private async buildQuotePayload(dto: ShippingQuoteDto) {
@@ -336,6 +384,41 @@ export class ShippingService extends TenantScopedService {
     if (provider !== 'ghn') {
       throw new BadRequestException('Location catalog is only available for GHN')
     }
+  }
+
+  private async recordEvent(
+    shipment: ShipmentEntity,
+    providerStatus: string,
+    status: ShipmentStatus,
+    rawPayload: Record<string, unknown>,
+  ) {
+    const latest = await this.shipmentEvents.findOne({
+      where: {
+        tenantId: shipment.tenantId,
+        shipmentId: shipment.id,
+        providerStatus,
+        status,
+      },
+      order: { occurredAt: 'DESC' },
+    })
+    if (latest) return latest
+
+    return this.shipmentEvents.save(
+      this.shipmentEvents.create({
+        tenantId: shipment.tenantId,
+        shipmentId: shipment.id,
+        provider: shipment.provider,
+        providerEventId: null,
+        providerStatus,
+        status,
+        description: String(
+          rawPayload.description ?? rawPayload.message ?? providerStatus,
+        ),
+        location: rawPayload.location ? String(rawPayload.location) : null,
+        occurredAt: new Date(),
+        rawPayload,
+      }),
+    )
   }
 
   private toResponse(row: ShipmentEntity) {

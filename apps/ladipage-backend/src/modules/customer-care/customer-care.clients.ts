@@ -172,9 +172,12 @@ export class ZaloConnectorClient {
     return payload as T
   }
 
-  async qr(): Promise<{ bytes: Buffer; contentType: string }> {
-    const { baseUrl } = this.settings()
-    const response = await fetch(`${baseUrl}/qr?t=${Date.now()}`, { signal: AbortSignal.timeout(20_000) })
+  async qr(connectionKey: string): Promise<{ bytes: Buffer; contentType: string }> {
+    const { baseUrl, token } = this.settings()
+    const response = await fetch(`${baseUrl}/sessions/${encodeURIComponent(connectionKey)}/qr?t=${Date.now()}`, {
+      headers: token ? { 'x-zalo-connector-token': token } : undefined,
+      signal: AbortSignal.timeout(20_000),
+    })
     if (!response.ok) {
       const raw = await response.text()
       throw new BadGatewayException(safeJson(raw)?.error || `Zalo connector returned HTTP ${response.status}`)

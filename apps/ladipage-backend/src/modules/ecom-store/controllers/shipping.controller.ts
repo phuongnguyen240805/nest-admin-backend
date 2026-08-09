@@ -98,6 +98,11 @@ export class ShippingController {
     return this.shipping.refresh(orderId)
   }
 
+  @Get('orders/:orderId/events')
+  events(@Param('orderId', ParseIntPipe) orderId: number) {
+    return this.shipping.events(orderId)
+  }
+
   @Post('orders/:orderId/cancel')
   cancel(@Param('orderId', ParseIntPipe) orderId: number) {
     return this.shipping.cancel(orderId)

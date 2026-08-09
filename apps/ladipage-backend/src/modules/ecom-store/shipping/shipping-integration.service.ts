@@ -14,15 +14,12 @@ import {
   ShippingIntegrationEntity,
   ShippingProvider,
 } from '../entities'
-import { GhnShippingAdapter } from './ghn.adapter'
-import { GhtkShippingAdapter } from './ghtk.adapter'
-import { ShippingAdapter } from './shipping-adapter'
+import {
+  isShippingProvider,
+  SHIPPING_PROVIDER_NAMES,
+} from './core'
+import { ShippingAdapterRegistry } from './shipping-adapter.registry'
 import { ShippingCredentialVaultService } from './shipping-credential-vault.service'
-
-const PROVIDER_NAMES: Record<ShippingProvider, string> = {
-  ghn: 'Giao Hàng Nhanh',
-  ghtk: 'Giao Hàng Tiết Kiệm',
-}
 
 @Injectable()
 export class ShippingIntegrationService extends TenantScopedService {
@@ -31,6 +28,7 @@ export class ShippingIntegrationService extends TenantScopedService {
     @InjectRepository(ShippingIntegrationEntity)
     private readonly repository: Repository<ShippingIntegrationEntity>,
     private readonly vault: ShippingCredentialVaultService,
+    private readonly registry: ShippingAdapterRegistry,
   ) {
     super(tenantContext)
   }
@@ -40,12 +38,20 @@ export class ShippingIntegrationService extends TenantScopedService {
       where: { tenantId: this.requireTenantId() },
       order: { provider: 'ASC' },
     })
-    return (['ghn', 'ghtk'] as ShippingProvider[]).map((provider) => {
+    return this.registry.registeredProviders().map((provider) => {
       const row = rows.find((item) => item.provider === provider)
+      const capabilities = this.registry.create({
+        id: row?.id ?? 0,
+        provider,
+        enabled: row?.enabled ?? false,
+        credentials: {},
+        settings: row?.settings ?? {},
+      }).getCapabilities()
       return {
         id: row?.id,
         provider,
-        name: PROVIDER_NAMES[provider],
+        name: SHIPPING_PROVIDER_NAMES[provider],
+        capabilities,
         enabled: row?.enabled ?? false,
         configured: Boolean(row?.ciphertext),
         connectedAt: row?.connectedAt,
@@ -61,6 +67,7 @@ export class ShippingIntegrationService extends TenantScopedService {
   }
 
   async save(provider: ShippingProvider, dto: SaveShippingIntegrationDto) {
+    this.requireRegisteredProvider(provider)
     const tenantId = this.requireTenantId()
     let row = await this.repository.findOne({ where: { tenantId, provider } })
     const previous = row ? this.decrypt(row) : {}
@@ -85,7 +92,7 @@ export class ShippingIntegrationService extends TenantScopedService {
       ...(row ?? {}),
       tenantId,
       provider,
-      name: PROVIDER_NAMES[provider],
+      name: SHIPPING_PROVIDER_NAMES[provider],
       enabled: dto.enabled ?? row?.enabled ?? true,
       settings: { ...(row?.settings ?? {}), ...(dto.settings ?? {}) },
       ...encrypted,
@@ -95,6 +102,7 @@ export class ShippingIntegrationService extends TenantScopedService {
   }
 
   async test(provider: ShippingProvider) {
+    this.requireRegisteredProvider(provider)
     const adapter = await this.getAdapter(provider, false)
     const result = await adapter.testConnection()
     if (result.success) {
@@ -112,15 +120,16 @@ export class ShippingIntegrationService extends TenantScopedService {
     action: string,
     params: Record<string, unknown>,
   ) {
+    this.requireRegisteredProvider(provider)
     return (await this.getAdapter(provider)).execute(action, params)
   }
 
   private async getAdapter(provider: ShippingProvider, requireEnabled = true) {
     const tenantId = this.requireTenantId()
     const row = await this.repository.findOne({ where: { tenantId, provider } })
-    if (!row) throw new NotFoundException(`${PROVIDER_NAMES[provider]} chưa được cấu hình`)
+    if (!row) throw new NotFoundException(`${SHIPPING_PROVIDER_NAMES[provider]} chưa được cấu hình`)
     if (requireEnabled && !row.enabled) {
-      throw new BadRequestException(`${PROVIDER_NAMES[provider]} đang tắt`)
+      throw new BadRequestException(`${SHIPPING_PROVIDER_NAMES[provider]} đang tắt`)
     }
     const config = {
       id: row.id,
@@ -129,9 +138,7 @@ export class ShippingIntegrationService extends TenantScopedService {
       credentials: this.decrypt(row),
       settings: row.settings ?? {},
     }
-    return provider === 'ghn'
-      ? new GhnShippingAdapter(config)
-      : new GhtkShippingAdapter(config)
+    return this.registry.create(config)
   }
 
   private decrypt(row: ShippingIntegrationEntity) {
@@ -140,5 +147,13 @@ export class ShippingIntegrationService extends TenantScopedService {
 
   private scope(tenantId: number, provider: ShippingProvider) {
     return `shipping:${tenantId}:${provider}`
+  }
+
+  private requireRegisteredProvider(provider: ShippingProvider) {
+    if (!isShippingProvider(provider) || !this.registry.isRegistered(provider)) {
+      throw new BadRequestException(
+        `Nhà vận chuyển ${String(provider)} chưa có adapter production`,
+      )
+    }
   }
 }

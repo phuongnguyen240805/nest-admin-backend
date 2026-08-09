@@ -1,4 +1,10 @@
-export type ShippingProvider = 'ghn' | 'ghtk'
+import {
+  SHIPPING_CAPABILITIES,
+  type ShippingCapabilities,
+  type ShippingProvider,
+} from './core'
+
+export type { ShippingProvider } from './core'
 
 export interface ShippingIntegrationConfig {
   id: number
@@ -18,6 +24,10 @@ export abstract class ShippingAdapter {
   abstract readonly name: string
 
   constructor(protected readonly config: ShippingIntegrationConfig) {}
+
+  getCapabilities(): ShippingCapabilities {
+    return SHIPPING_CAPABILITIES[this.provider]
+  }
 
   abstract testConnection(): Promise<ShippingTestResult>
   abstract execute(
