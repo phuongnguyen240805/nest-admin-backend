@@ -19,6 +19,7 @@ import {
   OrderItemEntity,
   OrderTagEntity,
   OrderTagMapEntity,
+  ShipmentEntity,
 } from '../entities'
 
 const INCOMPLETE_STATUSES = [
@@ -39,6 +40,8 @@ export class OrderService extends TenantScopedService {
     private readonly orderTagMapRepository: Repository<OrderTagMapEntity>,
     @InjectRepository(OrderTagEntity)
     private readonly orderTagRepository: Repository<OrderTagEntity>,
+    @InjectRepository(ShipmentEntity)
+    private readonly shipmentRepository: Repository<ShipmentEntity>,
     private readonly orderCustomerResolver: OrderCustomerResolver,
     private readonly dataSource: DataSource,
   ) {
@@ -95,11 +98,22 @@ export class OrderService extends TenantScopedService {
           },
         })
       : []
+    const shipment = await (manager
+      ? manager.getRepository(ShipmentEntity)
+      : this.shipmentRepository
+    ).findOne({ where: { tenantId: this.requireTenantId(), orderId: id } })
 
     return {
       ...order,
       items,
       tags: tags.map((t) => t.name),
+      shipment: shipment
+        ? {
+            ...shipment,
+            fee: Number(shipment.fee),
+            codAmount: Number(shipment.codAmount),
+          }
+        : null,
     }
   }
 
@@ -114,7 +128,7 @@ export class OrderService extends TenantScopedService {
     const total = dto.items.reduce(
       (sum, item) => sum + item.unitPrice * item.quantity,
       0,
-    )
+    ) + (dto.shippingFee ?? 0)
 
     return this.dataSource.transaction(async (manager) => {
       const orderRepo = manager.getRepository(OrderEntity)

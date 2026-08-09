@@ -16,6 +16,7 @@ import {
   LessThan,
   LessThanOrEqual,
   MoreThan,
+  MoreThanOrEqual,
   Repository,
 } from 'typeorm';
 
@@ -24,6 +25,7 @@ import { ClsService } from 'nestjs-cls';
 import { CrmFacade } from '../crm/crm.facade';
 import { OrderEntity } from '../ecom-store/entities/order.entity';
 import { OrderItemEntity } from '../ecom-store/entities/order-item.entity';
+import { ShipmentEntity } from '../ecom-store/entities/shipment.entity';
 
 import { FacebookConnectorClient, LibreDeskClient, ZaloConnectorClient } from './customer-care.clients';
 import {
@@ -59,6 +61,7 @@ interface LibreDeskPage<T> {
 }
 
 interface LibreDeskConversation {
+  id?: number;
   uuid: string;
   updated_at: string;
   waiting_since?: string | null;
@@ -78,7 +81,14 @@ interface LibreDeskConversation {
   priority?: string | null;
   assigned_user_id?: number | null;
   assigned_team_id?: number | null;
-  tags?: Array<{ id?: number | string; name?: string; color?: string }>;
+  tags?: Array<string | { id?: number | string; name?: string; color?: string }>;
+  meta?: {
+    facebook?: {
+      account_id?: string;
+      external_thread_id?: string;
+      thread_type?: string;
+    };
+  };
 }
 
 interface LibreDeskMessage {
@@ -111,6 +121,8 @@ interface InboundResult {
 @Injectable()
 export class CustomerCareService {
   private readonly logger = new Logger(CustomerCareService.name);
+  private readonly facebookBackfills = new Map<number, Promise<void>>();
+  private readonly facebookBackfillAt = new Map<number, number>();
 
   constructor(
     private readonly config: ConfigService,
@@ -142,6 +154,8 @@ export class CustomerCareService {
     private readonly orders: Repository<OrderEntity>,
     @InjectRepository(OrderItemEntity)
     private readonly orderItems: Repository<OrderItemEntity>,
+    @InjectRepository(ShipmentEntity)
+    private readonly shipments: Repository<ShipmentEntity>,
   ) {}
 
   private getTenantId() {
@@ -154,9 +168,15 @@ export class CustomerCareService {
     conversationId: string,
     tenantId = this.getTenantId(),
   ) {
-    const link = await this.conversations.findOne({
+    let link = await this.conversations.findOne({
       where: { tenantId, libreDeskConversationUuid: conversationId },
     });
+    if (!link) {
+      await this.syncFacebookConversationLinks(tenantId);
+      link = await this.conversations.findOne({
+        where: { tenantId, libreDeskConversationUuid: conversationId },
+      });
+    }
     if (!link)
       throw new NotFoundException('Customer Care conversation not found');
     return link;
@@ -206,6 +226,96 @@ export class CustomerCareService {
       );
     }
     return channel;
+  }
+
+  private async syncFacebookConversationLinks(tenantId: number) {
+    if (Date.now() - (this.facebookBackfillAt.get(tenantId) || 0) < 60_000)
+      return;
+    const running = this.facebookBackfills.get(tenantId);
+    if (running) return running;
+    const task = this.performFacebookConversationBackfill(tenantId)
+      .catch((error) =>
+        this.logger.warn(
+          `Facebook conversation backfill failed: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      )
+      .finally(() => this.facebookBackfills.delete(tenantId));
+    this.facebookBackfills.set(tenantId, task);
+    await task;
+  }
+
+  private async performFacebookConversationBackfill(tenantId: number) {
+    const page = await this.libreDesk.request<LibreDeskPage<LibreDeskConversation>>(
+      '/conversations/all?page=1&page_size=100',
+    );
+    const conversations = Array.isArray(page?.results) ? page.results : [];
+    const facebookRows = conversations.filter(
+      (item) => item.inbox_channel === 'facebook_personal' && item.meta?.facebook?.external_thread_id,
+    );
+    if (!facebookRows.length) {
+      this.facebookBackfillAt.set(tenantId, Date.now());
+      return;
+    }
+
+    const channel = await this.ensureFacebookChannel(tenantId);
+    for (const item of facebookRows) {
+      const externalId = String(item.meta!.facebook!.external_thread_id);
+      const profile = await this.facebook
+        .json<{ name?: string; avatarUrl?: string }>(
+          `/profiles/${encodeURIComponent(externalId)}`,
+        )
+        .catch(() => undefined);
+      const fallbackName = fullName(
+        item.contact?.first_name,
+        item.contact?.last_name,
+      );
+      let contact = await this.contacts.findOne({
+        where: { tenantId, provider: 'facebook_personal', externalId },
+      });
+      if (!contact)
+        contact = this.contacts.create({
+          tenantId,
+          provider: 'facebook_personal',
+          externalId,
+          displayName: profile?.name || fallbackName,
+          avatarUrl: profile?.avatarUrl || item.contact?.avatar_url || null,
+          phone: null,
+          email: item.contact?.email || null,
+          note: null,
+          crmCustomerId: null,
+          crmPersonId: null,
+          tags: (item.tags || []).map(normalizeConversationTag),
+          metadata: {},
+        });
+      else {
+        if (profile?.name) contact.displayName = profile.name;
+        if (profile?.avatarUrl) contact.avatarUrl = profile.avatarUrl;
+      }
+      contact = await this.contacts.save(contact);
+
+      let link = await this.conversations.findOne({
+        where: { tenantId, provider: 'facebook_personal', externalThreadId: externalId },
+      });
+      if (!link)
+        link = this.conversations.create({
+          tenantId,
+          channelAccountId: channel.id,
+          contactIdentityId: contact.id,
+          provider: 'facebook_personal',
+          externalThreadId: externalId,
+          threadType: item.meta?.facebook?.thread_type || 'user',
+          libreDeskConversationUuid: item.uuid,
+          lastExternalMessageId: null,
+          lastMessageAt: item.last_message_at ? new Date(item.last_message_at) : new Date(item.updated_at),
+          metadata: {},
+        });
+      else {
+        link.contactIdentityId = contact.id;
+        link.libreDeskConversationUuid = item.uuid;
+      }
+      await this.conversations.save(link);
+    }
+    this.facebookBackfillAt.set(tenantId, Date.now());
   }
 
   capabilities() {
@@ -373,6 +483,7 @@ export class CustomerCareService {
   async listConversations(query: ConversationQueryDto, userId: number) {
     const tenantId = this.getTenantId();
     await this.ensureDefaultChannel(tenantId);
+    await this.syncFacebookConversationLinks(tenantId);
     const page = Math.max(1, Number(query.cursor || 1));
     const pageSize = Math.min(100, query.limit || 50);
     const [links, agents] = await Promise.all([
@@ -728,11 +839,16 @@ export class CustomerCareService {
     if (!tagNames.length)
       throw new BadRequestException('At least one valid tag is required');
 
+    // LibreDesk uses automation action names (`add_tags`, `remove_tags`,
+    // `set_tags`) while the public Customer Care API deliberately exposes the
+    // shorter add/remove/set contract.
+    const libreDeskAction = `${action}_tags`;
+
     const result = await this.libreDesk.request(
       `/conversations/${encodeURIComponent(conversationId)}/tags`,
       {
         method: 'POST',
-        body: JSON.stringify({ tags: tagNames, action }),
+        body: JSON.stringify({ tags: tagNames, action: libreDeskAction }),
       },
     );
     if (conversationLink.contactIdentityId) {
@@ -911,9 +1027,37 @@ export class CustomerCareService {
       reactionMap.set(reaction.messageUuid, current);
     }
 
-    const libreDeskItems = rows.map((row) =>
-      this.mapMessage(row, reactionMap.get(row.uuid), linkMap.get(row.uuid)),
-    );
+    const mappedRows = rows.map((row) => {
+      const link = linkMap.get(row.uuid);
+      return {
+        row,
+        link,
+        item: this.mapMessage(row, reactionMap.get(row.uuid), link),
+      };
+    });
+    // Older Zalo self-echoes were persisted as a second LibreDesk message.
+    // Hide only a connector-native outgoing echo that has a matching normal
+    // outgoing message in the same short send window.
+    const libreDeskItems = mappedRows
+      .filter((current) => {
+        if (
+          current.link?.metadata?.source !== 'zalo_native' ||
+          current.item.direction !== 'outgoing'
+        )
+          return true;
+        const timestamp = new Date(current.item.createdAt).getTime();
+        return !mappedRows.some((other) => {
+          if (other.row.uuid === current.row.uuid) return false;
+          if (other.link?.metadata?.source === 'zalo_native') return false;
+          return (
+            other.item.direction === 'outgoing' &&
+            other.item.content === current.item.content &&
+            Math.abs(new Date(other.item.createdAt).getTime() - timestamp) <=
+              15_000
+          );
+        });
+      })
+      .map(({ item }) => item);
 
     const existingExternalIds = new Set(
       libreDeskItems
@@ -1072,7 +1216,7 @@ export class CustomerCareService {
     }
 
     try {
-      const raw = await this.libreDesk.request<LibreDeskMessage>(
+      let raw = await this.libreDesk.request<LibreDeskMessage>(
         `/conversations/${encodeURIComponent(conversationId)}/messages`,
         {
           method: 'POST',
@@ -1089,6 +1233,31 @@ export class CustomerCareService {
           }),
         },
       );
+      // QueueReply returns its in-memory `pending` row even when the Facebook
+      // worker has already received an ACK and persisted `sent`. Re-read for a
+      // short bounded window so the UI normally finishes in this same request.
+      if (
+        conversationLink.provider === 'facebook_personal' &&
+        ['pending', 'queued', 'processing'].includes(normalize(raw.status))
+      ) {
+        for (const delayMs of [0, 100, 250, 500]) {
+          if (delayMs)
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+          const refreshed = await this.libreDesk
+            .request<LibreDeskMessage>(
+              `/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(raw.uuid)}`,
+            )
+            .catch(() => undefined);
+          if (!refreshed) continue;
+          raw = refreshed;
+          if (
+            !['pending', 'queued', 'processing'].includes(
+              normalize(refreshed.status),
+            )
+          )
+            break;
+        }
+      }
       messageLink.libreDeskMessageUuid = raw.uuid;
       messageLink.status = raw.status || 'sent';
       await this.messages.save(messageLink);
@@ -1356,6 +1525,11 @@ export class CustomerCareService {
     const itemRows = orders.length
       ? await this.orderItems.find({ where: { orderId: In(orders.map((order) => order.id)) } })
       : [];
+    const shipmentRows = orders.length
+      ? await this.shipments.find({
+          where: { tenantId, orderId: In(orders.map((order) => order.id)) },
+        })
+      : [];
     const items = orders.map((order) => {
       const products = itemRows.filter((item) => item.orderId === order.id);
       return {
@@ -1368,6 +1542,16 @@ export class CustomerCareService {
           .join(', '),
         quantity: products.reduce((sum, item) => sum + item.quantity, 0),
         createdAt: order.createdAt,
+        shipment: (() => {
+          const shipment = shipmentRows.find((item) => item.orderId === order.id);
+          return shipment
+            ? {
+                ...shipment,
+                fee: Number(shipment.fee),
+                codAmount: Number(shipment.codAmount),
+              }
+            : null;
+        })(),
       };
     });
     return {
@@ -1637,6 +1821,76 @@ export class CustomerCareService {
       return { ...result, duplicate: true };
     }
 
+    const parsedOccurredAt = new Date(dto.occurred_at);
+    const safeOccurredAt = Number.isNaN(parsedOccurredAt.getTime())
+      ? new Date()
+      : parsedOccurredAt;
+
+    // A message sent from the CSKH UI is first queued in LibreDesk, then Zalo
+    // emits the same message back as an outgoing/self event with its native ID.
+    // Reconcile that ACK with the original row instead of inserting it again as
+    // an inbound mirror.
+    if (link) {
+      const candidates = await this.messages.find({
+        where: {
+          tenantId,
+          provider: dto.provider,
+          conversationLinkId: link.id,
+          externalMessageId: IsNull(),
+          createdAt: MoreThanOrEqual(
+            new Date(safeOccurredAt.getTime() - 60_000),
+          ),
+        },
+        order: { createdAt: 'DESC' },
+        take: 10,
+      });
+      const echoedContent = dto.message.text.trim();
+      const original = candidates.find(
+        (candidate) =>
+          Boolean(candidate.clientMessageId && candidate.libreDeskMessageUuid) &&
+          String(candidate.metadata?.content || '').trim() === echoedContent,
+      );
+      if (original) {
+        original.externalMessageId = dto.external_message_id;
+        original.status = 'sent';
+        original.metadata = {
+          ...(original.metadata || {}),
+          direction: 'outgoing',
+          nativeAckAt: safeOccurredAt.toISOString(),
+        };
+        await this.messages.save(original);
+        link.lastExternalMessageId = dto.external_message_id;
+        link.lastMessageAt = safeOccurredAt;
+        await this.conversations.save(link);
+
+        const result: InboundResult = {
+          conversation_uuid: link.libreDeskConversationUuid,
+          message_uuid: original.libreDeskMessageUuid || undefined,
+        };
+        event.status = 'processed';
+        event.processedAt = new Date();
+        event.lastError = null;
+        event.payload = {
+          ...(event.payload || {}),
+          debug_stage: 'outgoing_ack_reconciled',
+          result,
+        };
+        await this.inboundEvents.save(event);
+        await this.publish(
+          tenantId,
+          'message.delivery.updated',
+          link.libreDeskConversationUuid,
+          {
+            conversationId: link.libreDeskConversationUuid,
+            messageId: original.libreDeskMessageUuid,
+            externalMessageId: dto.external_message_id,
+            status: 'sent',
+          },
+        );
+        return result;
+      }
+    }
+
     let contact = await this.contacts.findOne({
       where: {
         tenantId,
@@ -1676,11 +1930,6 @@ export class CustomerCareService {
       message: dto.message,
     }, dto.provider);
     const isNewConversation = !link;
-
-    const occurredAt = new Date(dto.occurred_at);
-    const safeOccurredAt = Number.isNaN(occurredAt.getTime())
-      ? new Date()
-      : occurredAt;
 
     if (!link) {
       link = await this.conversations.save(
@@ -2100,11 +2349,7 @@ export class CustomerCareService {
       lastMessageAt: item.last_message_at || item.updated_at,
       unreadCount: item.unread_message_count || 0,
       waitingSince: item.waiting_since || undefined,
-      tags: (item.tags || []).map((tag) => ({
-        id: String(tag.id ?? tag.name),
-        name: tag.name || String(tag.id),
-        color: tag.color || '#84cc16',
-      })),
+      tags: (item.tags || []).map(normalizeConversationTag),
       assignee: assigned,
       teamId: item.assigned_team_id ? String(item.assigned_team_id) : undefined,
       pinned: preference?.pinned || false,
@@ -2218,6 +2463,21 @@ function customerCareTagColor(name: string) {
     'trả hàng': '#9b3432', 'khách hàng': '#8d2735', 'gia đình': '#87205f',
   };
   return colors[name.toLocaleLowerCase('vi')] || '#65a30d';
+}
+
+function normalizeConversationTag(
+  tag: string | { id?: number | string; name?: string; color?: string },
+) {
+  const name = typeof tag === 'string'
+    ? tag.trim()
+    : String(tag.name ?? tag.id ?? '').trim();
+  return {
+    id: typeof tag === 'string' ? name : String(tag.id ?? name),
+    name,
+    color:
+      (typeof tag === 'string' ? undefined : tag.color) ||
+      customerCareTagColor(name),
+  };
 }
 
 function mapChannel(value: string) {

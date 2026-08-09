@@ -44,7 +44,13 @@ export class LibreDeskClient {
     const headers = new Headers(init.headers)
     headers.set('Accept', 'application/json')
     headers.set('Authorization', `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`)
-    if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+    // Let fetch generate the multipart Content-Type (including its boundary).
+    // Treating every request body as JSON corrupts FormData uploads and makes
+    // LibreDesk's multipart parser reject otherwise valid files.
+    const isMultipart =
+      typeof FormData !== 'undefined' && init.body instanceof FormData
+    if (init.body && !isMultipart && !headers.has('Content-Type'))
+      headers.set('Content-Type', 'application/json')
     let response: Response
     try {
       response = await fetch(`${baseUrl}${path}`, {

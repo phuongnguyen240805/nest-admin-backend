@@ -1,0 +1,173 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { Type } from 'class-transformer'
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+  ValidateNested,
+} from 'class-validator'
+
+import type { ShippingProvider } from '../entities'
+
+export class SaveShippingIntegrationDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean
+
+  @ApiPropertyOptional({ description: 'Provider token; blank keeps existing token' })
+  @IsOptional()
+  @IsString()
+  token?: string
+
+  @ApiPropertyOptional({ description: 'Required by GHN' })
+  @IsOptional()
+  @IsString()
+  shopId?: string
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsObject()
+  settings?: Record<string, unknown>
+}
+
+export class ShippingAddressDto {
+  @ApiProperty()
+  @IsString()
+  @MaxLength(255)
+  address: string
+
+  @ApiProperty()
+  @IsString()
+  @MaxLength(120)
+  province: string
+
+  @ApiProperty()
+  @IsString()
+  @MaxLength(120)
+  district: string
+
+  @ApiProperty()
+  @IsString()
+  @MaxLength(120)
+  ward: string
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  provinceId?: number
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  districtId?: number
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  wardCode?: string
+}
+
+export class ShippingParcelDto {
+  @ApiPropertyOptional({ default: 500 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  weight?: number
+
+  @ApiPropertyOptional({ default: 20 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  length?: number
+
+  @ApiPropertyOptional({ default: 15 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  width?: number
+
+  @ApiPropertyOptional({ default: 10 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  height?: number
+}
+
+export class ShippingQuoteDto {
+  @ApiProperty({ enum: ['ghn', 'ghtk'] })
+  @IsIn(['ghn', 'ghtk'])
+  provider: ShippingProvider
+
+  @ApiProperty({ type: ShippingAddressDto })
+  @ValidateNested()
+  @Type(() => ShippingAddressDto)
+  address: ShippingAddressDto
+
+  @ApiPropertyOptional({ type: ShippingParcelDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ShippingParcelDto)
+  parcel?: ShippingParcelDto
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  serviceId?: number
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  serviceTypeId?: number
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  insuranceValue?: number
+}
+
+export class CreateShipmentDto extends ShippingQuoteDto {
+  @ApiProperty()
+  @IsString()
+  @MaxLength(255)
+  recipientName: string
+
+  @ApiProperty()
+  @IsString()
+  @MaxLength(30)
+  recipientPhone: string
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  serviceName?: string
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  fee?: number
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  codAmount?: number
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  note?: string
+
+  @ApiPropertyOptional({ default: 'KHONGCHOXEMHANG' })
+  @IsOptional()
+  @IsString()
+  requiredNote?: string
+}

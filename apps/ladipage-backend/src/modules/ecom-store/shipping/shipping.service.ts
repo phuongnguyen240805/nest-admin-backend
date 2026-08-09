@@ -1,0 +1,348 @@
+import { BadRequestException, Injectable } from '@nestjs/common'
+import { InjectRepository } from '@nestjs/typeorm'
+import { Repository } from 'typeorm'
+
+import { TenantContextService } from '@liora/nest-core'
+
+import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
+import { OrderStatus } from '../common/enums'
+import {
+  CreateShipmentDto,
+  ShippingQuoteDto,
+} from '../dto/shipping.dto'
+import {
+  OrderEntity,
+  OrderItemEntity,
+  ShipmentEntity,
+  ShippingIntegrationEntity,
+  ShippingProvider,
+} from '../entities'
+import { ShippingIntegrationService } from './shipping-integration.service'
+
+@Injectable()
+export class ShippingService extends TenantScopedService {
+  constructor(
+    tenantContext: TenantContextService,
+    @InjectRepository(OrderEntity)
+    private readonly orders: Repository<OrderEntity>,
+    @InjectRepository(OrderItemEntity)
+    private readonly orderItems: Repository<OrderItemEntity>,
+    @InjectRepository(ShipmentEntity)
+    private readonly shipments: Repository<ShipmentEntity>,
+    @InjectRepository(ShippingIntegrationEntity)
+    private readonly integrations: Repository<ShippingIntegrationEntity>,
+    private readonly integrationService: ShippingIntegrationService,
+  ) {
+    super(tenantContext)
+  }
+
+  integrationsList() {
+    return this.integrationService.list()
+  }
+
+  saveIntegration(provider: ShippingProvider, dto: Parameters<ShippingIntegrationService['save']>[1]) {
+    return this.integrationService.save(provider, dto)
+  }
+
+  testIntegration(provider: ShippingProvider) {
+    return this.integrationService.test(provider)
+  }
+
+  provinces(provider: ShippingProvider) {
+    this.requireGhnLocations(provider)
+    return this.integrationService.execute(provider, 'getProvinces', {})
+  }
+
+  districts(provider: ShippingProvider, provinceId: number) {
+    this.requireGhnLocations(provider)
+    return this.integrationService.execute(provider, 'getDistricts', {
+      provinceId,
+    })
+  }
+
+  wards(provider: ShippingProvider, districtId: number) {
+    this.requireGhnLocations(provider)
+    return this.integrationService.execute(provider, 'getWards', { districtId })
+  }
+
+  services(provider: ShippingProvider, toDistrict: number) {
+    this.requireGhnLocations(provider)
+    return this.integrationService.execute(provider, 'getServices', {
+      toDistrict,
+    })
+  }
+
+  async quote(dto: ShippingQuoteDto) {
+    const params = await this.buildQuotePayload(dto)
+    const result = await this.integrationService.execute(
+      dto.provider,
+      'calculateFee',
+      params,
+    )
+    const raw = (result.fee ?? result) as Record<string, unknown>
+    return {
+      provider: dto.provider,
+      total: Number(raw.total ?? raw.fee ?? raw.delivery ?? 0),
+      serviceFee: Number(raw.service_fee ?? raw.ship_fee_only ?? 0),
+      insuranceFee: Number(raw.insurance_fee ?? 0),
+      raw,
+    }
+  }
+
+  async detailForOrder(orderId: number) {
+    const row = await this.shipments.findOne({
+      where: { tenantId: this.requireTenantId(), orderId },
+    })
+    return row ? this.toResponse(row) : null
+  }
+
+  async create(orderId: number, dto: CreateShipmentDto) {
+    const tenantId = this.requireTenantId()
+    const existing = await this.shipments.findOne({
+      where: { tenantId, orderId },
+    })
+    if (existing && existing.status !== 'CANCELLED') {
+      throw new BadRequestException('Order already has an active shipment')
+    }
+    const order = await this.findOneForTenantOrFail(
+      this.orders,
+      { id: orderId },
+      'Order not found',
+    )
+    const items = await this.orderItems.find({ where: { orderId } })
+    const integration = await this.integrations.findOneByOrFail({
+      tenantId,
+      provider: dto.provider,
+    })
+    const payload = this.buildCreatePayload(dto, order, items, integration.settings)
+    const result = await this.integrationService.execute(
+      dto.provider,
+      'createOrder',
+      payload,
+    )
+    const providerOrder = (result.order ?? result) as Record<string, unknown>
+    const trackingCode = String(
+      providerOrder.order_code ??
+        providerOrder.label ??
+        providerOrder.label_id ??
+        providerOrder.tracking_id ??
+        '',
+    )
+    const shipment = this.shipments.create({
+      ...(existing ?? {}),
+      tenantId,
+      orderId,
+      integrationId: integration.id,
+      provider: dto.provider,
+      trackingCode: trackingCode || null,
+      serviceCode: dto.serviceId
+        ? String(dto.serviceId)
+        : dto.serviceTypeId
+          ? String(dto.serviceTypeId)
+          : null,
+      serviceName: dto.serviceName ?? null,
+      status: String(providerOrder.status ?? 'CREATED').toUpperCase(),
+      fee: Number(dto.fee ?? providerOrder.total_fee ?? providerOrder.fee ?? 0),
+      codAmount: Number(dto.codAmount ?? order.total),
+      recipientName: dto.recipientName,
+      recipientPhone: dto.recipientPhone,
+      address: dto.address.address,
+      province: dto.address.province,
+      district: dto.address.district,
+      ward: dto.address.ward,
+      providerPayload: providerOrder,
+      lastTrackedAt: new Date(),
+    })
+    await this.shipments.save(shipment)
+    order.status =
+      order.status === OrderStatus.COMPLETED ? order.status : OrderStatus.SHIPPED
+    await this.orders.save(order)
+    return this.toResponse(shipment)
+  }
+
+  async refresh(orderId: number) {
+    const shipment = await this.requireShipment(orderId)
+    if (!shipment.trackingCode) {
+      throw new BadRequestException('Shipment has no tracking code')
+    }
+    const result = await this.integrationService.execute(
+      shipment.provider,
+      'getTracking',
+      shipment.provider === 'ghn'
+        ? { orderCode: shipment.trackingCode }
+        : { trackingCode: shipment.trackingCode },
+    )
+    const tracking = (result.tracking ?? result) as Record<string, unknown>
+    shipment.status = String(
+      tracking.status ?? tracking.current_status ?? shipment.status,
+    ).toUpperCase()
+    shipment.providerPayload = {
+      ...shipment.providerPayload,
+      tracking,
+    }
+    shipment.lastTrackedAt = new Date()
+    await this.shipments.save(shipment)
+    return this.toResponse(shipment)
+  }
+
+  async cancel(orderId: number) {
+    const shipment = await this.requireShipment(orderId)
+    if (!shipment.trackingCode) {
+      throw new BadRequestException('Shipment has no tracking code')
+    }
+    await this.integrationService.execute(
+      shipment.provider,
+      'cancelOrder',
+      shipment.provider === 'ghn'
+        ? { orderCode: shipment.trackingCode }
+        : { trackingCode: shipment.trackingCode },
+    )
+    shipment.status = 'CANCELLED'
+    shipment.lastTrackedAt = new Date()
+    await this.shipments.save(shipment)
+    return this.toResponse(shipment)
+  }
+
+  private async buildQuotePayload(dto: ShippingQuoteDto) {
+    const parcel = {
+      weight: dto.parcel?.weight ?? 500,
+      length: dto.parcel?.length ?? 20,
+      width: dto.parcel?.width ?? 15,
+      height: dto.parcel?.height ?? 10,
+    }
+    if (dto.provider === 'ghn') {
+      if (!dto.address.districtId || !dto.address.wardCode) {
+        throw new BadRequestException('GHN requires districtId and wardCode')
+      }
+      return {
+        service_id: dto.serviceId,
+        service_type_id: dto.serviceTypeId ?? 2,
+        to_district_id: dto.address.districtId,
+        to_ward_code: dto.address.wardCode,
+        insurance_value: dto.insuranceValue ?? 0,
+        coupon: null,
+        ...parcel,
+      }
+    }
+    const integration = await this.integrations.findOneByOrFail({
+      tenantId: this.requireTenantId(),
+      provider: 'ghtk',
+    })
+    const pickup = integration.settings.pickup as
+      | Record<string, unknown>
+      | undefined
+    if (!pickup?.province || !pickup?.district) {
+      throw new BadRequestException('GHTK pickup address is not configured')
+    }
+    return {
+      pick_province: pickup.province,
+      pick_district: pickup.district,
+      pick_ward: pickup.ward ?? '',
+      pick_address: pickup.address ?? '',
+      province: dto.address.province,
+      district: dto.address.district,
+      ward: dto.address.ward,
+      address: dto.address.address,
+      weight: parcel.weight / 1000,
+      value: dto.insuranceValue ?? 0,
+      transport: 'road',
+    }
+  }
+
+  private buildCreatePayload(
+    dto: CreateShipmentDto,
+    order: OrderEntity,
+    items: OrderItemEntity[],
+    settings: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const parcel = {
+      weight: dto.parcel?.weight ?? 500,
+      length: dto.parcel?.length ?? 20,
+      width: dto.parcel?.width ?? 15,
+      height: dto.parcel?.height ?? 10,
+    }
+    if (dto.provider === 'ghn') {
+      if (!dto.address.districtId || !dto.address.wardCode) {
+        throw new BadRequestException('GHN requires districtId and wardCode')
+      }
+      return {
+        order: {
+          payment_type_id: 2,
+          note: dto.note ?? order.notes ?? '',
+          required_note: dto.requiredNote ?? 'KHONGCHOXEMHANG',
+          to_name: dto.recipientName,
+          to_phone: dto.recipientPhone,
+          to_address: dto.address.address,
+          to_ward_code: dto.address.wardCode,
+          to_district_id: dto.address.districtId,
+          cod_amount: dto.codAmount ?? Number(order.total),
+          content: items.map((item) => item.productName).join(', '),
+          insurance_value: Math.min(Number(order.total), 5_000_000),
+          service_id: dto.serviceId,
+          service_type_id: dto.serviceTypeId ?? 2,
+          ...parcel,
+          items: items.map((item) => ({
+            name: item.productName,
+            quantity: item.quantity,
+            price: Number(item.unitPrice),
+            weight: Math.max(1, Math.round(parcel.weight / Math.max(items.length, 1))),
+          })),
+        },
+      }
+    }
+    const pickup = settings.pickup as Record<string, unknown> | undefined
+    if (!pickup?.address || !pickup?.province || !pickup?.district || !pickup?.phone) {
+      throw new BadRequestException('GHTK pickup address is not configured')
+    }
+    return {
+      products: items.map((item) => ({
+        name: item.productName,
+        weight: parcel.weight / 1000,
+        quantity: item.quantity,
+        product_code: item.productId ? String(item.productId) : undefined,
+      })),
+      order: {
+        id: order.code,
+        pick_name: pickup.name ?? 'LadiPage Shop',
+        pick_address: pickup.address,
+        pick_province: pickup.province,
+        pick_district: pickup.district,
+        pick_ward: pickup.ward ?? '',
+        pick_tel: pickup.phone,
+        name: dto.recipientName,
+        address: dto.address.address,
+        province: dto.address.province,
+        district: dto.address.district,
+        ward: dto.address.ward,
+        tel: dto.recipientPhone,
+        is_freeship: '0',
+        pick_money: dto.codAmount ?? Number(order.total),
+        note: dto.note ?? order.notes ?? '',
+        value: Number(order.total),
+        transport: 'road',
+      },
+    }
+  }
+
+  private async requireShipment(orderId: number) {
+    return this.findOneForTenantOrFail(
+      this.shipments,
+      { orderId },
+      'Shipment not found',
+    )
+  }
+
+  private requireGhnLocations(provider: ShippingProvider) {
+    if (provider !== 'ghn') {
+      throw new BadRequestException('Location catalog is only available for GHN')
+    }
+  }
+
+  private toResponse(row: ShipmentEntity) {
+    return {
+      ...row,
+      fee: Number(row.fee),
+      codAmount: Number(row.codAmount),
+    }
+  }
+}

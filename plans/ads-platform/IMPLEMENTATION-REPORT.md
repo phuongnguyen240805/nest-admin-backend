@@ -2,6 +2,18 @@
 
 Cập nhật: 2026-08-08
 
+### Cập nhật triển khai local 2026-08-09
+
+- PostgreSQL, Redis, LadiPage API và BullMQ worker đã chạy healthy trong Docker local.
+- Migration `AdsPlatformCore1762000000000` đã apply thành công.
+- Màn Meta Connections, Ads Manager read projection và Campaign Wizard đã có live mode qua
+  `NEXT_PUBLIC_ADS_PLATFORM_MODE=live`; mock mode vẫn giữ để phát triển độc lập.
+- Đã thêm validator `.env.ads-platforms`, script gán quyền pilot theo role ID, hướng dẫn lấy cấu hình
+  và báo cáo chức năng từng file.
+- Chưa gán quyền `ads:*`: cần chủ hệ thống xác nhận role pilot cụ thể; không tự cấp publish/action.
+- Chưa chạy OAuth/E2E provider vì App ID/App Secret/redirect thật của Meta và TikTok đang trống;
+  Shopee partner/publish vẫn tắt đúng policy.
+
 ## Kết quả đã đạt
 
 - Tạo `@liora/ads-contracts` dùng chung cho provider, capability, operation context, snapshot và

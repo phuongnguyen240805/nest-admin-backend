@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 
 import { Injectable, ServiceUnavailableException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
@@ -55,7 +56,10 @@ export class AdsVaultService {
   }
 
   private getKey(): Buffer {
-    const encoded = this.configService.get<string>('ADS_VAULT_MASTER_KEY')
+    const keyFile = this.configService.get<string>('ADS_VAULT_MASTER_KEY_FILE')
+    const encoded = keyFile
+      ? readFileSync(keyFile, 'utf8').trim()
+      : this.configService.get<string>('ADS_VAULT_MASTER_KEY')
     if (!encoded) {
       throw new ServiceUnavailableException('ADS_VAULT_MASTER_KEY is not configured')
     }

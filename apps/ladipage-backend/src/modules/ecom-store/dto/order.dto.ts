@@ -70,6 +70,12 @@ export class CreateOrderDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  shippingFee?: number
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   @MaxLength(100)
   source?: string

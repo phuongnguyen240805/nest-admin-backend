@@ -14,6 +14,7 @@ import { OrderController } from './controllers/order.controller'
 import { ProductController } from './controllers/product.controller'
 import { ReviewController } from './controllers/review.controller'
 import { ReviewGlobalController } from './controllers/review-global.controller'
+import { ShippingController } from './controllers/shipping.controller'
 import { TagController } from './controllers/tag.controller'
 import {
   CustomFieldEntity,
@@ -27,6 +28,8 @@ import {
   ProductReviewEntity,
   ProductTagEntity,
   ProductTagMapEntity,
+  ShipmentEntity,
+  ShippingIntegrationEntity,
 } from './entities'
 import { CategoryService } from './services/category.service'
 import { EcomCustomFieldService } from './services/custom-field.service'
@@ -37,6 +40,9 @@ import { OrderService } from './services/order.service'
 import { ProductService } from './services/product.service'
 import { ReviewService } from './services/review.service'
 import { EcomTagService } from './services/tag.service'
+import { ShippingCredentialVaultService } from './shipping/shipping-credential-vault.service'
+import { ShippingIntegrationService } from './shipping/shipping-integration.service'
+import { ShippingService } from './shipping/shipping.service'
 
 @Module({
   imports: [
@@ -55,6 +61,8 @@ import { EcomTagService } from './services/tag.service'
       DeliveryNoteEntity,
       ProductReviewEntity,
       CustomFieldEntity,
+      ShippingIntegrationEntity,
+      ShipmentEntity,
     ]),
   ],
   controllers: [
@@ -67,6 +75,7 @@ import { EcomTagService } from './services/tag.service'
     ReviewGlobalController,
     CustomFieldController,
     DeliveryNoteController,
+    ShippingController,
   ],
   providers: [
     OrderCustomerResolver,
@@ -78,7 +87,10 @@ import { EcomTagService } from './services/tag.service'
     ReviewService,
     EcomCustomFieldService,
     DeliveryNoteService,
+    ShippingCredentialVaultService,
+    ShippingIntegrationService,
+    ShippingService,
   ],
-  exports: [TypeOrmModule],
+  exports: [TypeOrmModule, ShippingIntegrationService, ShippingService],
 })
 export class EcomStoreModule {}

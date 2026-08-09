@@ -32,6 +32,7 @@ import {
 import type { TikTokCampaignDraft, TikTokResponse } from './tiktok.types'
 
 const TIKTOK_HOSTS = ['business-api.tiktok.com'] as const
+const TIKTOK_AUTH_HOSTS = ['ads.tiktok.com', 'business-api.tiktok.com'] as const
 
 @Injectable()
 export class TikTokAdsPlugin implements AdsProviderPlugin, OnModuleInit {
@@ -59,8 +60,8 @@ export class TikTokAdsPlugin implements AdsProviderPlugin, OnModuleInit {
     getAuthorizationUrl: async (_context: AdsOperationContext, state: string) => {
       const configured = this.requireConfig('TIKTOK_AUTH_URL')
       const url = new URL(configured)
-      if (url.protocol !== 'https:' || !TIKTOK_HOSTS.includes(url.hostname as never)) {
-        throw new ServiceUnavailableException('TIKTOK_AUTH_URL must use business-api.tiktok.com')
+      if (url.protocol !== 'https:' || !TIKTOK_AUTH_HOSTS.includes(url.hostname as never)) {
+        throw new ServiceUnavailableException('TIKTOK_AUTH_URL must use an approved TikTok Ads host')
       }
       url.searchParams.set('app_id', this.requireConfig('TIKTOK_APP_ID'))
       url.searchParams.set('redirect_uri', this.requireConfig('TIKTOK_REDIRECT_URI'))
