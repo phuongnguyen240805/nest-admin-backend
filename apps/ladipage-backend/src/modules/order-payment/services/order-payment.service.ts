@@ -10,6 +10,7 @@ import { OrderLifecycleService } from '../../ecom-store/services/order-lifecycle
 import { CreateOrderPaymentDto } from '../dto/order-payment.dto'
 import { OrderPaymentEntity, OrderPaymentEventEntity } from '../entities'
 import { SepayQrProvider } from '../providers/sepay/sepay-qr.provider'
+import { DomainEventOutboxService } from '../../domain-events/domain-event-outbox.service'
 
 @Injectable()
 export class OrderPaymentService {
@@ -22,6 +23,7 @@ export class OrderPaymentService {
     @InjectRepository(OrderPaymentEventEntity)
     private readonly paymentEvents: Repository<OrderPaymentEventEntity>,
     private readonly orderLifecycle: OrderLifecycleService,
+    private readonly domainEvents: DomainEventOutboxService,
     private readonly sepayQr: SepayQrProvider,
     private readonly dataSource: DataSource,
   ) {}
@@ -139,6 +141,20 @@ export class OrderPaymentService {
         providerEventId: null,
         payload: { provider, orderId },
       })
+      await this.domainEvents.append({
+        tenantId,
+        aggregateType: 'payment',
+        aggregateId: payment.id,
+        eventType: 'payment.created',
+        payload: {
+          paymentId: payment.id,
+          orderId,
+          orderCode: order.code,
+          provider,
+          status: payment.status,
+          amount: Number(payment.amount),
+        },
+      }, manager)
       await this.orderLifecycle.setPaymentStatus(orderId, activeStatus, manager)
       return this.toResponse(payment)
     })
@@ -165,6 +181,21 @@ export class OrderPaymentService {
       providerEventId: input.providerEventId,
       payload: input.payload,
     })
+    await this.domainEvents.append({
+      tenantId: payment.tenantId,
+      aggregateType: 'payment',
+      aggregateId: payment.id,
+      eventType: 'payment.paid',
+      payload: {
+        paymentId: payment.id,
+        orderId: payment.orderId,
+        provider: payment.provider,
+        status: OrderPaymentStatus.PAID,
+        amount: Number(payment.amount),
+        paidAt: input.paidAt.toISOString(),
+        providerTransactionId: saved.providerTransactionId,
+      },
+    }, manager)
     await this.orderLifecycle.setPaymentStatusForTenant(
       payment.orderId,
       payment.tenantId,

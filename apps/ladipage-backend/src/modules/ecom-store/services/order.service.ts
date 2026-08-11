@@ -8,6 +8,7 @@ import { TenantContextService } from '@liora/nest-core'
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 import { OrderCustomerResolver } from './order-customer.resolver'
 import { OrderLifecycleService } from './order-lifecycle.service'
+import { DomainEventOutboxService } from '../../domain-events/domain-event-outbox.service'
 
 import { OrderStatus } from '../common/enums'
 import {
@@ -46,6 +47,7 @@ export class OrderService extends TenantScopedService {
     private readonly shipmentRepository: Repository<ShipmentEntity>,
     private readonly orderCustomerResolver: OrderCustomerResolver,
     private readonly orderLifecycle: OrderLifecycleService,
+    private readonly domainEvents: DomainEventOutboxService,
     private readonly dataSource: DataSource,
   ) {
     super(tenantContext)
@@ -187,6 +189,21 @@ export class OrderService extends TenantScopedService {
           dto.tagIds.map((tagId) => ({ orderId: order.id, tagId })),
         )
       }
+
+      await this.domainEvents.append({
+        tenantId,
+        aggregateType: 'order',
+        aggregateId: order.id,
+        eventType: 'order.created',
+        payload: {
+          orderId: order.id,
+          orderCode: order.code,
+          businessStatus: order.businessStatus,
+          paymentStatus: order.paymentStatus,
+          fulfillmentStatus: order.fulfillmentStatus,
+          source: order.source,
+        },
+      }, tx)
 
       return this.detail(order.id, tx)
     }

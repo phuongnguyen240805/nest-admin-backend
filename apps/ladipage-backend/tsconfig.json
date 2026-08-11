@@ -31,7 +31,9 @@
       "@liora/ladipage-types": ["./libs/ladipage-types/src/index.ts"],
       "@liora/ladipage-types/*": ["./libs/ladipage-types/src/*"],
       "@liora/ads-contracts": ["../../libs/ads-contracts/src/index.ts"],
-      "@liora/ads-contracts/*": ["../../libs/ads-contracts/src/*"]
+      "@liora/ads-contracts/*": ["../../libs/ads-contracts/src/*"],
+      "@liora/ai-gateway": ["../../libs/ai-gateway/src/index.ts"],
+      "@liora/ai-gateway/*": ["../../libs/ai-gateway/src/*"]
     },
     "esModuleInterop": true
   }

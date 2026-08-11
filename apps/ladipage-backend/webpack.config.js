@@ -10,6 +10,7 @@ module.exports = {
       '@liora/ads-contracts': join(__dirname, '../../libs/ads-contracts/src/index.ts'),
       // nest-core dùng alias nội bộ `~/*` khi webpack bundle source
       '~': join(__dirname, '../../libs/nest-core/src'),
+      '@liora/ai-gateway': join(__dirname, '../../libs/ai-gateway/src/index.ts'),
     },
   },
   output: {

@@ -30,6 +30,7 @@ import { OrderItemEntity } from '../ecom-store/entities/order-item.entity';
 import { ShipmentEntity } from '../ecom-store/entities/shipment.entity';
 import { CreateOrderDto } from '../ecom-store/dto/order.dto';
 import { OrderService } from '../ecom-store/services/order.service';
+import { DomainEventOutboxService } from '../domain-events/domain-event-outbox.service';
 
 import { FacebookConnectorClient, LibreDeskClient, ZaloConnectorClient } from './customer-care.clients';
 import {
@@ -164,6 +165,7 @@ export class CustomerCareService {
     @InjectRepository(ShipmentEntity)
     private readonly shipments: Repository<ShipmentEntity>,
     private readonly orderService: OrderService,
+    private readonly domainEvents: DomainEventOutboxService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -2745,7 +2747,7 @@ export class CustomerCareService {
         .where('event.tenant_id = :tenantId', { tenantId })
         .getRawOne<{ max: string | number }>();
       const sequence = Number(raw?.max || 0) + 1;
-      return manager.getRepository(CustomerCareSyncEventEntity).save(
+      const saved = await manager.getRepository(CustomerCareSyncEventEntity).save(
         manager.getRepository(CustomerCareSyncEventEntity).create({
           tenantId,
           sequence,
@@ -2755,6 +2757,20 @@ export class CustomerCareService {
           payload,
         }),
       );
+      const domainType = this.customerCareDomainEventType(type, payload);
+      if (domainType && aggregateId) {
+        await this.domainEvents.append({
+          tenantId,
+          aggregateType: type.startsWith('contact.') ? 'contact' : 'conversation',
+          aggregateId,
+          eventType: domainType,
+          payload: { ...payload, conversationId: type.startsWith('contact.') ? undefined : aggregateId },
+          availableAt: domainType === 'customer-care.message.inbound'
+            ? new Date(Date.now() + this.customerCareAiDebounceMs())
+            : undefined,
+        }, manager);
+      }
+      return saved;
     });
     const envelope = {
       eventId: event.eventId,
@@ -2773,6 +2789,29 @@ export class CustomerCareService {
       this.gateway.emitConversation(tenantId, aggregateId, type, envelope);
     else this.gateway.emitTenant(tenantId, type, envelope);
     return event;
+  }
+
+  private customerCareAiDebounceMs() {
+    const value = Number(process.env.CUSTOMER_CARE_AI_DEBOUNCE_MS ?? 2_500)
+    return Number.isFinite(value) ? Math.max(1_000, Math.min(30_000, value)) : 2_500
+  }
+
+  private customerCareDomainEventType(
+    type: string,
+    payload: Record<string, unknown>,
+  ): string | null {
+    if (type === 'message.created' || type === 'conversation.created') {
+      const message = payload.message as { direction?: string } | undefined
+      if (message?.direction === 'incoming') return 'customer-care.message.inbound'
+      if (message?.direction === 'outgoing') return 'customer-care.message.outbound'
+    }
+    if (type === 'contact.updated') {
+      return 'customer-care.contact.linked'
+    }
+    if (type === 'conversation-order.updated') {
+      return 'conversation-order.linked'
+    }
+    return null
   }
 
   @Interval(6 * 60 * 60_000)

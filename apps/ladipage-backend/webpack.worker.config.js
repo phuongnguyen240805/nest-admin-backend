@@ -18,6 +18,7 @@ module.exports = {
         '../librefang-backend/libs/librefang-client/src/index.ts',
       ),
       '~': join(__dirname, '../../libs/nest-core/src'),
+      '@liora/ai-gateway': join(__dirname, '../../libs/ai-gateway/src/index.ts'),
     },
   },
   output: {

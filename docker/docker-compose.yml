@@ -298,6 +298,8 @@ services:
       CUSTOMER_CARE_LIBREDESK_BASE_URL: ${CUSTOMER_CARE_LIBREDESK_DOCKER_BASE_URL:-http://libredesk-app:9000/api/v1}
       CUSTOMER_CARE_ZALO_CONNECTOR_URL: ${CUSTOMER_CARE_ZALO_CONNECTOR_DOCKER_URL:-http://zalo-connector:3100}
       CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL: ${CUSTOMER_CARE_FACEBOOK_CONNECTOR_DOCKER_URL:-http://facebook-connector:3200}
+      AI_GATEWAY_BASE_URL: ${AI_GATEWAY_DOCKER_BASE_URL:-http://9router:20128/v1}
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
       # Unlighthouse 0.18 needs Node 22+ (image) + Chromium in container
       RUNNING_IN_DOCKER: "true"
       UNLIGHTHOUSE_MODE: ${UNLIGHTHOUSE_MODE:-cli}
@@ -453,6 +455,27 @@ services:
     networks:
       - liora-network
 
+  # ================== AI GATEWAY / 9ROUTER ==================
+  # Optional profile: start with `docker compose --profile ai-gateway up -d 9router`.
+  # Provider accounts/API access are configured in the 9Router dashboard and
+  # persisted in the dedicated data volume.
+  9router:
+    image: decolua/9router:latest
+    container_name: liora-9router
+    profiles: ["ai-gateway"]
+    restart: unless-stopped
+    ports:
+      - "20128:20128"
+    environment:
+      DATA_DIR: /app/data
+      PORT: "20128"
+      HOSTNAME: "0.0.0.0"
+      NODE_ENV: production
+    volumes:
+      - nine_router_data:/app/data
+    networks:
+      - liora-platform
+
   # ================== MINIO ==================
   minio:
     image: minio/minio:latest
@@ -490,3 +513,4 @@ volumes:
   minio_data:
   umami_db_data:
   openseo_data:
+  nine_router_data:

@@ -45,7 +45,9 @@
       "@liora/crm-core": ["libs/crm-core/src/index.ts"],
       "@liora/crm-core/*": ["libs/crm-core/src/*"],
       "@liora/ads-contracts": ["libs/ads-contracts/src/index.ts"],
-      "@liora/ads-contracts/*": ["libs/ads-contracts/src/*"]
+      "@liora/ads-contracts/*": ["libs/ads-contracts/src/*"],
+      "@liora/ai-gateway": ["../../libs/ai-gateway/src/index.ts"],
+      "@liora/ai-gateway/*": ["../../libs/ai-gateway/src/*"]
     }
   },
   "include": ["src/types/**/*.d.ts", "**/*.d.ts"],

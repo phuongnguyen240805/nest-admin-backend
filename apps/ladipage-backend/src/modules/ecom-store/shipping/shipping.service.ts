@@ -7,6 +7,7 @@ import { TenantContextService } from '@liora/nest-core'
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 import { fulfillmentFromShipmentStatus } from '../common/order-lifecycle'
 import { OrderLifecycleService } from '../services/order-lifecycle.service'
+import { DomainEventOutboxService } from '../../domain-events/domain-event-outbox.service'
 import {
   CreateShipmentDto,
   ShippingQuoteDto,
@@ -41,6 +42,7 @@ export class ShippingService extends TenantScopedService {
     private readonly integrations: Repository<ShippingIntegrationEntity>,
     private readonly integrationService: ShippingIntegrationService,
     private readonly orderLifecycle: OrderLifecycleService,
+    private readonly domainEvents: DomainEventOutboxService,
   ) {
     super(tenantContext)
   }
@@ -414,7 +416,7 @@ export class ShippingService extends TenantScopedService {
     })
     if (latest) return latest
 
-    return this.shipmentEvents.save(
+    const saved = await this.shipmentEvents.save(
       this.shipmentEvents.create({
         tenantId: shipment.tenantId,
         shipmentId: shipment.id,
@@ -430,6 +432,26 @@ export class ShippingService extends TenantScopedService {
         rawPayload,
       }),
     )
+    await this.domainEvents.append({
+      tenantId: shipment.tenantId,
+      aggregateType: 'shipment',
+      aggregateId: shipment.id,
+      eventType: status === ShipmentStatus.DELIVERED
+        ? 'shipment.delivered'
+        : shipment.status === ShipmentStatus.CREATED
+          ? 'shipment.created'
+          : 'shipment.status.changed',
+      payload: {
+        shipmentId: shipment.id,
+        orderId: shipment.orderId,
+        provider: shipment.provider,
+        trackingCode: shipment.trackingCode,
+        providerStatus,
+        status,
+        estimatedDeliveryAt: shipment.estimatedDeliveryAt?.toISOString() ?? null,
+      },
+    })
+    return saved
   }
 
   private toResponse(row: ShipmentEntity) {

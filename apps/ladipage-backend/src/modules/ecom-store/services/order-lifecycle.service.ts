@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { EntityManager, Repository } from 'typeorm'
 
@@ -14,6 +14,7 @@ import {
 import { deriveLifecycleFromLegacy } from '../common/order-lifecycle'
 import { UpdateOrderLifecycleDto } from '../dto/order.dto'
 import { OrderEntity } from '../entities/order.entity'
+import { DomainEventOutboxService } from '../../domain-events/domain-event-outbox.service'
 
 @Injectable()
 export class OrderLifecycleService extends TenantScopedService {
@@ -21,6 +22,7 @@ export class OrderLifecycleService extends TenantScopedService {
     tenantContext: TenantContextService,
     @InjectRepository(OrderEntity)
     private readonly orders: Repository<OrderEntity>,
+    private readonly domainEvents: DomainEventOutboxService,
   ) {
     super(tenantContext)
   }
@@ -50,7 +52,9 @@ export class OrderLifecycleService extends TenantScopedService {
       order.isIncomplete = false
     }
     if (status === OrderStatus.SPAM) order.businessStatus = OrderBusinessStatus.SPAM
-    return this.orders.save(order)
+    const saved = await this.orders.save(order)
+    await this.emitStatusChanged(saved)
+    return saved
   }
 
   async update(id: number, dto: UpdateOrderLifecycleDto): Promise<OrderEntity> {
@@ -78,7 +82,46 @@ export class OrderLifecycleService extends TenantScopedService {
         order.status = OrderStatus.SHIPPED
       }
     }
-    return this.orders.save(order)
+    const saved = await this.orders.save(order)
+    await this.emitStatusChanged(saved)
+    return saved
+  }
+
+  async cancel(id: number, reason: string, manager?: EntityManager): Promise<OrderEntity> {
+    const order = await this.requireOrder(id, manager)
+    const repo = manager ? manager.getRepository(OrderEntity) : this.orders
+    if (order.businessStatus === OrderBusinessStatus.CANCELLED) return order
+    if ([OrderBusinessStatus.COMPLETED, OrderBusinessStatus.SPAM].includes(order.businessStatus)) {
+      throw new BadRequestException(`Order cannot be cancelled from business status ${order.businessStatus}`)
+    }
+    if ([
+      OrderFulfillmentStatus.SHIPPED,
+      OrderFulfillmentStatus.IN_TRANSIT,
+      OrderFulfillmentStatus.DELIVERING,
+      OrderFulfillmentStatus.DELIVERED,
+      OrderFulfillmentStatus.RETURNING,
+      OrderFulfillmentStatus.RETURNED,
+    ].includes(order.fulfillmentStatus)) {
+      throw new BadRequestException(`Order cannot be cancelled from fulfillment status ${order.fulfillmentStatus}`)
+    }
+
+    order.businessStatus = OrderBusinessStatus.CANCELLED
+    order.cancelledAt = order.cancelledAt ?? new Date()
+    order.cancelReason = reason.trim().slice(0, 500) || 'Cancelled by agent approval'
+    order.isIncomplete = false
+    if ([OrderFulfillmentStatus.UNKNOWN, OrderFulfillmentStatus.UNFULFILLED, OrderFulfillmentStatus.READY_TO_SHIP].includes(order.fulfillmentStatus)) {
+      order.fulfillmentStatus = OrderFulfillmentStatus.CANCELLED
+    }
+    const saved = await repo.save(order)
+    await this.emitStatusChanged(saved, manager)
+    await this.domainEvents.append({
+      tenantId: saved.tenantId,
+      aggregateType: 'order',
+      aggregateId: saved.id,
+      eventType: 'order.cancelled',
+      payload: { orderId: saved.id, orderCode: saved.code, reason: saved.cancelReason },
+    }, manager)
+    return saved
   }
 
   async setPaymentStatus(
@@ -109,7 +152,9 @@ export class OrderLifecycleService extends TenantScopedService {
     const order = await repo.findOne({ where: { id, tenantId } })
     if (!order) throw new NotFoundException('Order not found for payment tenant')
     this.applyPaymentStatus(order, status)
-    return repo.save(order)
+    const saved = await repo.save(order)
+    await this.emitStatusChanged(saved, manager, 'payment')
+    return saved
   }
 
   async setFulfillmentStatus(
@@ -123,7 +168,31 @@ export class OrderLifecycleService extends TenantScopedService {
     if (this.isLegacyShipped(status) && ![OrderStatus.COMPLETED, OrderStatus.SPAM].includes(order.status)) {
       order.status = OrderStatus.SHIPPED
     }
-    return repo.save(order)
+    const saved = await repo.save(order)
+    await this.emitStatusChanged(saved, manager, 'fulfillment')
+    return saved
+  }
+
+  private async emitStatusChanged(
+    order: OrderEntity,
+    manager?: EntityManager,
+    changedAxis?: 'payment' | 'fulfillment',
+  ) {
+    await this.domainEvents.append({
+      tenantId: order.tenantId,
+      aggregateType: 'order',
+      aggregateId: order.id,
+      eventType: 'order.status.changed',
+      payload: {
+        orderId: order.id,
+        orderCode: order.code,
+        status: order.status,
+        businessStatus: order.businessStatus,
+        paymentStatus: order.paymentStatus,
+        fulfillmentStatus: order.fulfillmentStatus,
+        changedAxis: changedAxis ?? 'business',
+      },
+    }, manager)
   }
 
   private applyPaymentStatus(order: OrderEntity, status: OrderPaymentStatus) {

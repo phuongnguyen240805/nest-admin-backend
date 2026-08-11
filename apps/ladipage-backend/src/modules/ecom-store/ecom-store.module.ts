@@ -97,6 +97,6 @@ import { ShippingService } from './shipping/shipping.service'
     ShippingIntegrationService,
     ShippingService,
   ],
-  exports: [TypeOrmModule, OrderService, OrderLifecycleService, ShippingIntegrationService, ShippingService],
+  exports: [TypeOrmModule, OrderService, OrderLifecycleService, ProductService, InventoryService, ShippingIntegrationService, ShippingService],
 })
 export class EcomStoreModule {}

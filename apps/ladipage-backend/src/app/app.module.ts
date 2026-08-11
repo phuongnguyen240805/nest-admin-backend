@@ -8,6 +8,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 
 import { resolveWorkspaceEnvPaths } from "@liora/shared";
+import { AiGatewayModule } from '@liora/ai-gateway';
 import { DatabaseModule } from "@liora/database";
 import { LibrefangConfig } from "@liora/librefang-client";
 import { SupabaseConfig } from "@liora/supabase";
@@ -77,6 +78,9 @@ import { CommerceModule } from '../modules/commerce/commerce.module';
 import { CloudPhoneModule } from '../modules/cloud-phone/cloud-phone.module';
 import { CustomerCareModule } from '../modules/customer-care/customer-care.module';
 import { OrderPaymentModule } from '../modules/order-payment/order-payment.module';
+import { DomainEventsModule } from '../modules/domain-events/domain-events.module';
+import { CustomerCareContextModule } from '../modules/customer-care-context/customer-care-context.module';
+import { CustomerCareAiModule } from '../modules/customer-care-ai/customer-care-ai.module';
 import { AdsPlatformModule } from '../modules/ads-platform/ads-platform.module';
 
 const bullMqImports = isBullMqEnabled()
@@ -115,6 +119,7 @@ const bullMqImports = isBullMqEnabled()
     // === NEST-CORE REUSABLE STACK ===
     ...bullMqImports,
     SharedModule,        // Redis, Mailer, Logger, Scheduler, Throttler, EventEmitter...
+    AiGatewayModule,
     DatabaseModule,      // TypeORM + constraints
     TenantModule,        // Multi-tenant / workspace (dùng sau cho team)
     AuthModule,          // JWT + RBAC + Captcha + (sau hybrid Supabase)
@@ -135,8 +140,11 @@ const bullMqImports = isBullMqEnabled()
     EcomStoreModule,
     CommerceModule,
     CloudPhoneModule,
+    DomainEventsModule,
     CustomerCareModule,
     OrderPaymentModule,
+    CustomerCareContextModule,
+    CustomerCareAiModule,
     AdsPlatformModule,
     DomainModule,
     PublishModule,
