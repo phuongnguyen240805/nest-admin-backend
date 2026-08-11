@@ -170,9 +170,25 @@ export class CustomerCareService {
     const link = await this.conversations.findOne({
       where: { tenantId, libreDeskConversationUuid: conversationId },
     });
-    if (!link)
+    if (!link || Boolean(link.metadata?.deletedAt))
       throw new NotFoundException('Customer Care conversation not found');
     return link;
+  }
+
+  private async restoreDeletedConversationLink(
+    link: CustomerCareConversationLinkEntity,
+  ) {
+    if (!link.metadata?.deletedAt) return false;
+    const metadata = { ...(link.metadata || {}) };
+    delete metadata.deletedAt;
+    delete metadata.deletedByUserId;
+    delete metadata.deletedChannelAccountId;
+    link.metadata = {
+      ...metadata,
+      restoredAt: new Date().toISOString(),
+    };
+    await this.conversations.save(link);
+    return true;
   }
 
   capabilities() {
@@ -198,6 +214,7 @@ export class CustomerCareService {
         mute: true,
         archive: true,
         drafts: true,
+        delete: true,
       },
       realtime: true,
       offlineCache: true,
@@ -565,13 +582,14 @@ export class CustomerCareService {
     const tenantId = this.getTenantId();
     const page = Math.max(1, Number(query.cursor || 1));
     const pageSize = Math.min(100, query.limit || 50);
-    const [links, agents] = await Promise.all([
+    const [allLinks, agents] = await Promise.all([
       this.conversations.find({
         where: query.channelAccountId ? { tenantId, channelAccountId: query.channelAccountId } : { tenantId },
         order: { lastMessageAt: 'DESC' },
       }),
       this.getAgentsRaw().catch(() => []),
     ]);
+    const links = allLinks.filter((link) => !link.metadata?.deletedAt);
     const rawResults = await Promise.allSettled(
       links.map((link) =>
         this.libreDesk.request<LibreDeskConversation>(
@@ -701,6 +719,55 @@ export class CustomerCareService {
     );
   }
 
+  async deleteConversation(
+    conversationId: string,
+    userId: number,
+    expectedChannelAccountId?: number,
+  ) {
+    const tenantId = this.getTenantId();
+    const link = await this.conversations.findOne({
+      where: { tenantId, libreDeskConversationUuid: conversationId },
+    });
+    if (!link || link.metadata?.deletedAt) {
+      throw new NotFoundException('Customer Care conversation not found');
+    }
+
+    // When the UI knows the owning account, verify it here as well. This
+    // prevents a stale multi-account tab from deleting a conversation that
+    // belongs to another social account.
+    if (
+      expectedChannelAccountId !== undefined &&
+      link.channelAccountId !== expectedChannelAccountId
+    ) {
+      throw new NotFoundException('Customer Care conversation not found');
+    }
+
+    link.metadata = {
+      ...(link.metadata || {}),
+      deletedAt: new Date().toISOString(),
+      deletedByUserId: userId || null,
+      deletedChannelAccountId: link.channelAccountId,
+    };
+    await this.conversations.save(link);
+
+    // Draft/pin/mute/archive preferences are UI state. Remove them so a future
+    // inbound message can reopen this thread with a clean workspace state.
+    await this.preferences
+      .delete({ tenantId, conversationUuid: conversationId })
+      .catch(() => undefined);
+
+    await this.publish(tenantId, 'conversation.deleted', conversationId, {
+      conversationId,
+      channelAccountId: String(link.channelAccountId),
+    });
+
+    return {
+      deleted: true,
+      conversationId,
+      channelAccountId: String(link.channelAccountId),
+    };
+  }
+
   async createConversation(dto: CreateConversationDto) {
     const tenantId = this.getTenantId();
     const channel = await this.getChannel(dto.channelAccountId);
@@ -715,6 +782,15 @@ export class CustomerCareService {
     });
 
     if (existing) {
+      const restored = await this.restoreDeletedConversationLink(existing);
+      if (restored) {
+        await this.publish(
+          tenantId,
+          'conversation.created',
+          existing.libreDeskConversationUuid,
+          { conversationId: existing.libreDeskConversationUuid },
+        );
+      }
       return this.getConversation(existing.libreDeskConversationUuid, 0);
     }
 
@@ -1179,7 +1255,9 @@ export class CustomerCareService {
               : link.createdAt.toISOString(),
           sender: { name: 'Bạn' },
           senderName: 'Bạn',
-          status: link.status || 'sent',
+          status: link.status === 'recalled' ? 'recalled' : link.status || 'sent',
+          recalled:
+            link.status === 'recalled' || link.metadata?.recalled === true,
           attachments: [],
           reactions: [],
         };
@@ -1461,17 +1539,108 @@ export class CustomerCareService {
 
   async recallMessage(conversationId: string, messageId: string) {
     const tenantId = this.getTenantId();
-    await this.requireConversationLink(conversationId, tenantId);
-    await this.libreDesk.request(
-      `/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}`,
-      { method: 'DELETE' },
+    const conversation = await this.requireConversationLink(
+      conversationId,
+      tenantId,
     );
+
+    // `recall.local = true` and `recall.native = false` means this action only
+    // hides/marks the message inside the CSKH workspace. LibreDesk does not
+    // expose a DELETE-message endpoint for this flow, so calling DELETE there
+    // returns 404/"Not found" and bubbles up as 502.
+    let link: CustomerCareMessageLinkEntity | null = null;
+
+    if (messageId.startsWith('mirror:')) {
+      const mirrorKey = messageId.slice('mirror:'.length);
+      if (/^\d+$/.test(mirrorKey)) {
+        link = await this.messages.findOne({
+          where: {
+            id: Number(mirrorKey),
+            tenantId,
+            conversationLinkId: conversation.id,
+          },
+        });
+      } else if (mirrorKey) {
+        link = await this.messages.findOne({
+          where: {
+            tenantId,
+            conversationLinkId: conversation.id,
+            externalMessageId: mirrorKey,
+          },
+        });
+      }
+      if (!link) throw new NotFoundException('Customer Care message not found');
+    } else {
+      link = await this.messages.findOne({
+        where: {
+          tenantId,
+          conversationLinkId: conversation.id,
+          libreDeskMessageUuid: messageId,
+        },
+      });
+
+      // Older LibreDesk rows may not have a cc_message_link yet. Resolve the
+      // message with GET (which is supported), then create/reconcile a local
+      // link so the recall state survives reloads and syncs.
+      if (!link) {
+        const row = await this.libreDesk.request<LibreDeskMessage>(
+          `/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}`,
+        );
+        if (row.conversation_uuid !== conversationId) {
+          throw new NotFoundException('Customer Care message not found');
+        }
+
+        if (row.source_id) {
+          link = await this.messages.findOne({
+            where: {
+              tenantId,
+              conversationLinkId: conversation.id,
+              channelAccountId: conversation.channelAccountId,
+              provider: conversation.provider,
+              externalMessageId: row.source_id,
+            },
+          });
+        }
+
+        if (!link) {
+          link = this.messages.create({
+            tenantId,
+            channelAccountId: conversation.channelAccountId,
+            conversationLinkId: conversation.id,
+            provider: conversation.provider,
+            externalMessageId: row.source_id || null,
+            clientMessageId: null,
+            libreDeskMessageUuid: row.uuid,
+            status: 'sent',
+            metadata: {},
+          });
+        } else if (!link.libreDeskMessageUuid) {
+          link.libreDeskMessageUuid = row.uuid;
+        }
+      }
+    }
+
+    link.status = 'recalled';
+    link.metadata = {
+      ...(link.metadata || {}),
+      recalled: true,
+      recalledAt: new Date().toISOString(),
+      recallScope: 'local',
+    };
+    await this.messages.save(link);
+
     await this.publish(tenantId, 'message.recalled', conversationId, {
       conversationId,
       messageId,
+      externalMessageId: link.externalMessageId || undefined,
       native: false,
     });
-    return { conversationId, messageId, recalled: true, native: false };
+    return {
+      conversationId,
+      messageId,
+      recalled: true,
+      native: false,
+    };
   }
 
   async forwardMessage(
@@ -1886,12 +2055,25 @@ export class CustomerCareService {
         externalThreadId: dto.external_thread_id,
       },
     });
+    const restoredConversation = link
+      ? await this.restoreDeletedConversationLink(link)
+      : false;
 
     if (existingMessage) {
       const existingLink = existingMessage.conversationLinkId
         ? await this.conversations.findOne({ where: { id: existingMessage.conversationLinkId, tenantId } })
         : link;
       if (!existingLink) throw new NotFoundException('Outgoing conversation link not found');
+      const restoredExistingConversation =
+        await this.restoreDeletedConversationLink(existingLink);
+      if (restoredExistingConversation) {
+        await this.publish(
+          tenantId,
+          'conversation.created',
+          existingLink.libreDeskConversationUuid,
+          { conversationId: existingLink.libreDeskConversationUuid },
+        );
+      }
       const result: InboundResult = {
         conversation_uuid: existingLink.libreDeskConversationUuid,
         message_uuid: existingMessage.libreDeskMessageUuid || undefined,
@@ -2021,7 +2203,7 @@ export class CustomerCareService {
       sender: dto.sender,
       message: dto.message,
     }, dto.provider);
-    const isNewConversation = !link;
+    const isNewConversation = !link || restoredConversation;
 
     if (!link) {
       link = await this.conversations.save(
@@ -2173,7 +2355,10 @@ export class CustomerCareService {
           externalThreadId: dto.external_thread_id,
         },
       });
-      const isNewConversation = !link;
+      const restoredConversation = link
+        ? await this.restoreDeletedConversationLink(link)
+        : false;
+      const isNewConversation = !link || restoredConversation;
       const result = await this.libreDesk.inbound<InboundResult>({
         tenant_key: String(tenantId),
         channel_connection_key: channel.connectionKey,
@@ -2495,7 +2680,10 @@ export class CustomerCareService {
       senderName:
         senderName === 'Khách hàng' && !incoming ? 'Nhân viên' : senderName,
       senderAvatar: item.author?.avatar_url || undefined,
-      status: mapMessageStatus(item.status, incoming),
+      status:
+        link?.status === 'recalled' || link?.metadata?.recalled === true
+          ? 'recalled'
+          : mapMessageStatus(item.status, incoming),
       attachments: (item.attachments || []).map((attachment) => ({
         id: attachment.uuid,
         name: attachment.name,
@@ -2517,7 +2705,8 @@ export class CustomerCareService {
         count: value.count,
         reactedByMe: value.reactedByMe,
       })),
-      recalled: false,
+      recalled:
+        link?.status === 'recalled' || link?.metadata?.recalled === true,
     };
   }
 

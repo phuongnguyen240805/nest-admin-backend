@@ -121,6 +121,28 @@ export class CustomerCareController {
   ) {
     return this.service.getConversation(id, uid(user));
   }
+  @Delete('conversations/:id')
+  deleteConversation(
+    @Param('id') id: string,
+    @Query('channelAccountId') channelAccountId: string | undefined,
+    @CurrentUser() user: any,
+  ) {
+    let expectedChannelAccountId: number | undefined;
+    if (channelAccountId !== undefined && channelAccountId !== '') {
+      expectedChannelAccountId = Number(channelAccountId);
+      if (
+        !Number.isInteger(expectedChannelAccountId) ||
+        expectedChannelAccountId <= 0
+      ) {
+        throw new BadRequestException('channelAccountId must be a positive integer');
+      }
+    }
+    return this.service.deleteConversation(
+      id,
+      uid(user),
+      expectedChannelAccountId,
+    );
+  }
   @Patch('conversations/:id')
   patchConversation(
     @Param('id') id: string,
