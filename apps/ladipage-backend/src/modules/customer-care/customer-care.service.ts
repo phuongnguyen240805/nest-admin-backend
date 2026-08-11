@@ -288,23 +288,189 @@ export class CustomerCareService {
     await this.channels.save(row);
   }
 
+  private connectorAccountId(status: Record<string, unknown>) {
+    return typeof status.account_id === 'string' ? status.account_id.trim() : '';
+  }
+
+  private connectorProfileName(status: Record<string, unknown>) {
+    const root = status.profile && typeof status.profile === 'object'
+      ? (status.profile as Record<string, unknown>)
+      : {};
+    const nested = [root.profile, root.data, root.user].find(
+      (value) => value && typeof value === 'object',
+    ) as Record<string, unknown> | undefined;
+    const source = { ...root, ...(nested || {}) };
+    for (const key of ['displayName', 'display_name', 'name', 'username', 'zaloName']) {
+      const value = source[key];
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+    return '';
+  }
+
+  private shouldReplaceGeneratedChannelName(row: CustomerCareChannelAccountEntity) {
+    const value = String(row.name || '').trim().toLowerCase();
+    return !value ||
+      value === 'zalo cá nhân' ||
+      value === 'facebook cá nhân' ||
+      value === 'zalo cskh' ||
+      value === 'facebook cskh' ||
+      /\b(demo|test|sample)\b/i.test(value);
+  }
+
+  private async cleanupDuplicateChannel(row: CustomerCareChannelAccountEntity, duplicateOfId: number) {
+    row.enabled = false;
+    row.metadata = {
+      ...(row.metadata || {}),
+      duplicateOfChannelId: duplicateOfId,
+      disabledReason: 'duplicate_social_account',
+      disabledAt: new Date().toISOString(),
+    };
+    await this.channels.save(row).catch(() => undefined);
+
+    const inboxId = row.metadata?.libreDeskInboxId;
+    if (typeof inboxId === 'number' || typeof inboxId === 'string') {
+      await this.libreDesk
+        .request(`/inboxes/${encodeURIComponent(String(inboxId))}`, { method: 'DELETE' })
+        .catch(() => undefined);
+    }
+    const client = row.provider === 'facebook_personal' ? this.facebook : this.zalo;
+    await client
+      .json(`/sessions/${row.connectionKey}`, { method: 'DELETE' }, true)
+      .catch(() => undefined);
+  }
+
+  /**
+   * Bind a connector session to one canonical social account row. A second QR
+   * login of the same Zalo/Facebook account must not create a second inbox.
+   * Instead, the new draft row is disabled and callers are redirected to the
+   * already-existing channel.
+   */
+  private async reconcileChannelIdentity(
+    row: CustomerCareChannelAccountEntity,
+    status: Record<string, unknown>,
+  ) {
+    const accountId = this.connectorAccountId(status);
+    if (!accountId) return { row, status, duplicate: false };
+
+    const duplicate = await this.channels.findOne({
+      where: {
+        tenantId: row.tenantId,
+        provider: row.provider,
+        externalAccountId: accountId,
+      },
+    });
+
+    if (duplicate && duplicate.id !== row.id) {
+      let duplicateChanged = false;
+      if (!duplicate.enabled) {
+        duplicate.enabled = true;
+        duplicate.metadata = {
+          ...(duplicate.metadata || {}),
+          restoredAt: new Date().toISOString(),
+        };
+        duplicateChanged = true;
+      }
+      const duplicateProfileName = this.connectorProfileName(status);
+      if (
+        duplicateProfileName &&
+        this.shouldReplaceGeneratedChannelName(duplicate) &&
+        duplicate.name !== duplicateProfileName
+      ) {
+        duplicate.name = duplicateProfileName;
+        duplicateChanged = true;
+      }
+      if (duplicateChanged) await this.channels.save(duplicate);
+      await this.cleanupDuplicateChannel(row, duplicate.id);
+      const canonicalClient = duplicate.provider === 'facebook_personal' ? this.facebook : this.zalo;
+      const canonicalStatus = ['zalo_personal', 'facebook_personal'].includes(duplicate.provider)
+        ? await canonicalClient
+            .json<Record<string, unknown>>(`/sessions/${duplicate.connectionKey}/status`, {}, true)
+            .catch(() => ({}))
+        : {};
+      return {
+        row: duplicate,
+        status: {
+          ...canonicalStatus,
+          account_id: accountId,
+          duplicate_of_channel_id: String(duplicate.id),
+        },
+        duplicate: true,
+      };
+    }
+
+    let changed = false;
+    if (row.externalAccountId !== accountId) {
+      row.externalAccountId = accountId;
+      changed = true;
+    }
+    const profileName = this.connectorProfileName(status);
+    if (profileName && this.shouldReplaceGeneratedChannelName(row) && row.name !== profileName) {
+      row.name = profileName;
+      changed = true;
+    }
+    if (changed) await this.channels.save(row);
+    return { row, status, duplicate: false };
+  }
+
   async listChannels() {
     const tenantId = this.getTenantId();
     const rows = await this.channels.find({
-      where: { tenantId },
+      where: { tenantId, enabled: true },
       order: { id: 'ASC' },
     });
     const statuses = await Promise.all(
       rows.map(async (row) => {
         const client = row.provider === 'facebook_personal' ? this.facebook : this.zalo;
-        const status = ['zalo_personal', 'facebook_personal'].includes(row.provider)
-          ? await client.json<Record<string, unknown>>(`/sessions/${row.connectionKey}/status`, {}, true)
+        return ['zalo_personal', 'facebook_personal'].includes(row.provider)
+          ? client
+              .json<Record<string, unknown>>(`/sessions/${row.connectionKey}/status`, {}, true)
               .catch((error) => ({ phase: 'error', last_error: String(error) }))
           : {};
-        return this.mapChannel(row, status);
       }),
     );
-    return statuses;
+
+    // Identity reconciliation is intentionally sequential. If two pending
+    // connector sessions both resolve to the same social account at once, a
+    // concurrent save can race the unique (tenant, provider, externalAccountId)
+    // constraint and make GET /channels fail completely.
+    const probed: Array<{
+      row: CustomerCareChannelAccountEntity;
+      status: Record<string, unknown>;
+      duplicate: boolean;
+    }> = [];
+    for (let index = 0; index < rows.length; index += 1) {
+      probed.push(await this.reconcileChannelIdentity(rows[index], statuses[index]));
+    }
+
+    const seenRows = new Set<number>();
+    const seenIdentities = new Set<string>();
+    const result: ReturnType<CustomerCareService['mapChannel']>[] = [];
+
+    for (const resolved of probed) {
+      const row = resolved.row;
+      if (!row.enabled || seenRows.has(row.id)) continue;
+
+      const statusAccountId = this.connectorAccountId(resolved.status);
+      const pendingIdentity = row.externalAccountId.startsWith('pending:');
+      const phase = String(resolved.status.phase || 'disconnected').toLowerCase();
+      // Keep a freshly-created pending row visible for the QR/login flow, but
+      // stop returning abandoned drafts from older sessions. New UI versions
+      // delete a draft immediately when the connect dialog is cancelled.
+      const stalePending =
+        pendingIdentity &&
+        !['starting', 'qr_ready', 'connecting', 'connected'].includes(phase) &&
+        Date.now() - row.createdAt.getTime() > 30 * 60_000;
+      if (stalePending) continue;
+
+      const identity = statusAccountId || (!pendingIdentity ? row.externalAccountId : '');
+      const identityKey = identity ? `${row.provider}:${identity}` : `${row.provider}:row:${row.id}`;
+      if (seenIdentities.has(identityKey)) continue;
+
+      seenRows.add(row.id);
+      seenIdentities.add(identityKey);
+      result.push(this.mapChannel(row, resolved.status));
+    }
+    return result;
   }
 
   async getChannel(id: number) {
@@ -318,12 +484,8 @@ export class CustomerCareService {
     const row = await this.getChannel(id);
     const client = row.provider === 'facebook_personal' ? this.facebook : this.zalo;
     const status = await client.json<Record<string, unknown>>(`/sessions/${row.connectionKey}/status`, {}, true);
-    const accountId = typeof status.account_id === 'string' ? status.account_id.trim() : '';
-    if (accountId && accountId !== row.externalAccountId) {
-      row.externalAccountId = accountId;
-      await this.channels.save(row);
-    }
-    return this.mapChannel(row, status);
+    const resolved = await this.reconcileChannelIdentity(row, status);
+    return this.mapChannel(resolved.row, resolved.status);
   }
 
   async resetChannel(id: number) {
@@ -377,16 +539,12 @@ export class CustomerCareService {
       method: 'POST',
       body: JSON.stringify({ cookie }),
     });
-    const accountId = typeof status.account_id === 'string' ? status.account_id.trim() : '';
-    if (accountId) {
-      row.externalAccountId = accountId;
-      await this.channels.save(row);
-    }
-    await this.publish(row.tenantId, 'channel.status.changed', String(row.id), {
-      channelId: String(row.id),
-      ...status,
+    const resolved = await this.reconcileChannelIdentity(row, status);
+    await this.publish(resolved.row.tenantId, 'channel.status.changed', String(resolved.row.id), {
+      channelId: String(resolved.row.id),
+      ...resolved.status,
     });
-    return status;
+    return this.mapChannel(resolved.row, resolved.status);
   }
 
   private mapChannel(
@@ -436,6 +594,11 @@ export class CustomerCareService {
     const identities = contactIds.length
       ? await this.contacts.find({ where: { tenantId, id: In(contactIds) } })
       : [];
+    const channelIds = [...new Set(links.map((link) => link.channelAccountId).filter(Boolean))];
+    const channelRows = channelIds.length
+      ? await this.channels.find({ where: { tenantId, id: In(channelIds) } })
+      : [];
+    const channelMap = new Map(channelRows.map((item) => [item.id, item]));
     const prefMap = new Map(prefs.map((item) => [item.conversationUuid, item]));
     const linkMap = new Map(
       links.map((item) => [item.libreDeskConversationUuid, item]),
@@ -462,6 +625,9 @@ export class CustomerCareService {
             ? contactMap.get(linkMap.get(item.uuid)!.contactIdentityId!)
             : undefined,
           linkMap.get(item.uuid),
+          linkMap.get(item.uuid)?.channelAccountId
+            ? channelMap.get(linkMap.get(item.uuid)!.channelAccountId)
+            : undefined,
         ),
       );
     const search = (query.search || '').trim().toLocaleLowerCase('vi');
@@ -511,6 +677,9 @@ export class CustomerCareService {
           where: { tenantId, id: link.contactIdentityId },
         })
       : null;
+    const channelAccount = link.channelAccountId
+      ? await this.channels.findOne({ where: { tenantId, id: link.channelAccountId } })
+      : null;
     const agents = await this.getAgentsRaw().catch(() => []);
     const agentMap = new Map(
       (agents as any[]).map((agent) => [
@@ -528,6 +697,7 @@ export class CustomerCareService {
       pref || undefined,
       identity || undefined,
       link,
+      channelAccount || undefined,
     );
   }
 
@@ -1590,15 +1760,31 @@ export class CustomerCareService {
   }
 
   async inbound(connectionKey: string, dto: ZaloInboundDto) {
-    const channel = await this.channels.findOne({ where: { connectionKey, enabled: true } });
+    let channel = await this.channels.findOne({ where: { connectionKey, enabled: true } });
     if (!channel) throw new NotFoundException('Customer Care channel session not found');
     if (channel.provider !== dto.provider)
       throw new BadRequestException('Webhook provider does not match channel session');
     if (!channel.externalAccountId.startsWith('pending:') && channel.externalAccountId !== dto.account_id)
       throw new BadRequestException('Webhook account does not match channel session');
     if (channel.externalAccountId.startsWith('pending:')) {
-      channel.externalAccountId = dto.account_id;
-      await this.channels.save(channel);
+      const existing = await this.channels.findOne({
+        where: {
+          tenantId: channel.tenantId,
+          provider: channel.provider,
+          externalAccountId: dto.account_id,
+          enabled: true,
+        },
+      });
+      if (existing && existing.id !== channel.id) {
+        // A second login of the same social identity must not create another
+        // conversation namespace. Process this last webhook against the
+        // canonical account and retire the duplicate session.
+        await this.cleanupDuplicateChannel(channel, existing.id);
+        channel = existing;
+      } else {
+        channel.externalAccountId = dto.account_id;
+        await this.channels.save(channel);
+      }
     }
     const tenantId = channel.tenantId;
 
@@ -2207,6 +2393,7 @@ export class CustomerCareService {
     preference?: CustomerCareConversationPreferenceEntity,
     identity?: CustomerCareContactIdentityEntity,
     link?: CustomerCareConversationLinkEntity,
+    channelAccount?: CustomerCareChannelAccountEntity,
   ) {
     const assigned = item.assigned_user_id
       ? agents.get(Number(item.assigned_user_id))
@@ -2242,8 +2429,12 @@ export class CustomerCareService {
             assignee: assigned,
           },
       channel,
+      channelProvider: link?.provider || item.inbox_channel || undefined,
+      channelAccountId: link?.channelAccountId ? String(link.channelAccountId) : undefined,
+      channelAccountName:
+        channelAccount?.name || item.inbox_name || (channel === 'zalo' ? 'Zalo cá nhân' : channel),
       channelName:
-        item.inbox_name || (channel === 'zalo' ? 'Zalo cá nhân' : channel),
+        channelAccount?.name || item.inbox_name || (channel === 'zalo' ? 'Zalo cá nhân' : channel),
       status: mapConversationStatus(
         item.status,
         item.unread_message_count || 0,
@@ -2389,6 +2580,7 @@ function mapChannel(value: string) {
   const key = normalize(value);
   if (key.includes('zalo')) return 'zalo';
   if (key.includes('facebook')) return 'facebook';
+  if (key.includes('telegram')) return 'telegram';
   if (key.includes('instagram')) return 'instagram';
   if (key.includes('whatsapp')) return 'whatsapp';
   if (key.includes('tiktok')) return 'tiktok';

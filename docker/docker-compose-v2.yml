@@ -293,11 +293,6 @@ services:
       # Instatic on host — 127.0.0.1 inside this container is NOT the host
       INSTATIC_BASE_URL: ${INSTATIC_BASE_URL:-http://host.docker.internal:8787}
       INSTATIC_MOCK: ${INSTATIC_MOCK:-false}
-      # Customer Care dependencies currently run outside this compose file.
-      # Never use 127.0.0.1 here: inside liora-ladipage it points back to this container.
-      CUSTOMER_CARE_LIBREDESK_BASE_URL: ${CUSTOMER_CARE_LIBREDESK_DOCKER_BASE_URL:-http://host.docker.internal:9001/api/v1}
-      CUSTOMER_CARE_ZALO_CONNECTOR_URL: ${CUSTOMER_CARE_ZALO_CONNECTOR_DOCKER_URL:-http://host.docker.internal:3100}
-      CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL: ${CUSTOMER_CARE_FACEBOOK_CONNECTOR_DOCKER_URL:-http://host.docker.internal:3200}
       # Unlighthouse 0.18 needs Node 22+ (image) + Chromium in container
       RUNNING_IN_DOCKER: "true"
       UNLIGHTHOUSE_MODE: ${UNLIGHTHOUSE_MODE:-cli}
