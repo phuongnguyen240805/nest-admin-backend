@@ -17,6 +17,8 @@ import {
   LessThanOrEqual,
   MoreThan,
   MoreThanOrEqual,
+  DataSource,
+  EntityManager,
   Repository,
 } from 'typeorm';
 
@@ -26,10 +28,13 @@ import { CrmFacade } from '../crm/crm.facade';
 import { OrderEntity } from '../ecom-store/entities/order.entity';
 import { OrderItemEntity } from '../ecom-store/entities/order-item.entity';
 import { ShipmentEntity } from '../ecom-store/entities/shipment.entity';
+import { CreateOrderDto } from '../ecom-store/dto/order.dto';
+import { OrderService } from '../ecom-store/services/order.service';
 
 import { FacebookConnectorClient, LibreDeskClient, ZaloConnectorClient } from './customer-care.clients';
 import {
   ContactPatchDto,
+  ConversationOrderLinkDto,
   ConversationPatchDto,
   ConversationQueryDto,
   CreateChannelDto,
@@ -44,6 +49,7 @@ import {
   CustomerCareChannelAccountEntity,
   CustomerCareContactIdentityEntity,
   CustomerCareConversationLinkEntity,
+  CustomerCareConversationOrderLinkEntity,
   CustomerCareConversationPreferenceEntity,
   CustomerCareInboundEventEntity,
   CustomerCareMessageLinkEntity,
@@ -137,6 +143,8 @@ export class CustomerCareService {
     private readonly contacts: Repository<CustomerCareContactIdentityEntity>,
     @InjectRepository(CustomerCareConversationLinkEntity)
     private readonly conversations: Repository<CustomerCareConversationLinkEntity>,
+    @InjectRepository(CustomerCareConversationOrderLinkEntity)
+    private readonly conversationOrdersRepo: Repository<CustomerCareConversationOrderLinkEntity>,
     @InjectRepository(CustomerCareMessageLinkEntity)
     private readonly messages: Repository<CustomerCareMessageLinkEntity>,
     @InjectRepository(CustomerCareConversationPreferenceEntity)
@@ -155,6 +163,8 @@ export class CustomerCareService {
     private readonly orderItems: Repository<OrderItemEntity>,
     @InjectRepository(ShipmentEntity)
     private readonly shipments: Repository<ShipmentEntity>,
+    private readonly orderService: OrderService,
+    private readonly dataSource: DataSource,
   ) {}
 
   private getTenantId() {
@@ -1770,6 +1780,217 @@ export class CustomerCareService {
     );
   }
 
+  private async lockConversationOrderLinks(
+    manager: EntityManager,
+    tenantId: number,
+    conversationLinkId: number,
+  ) {
+    await manager.query(
+      'SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))',
+      ['cc-conversation-order', `${tenantId}:${conversationLinkId}`],
+    );
+  }
+
+  private mapConversationOrderLink(row: CustomerCareConversationOrderLinkEntity) {
+    return {
+      id: row.id,
+      conversationLinkId: row.conversationLinkId,
+      contactIdentityId: row.contactIdentityId,
+      orderId: row.orderId,
+      relationType: row.relationType,
+      sourceMessageId: row.sourceMessageId,
+      isPrimary: row.isPrimary,
+      createdByUserId: row.createdByUserId,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  async conversationOrders(conversationId: string) {
+    const tenantId = this.getTenantId();
+    const conversation = await this.requireConversationLink(conversationId, tenantId);
+    const links = await this.conversationOrdersRepo.find({
+      where: { tenantId, conversationLinkId: conversation.id },
+      order: { isPrimary: 'DESC', createdAt: 'DESC' },
+    });
+
+    return Promise.all(
+      links.map(async (link) => ({
+        ...(await this.orderService.detail(link.orderId)),
+        conversationOrderLink: this.mapConversationOrderLink(link),
+      })),
+    );
+  }
+
+  async createConversationOrder(
+    conversationId: string,
+    dto: CreateOrderDto,
+    userId: number,
+  ) {
+    const tenantId = this.getTenantId();
+    const conversation = await this.requireConversationLink(conversationId, tenantId);
+
+    const result = await this.dataSource.transaction(async (manager) => {
+      await this.lockConversationOrderLinks(manager, tenantId, conversation.id);
+      const order = await this.orderService.create(
+        { ...dto, source: `customer-care:${conversation.provider}` },
+        manager,
+      );
+      const repo = manager.getRepository(CustomerCareConversationOrderLinkEntity);
+
+      await repo.update(
+        { tenantId, conversationLinkId: conversation.id, isPrimary: true },
+        { isPrimary: false },
+      );
+
+      const link = await repo.save(
+        repo.create({
+          tenantId,
+          conversationLinkId: conversation.id,
+          contactIdentityId: conversation.contactIdentityId,
+          orderId: Number(order.id),
+          relationType: 'CREATED_FROM_CHAT',
+          sourceMessageId: null,
+          isPrimary: true,
+          createdByUserId: userId > 0 ? userId : null,
+        }),
+      );
+
+      return {
+        ...order,
+        conversationOrderLink: this.mapConversationOrderLink(link),
+      };
+    });
+
+    await this.publish(tenantId, 'conversation-order.updated', conversationId, {
+      conversationId,
+      orderId: Number(result.id),
+      action: 'created',
+      link: result.conversationOrderLink,
+    });
+    return result;
+  }
+
+  async linkConversationOrder(
+    conversationId: string,
+    orderId: number,
+    dto: ConversationOrderLinkDto,
+    userId: number,
+  ) {
+    const tenantId = this.getTenantId();
+    const conversation = await this.requireConversationLink(conversationId, tenantId);
+    await this.orderService.detail(orderId);
+
+    const link = await this.dataSource.transaction(async (manager) => {
+      await this.lockConversationOrderLinks(manager, tenantId, conversation.id);
+      const repo = manager.getRepository(CustomerCareConversationOrderLinkEntity);
+      const currentPrimary = await repo.findOne({
+        where: { tenantId, conversationLinkId: conversation.id, isPrimary: true },
+      });
+      const makePrimary = dto.isPrimary === true || !currentPrimary;
+      if (makePrimary) {
+        await repo.update(
+          { tenantId, conversationLinkId: conversation.id, isPrimary: true },
+          { isPrimary: false },
+        );
+      }
+
+      let row = await repo.findOne({
+        where: { tenantId, conversationLinkId: conversation.id, orderId },
+      });
+      if (!row) {
+        row = repo.create({
+          tenantId,
+          conversationLinkId: conversation.id,
+          contactIdentityId: conversation.contactIdentityId,
+          orderId,
+          relationType: dto.relationType ?? 'MANUAL',
+          sourceMessageId: dto.sourceMessageId ?? null,
+          isPrimary: makePrimary,
+          createdByUserId: userId > 0 ? userId : null,
+        });
+      } else {
+        if (dto.relationType !== undefined) row.relationType = dto.relationType;
+        if (dto.sourceMessageId !== undefined) row.sourceMessageId = dto.sourceMessageId || null;
+        if (makePrimary) row.isPrimary = true;
+        if (conversation.contactIdentityId) row.contactIdentityId = conversation.contactIdentityId;
+      }
+      return repo.save(row);
+    });
+
+    await this.publish(tenantId, 'conversation-order.updated', conversationId, {
+      conversationId,
+      orderId,
+      action: 'linked',
+      link: this.mapConversationOrderLink(link),
+    });
+    return {
+      ...(await this.orderService.detail(orderId)),
+      conversationOrderLink: this.mapConversationOrderLink(link),
+    };
+  }
+
+  async unlinkConversationOrder(conversationId: string, orderId: number) {
+    const tenantId = this.getTenantId();
+    const conversation = await this.requireConversationLink(conversationId, tenantId);
+    const removed = await this.dataSource.transaction(async (manager) => {
+      await this.lockConversationOrderLinks(manager, tenantId, conversation.id);
+      const repo = manager.getRepository(CustomerCareConversationOrderLinkEntity);
+      const row = await repo.findOne({
+        where: { tenantId, conversationLinkId: conversation.id, orderId },
+      });
+      if (!row) throw new NotFoundException('Conversation order link not found');
+      const wasPrimary = row.isPrimary;
+      await repo.remove(row);
+
+      if (wasPrimary) {
+        const next = await repo.findOne({
+          where: { tenantId, conversationLinkId: conversation.id },
+          order: { createdAt: 'DESC' },
+        });
+        if (next) {
+          next.isPrimary = true;
+          await repo.save(next);
+        }
+      }
+      return this.mapConversationOrderLink(row);
+    });
+
+    await this.publish(tenantId, 'conversation-order.updated', conversationId, {
+      conversationId,
+      orderId,
+      action: 'unlinked',
+    });
+    return { deleted: true, link: removed };
+  }
+
+  async setPrimaryConversationOrder(conversationId: string, orderId: number) {
+    const tenantId = this.getTenantId();
+    const conversation = await this.requireConversationLink(conversationId, tenantId);
+    const link = await this.dataSource.transaction(async (manager) => {
+      await this.lockConversationOrderLinks(manager, tenantId, conversation.id);
+      const repo = manager.getRepository(CustomerCareConversationOrderLinkEntity);
+      const row = await repo.findOne({
+        where: { tenantId, conversationLinkId: conversation.id, orderId },
+      });
+      if (!row) throw new NotFoundException('Conversation order link not found');
+      await repo.update(
+        { tenantId, conversationLinkId: conversation.id, isPrimary: true },
+        { isPrimary: false },
+      );
+      row.isPrimary = true;
+      return repo.save(row);
+    });
+
+    await this.publish(tenantId, 'conversation-order.updated', conversationId, {
+      conversationId,
+      orderId,
+      action: 'primary',
+      link: this.mapConversationOrderLink(link),
+    });
+    return this.mapConversationOrderLink(link);
+  }
+
   async contactOrders(id: number) {
     const tenantId = this.getTenantId();
     const row = await this.contacts.findOne({ where: { id, tenantId } });
@@ -1798,6 +2019,9 @@ export class CustomerCareService {
         id: order.code,
         orderId: order.id,
         status: order.status,
+        businessStatus: order.businessStatus,
+        paymentStatus: order.paymentStatus,
+        fulfillmentStatus: order.fulfillmentStatus,
         totalPrice: Number(order.total),
         productName: products
           .map((item) => `${item.productName} (x${item.quantity})`)
@@ -1955,6 +2179,8 @@ export class CustomerCareService {
         await this.channels.save(channel);
       }
     }
+    // Security boundary: connector payloads never select a tenant. The opaque
+    // connectionKey resolves the channel row, and the channel row owns tenantId.
     const tenantId = channel.tenantId;
 
     // Persist immediately after webhook HMAC + DTO validation. This makes

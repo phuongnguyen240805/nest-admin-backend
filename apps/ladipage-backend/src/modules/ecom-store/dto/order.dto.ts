@@ -16,7 +16,12 @@ import {
 
 import { PagerDto } from '@liora/dto'
 
-import { OrderStatus } from '../common/enums'
+import {
+  OrderBusinessStatus,
+  OrderFulfillmentStatus,
+  OrderPaymentStatus,
+  OrderStatus,
+} from '../common/enums'
 
 export class OrderQueryDto extends PagerDto {
   @ApiPropertyOptional({ description: 'Filter by status or "incomplete"' })
@@ -124,4 +129,27 @@ export class UpdateOrderStatusDto {
   @ApiProperty({ enum: OrderStatus })
   @IsEnum(OrderStatus)
   status: OrderStatus
+}
+
+
+export class UpdateOrderLifecycleDto {
+  @ApiPropertyOptional({ enum: OrderBusinessStatus })
+  @IsOptional()
+  @IsEnum(OrderBusinessStatus)
+  businessStatus?: OrderBusinessStatus
+
+  @ApiPropertyOptional({ enum: OrderPaymentStatus })
+  @IsOptional()
+  @IsEnum(OrderPaymentStatus)
+  paymentStatus?: OrderPaymentStatus
+
+  @ApiPropertyOptional({ enum: OrderFulfillmentStatus })
+  @IsOptional()
+  @IsEnum(OrderFulfillmentStatus)
+  fulfillmentStatus?: OrderFulfillmentStatus
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  cancelReason?: string
 }

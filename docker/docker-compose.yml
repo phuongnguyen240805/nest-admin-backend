@@ -295,9 +295,9 @@ services:
       INSTATIC_MOCK: ${INSTATIC_MOCK:-false}
       # Customer Care dependencies currently run outside this compose file.
       # Never use 127.0.0.1 here: inside liora-ladipage it points back to this container.
-      CUSTOMER_CARE_LIBREDESK_BASE_URL: ${CUSTOMER_CARE_LIBREDESK_DOCKER_BASE_URL:-http://host.docker.internal:9001/api/v1}
-      CUSTOMER_CARE_ZALO_CONNECTOR_URL: ${CUSTOMER_CARE_ZALO_CONNECTOR_DOCKER_URL:-http://host.docker.internal:3100}
-      CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL: ${CUSTOMER_CARE_FACEBOOK_CONNECTOR_DOCKER_URL:-http://host.docker.internal:3200}
+      CUSTOMER_CARE_LIBREDESK_BASE_URL: ${CUSTOMER_CARE_LIBREDESK_DOCKER_BASE_URL:-http://libredesk-app:9000/api/v1}
+      CUSTOMER_CARE_ZALO_CONNECTOR_URL: ${CUSTOMER_CARE_ZALO_CONNECTOR_DOCKER_URL:-http://zalo-connector:3100}
+      CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL: ${CUSTOMER_CARE_FACEBOOK_CONNECTOR_DOCKER_URL:-http://facebook-connector:3200}
       # Unlighthouse 0.18 needs Node 22+ (image) + Chromium in container
       RUNNING_IN_DOCKER: "true"
       UNLIGHTHOUSE_MODE: ${UNLIGHTHOUSE_MODE:-cli}
@@ -347,6 +347,9 @@ services:
       liora-network:
         aliases:
           - ladipage
+      liora-platform:
+        aliases:
+          - liora-ladipage
 
   # ================== LADIPAGE BULLMQ WORKER (processors — cùng app ladipage-backend) ==================
   liora-ladipage-worker:
@@ -477,6 +480,9 @@ services:
 networks:
   liora-network:
     driver: bridge
+  liora-platform:
+    external: true
+    name: ${LIORA_PLATFORM_NETWORK:-liora-platform}
 
 volumes:
   postgres_data:

@@ -117,6 +117,34 @@ export class CustomerCareConversationLinkEntity extends CustomerCareTenantEntity
   metadata!: Record<string, unknown>
 }
 
+
+@Entity({ name: 'cc_conversation_order_link' })
+@Index(['tenantId', 'conversationLinkId', 'orderId'], { unique: true })
+@Index(['tenantId', 'orderId'])
+@Index(['tenantId', 'conversationLinkId'], { unique: true, where: 'is_primary = true' })
+export class CustomerCareConversationOrderLinkEntity extends CustomerCareTenantEntity {
+  @Column({ name: 'conversation_link_id', type: 'int' })
+  conversationLinkId!: number
+
+  @Column({ name: 'contact_identity_id', type: 'int', nullable: true })
+  contactIdentityId!: number | null
+
+  @Column({ name: 'order_id', type: 'int' })
+  orderId!: number
+
+  @Column({ name: 'relation_type', type: 'varchar', length: 30, default: 'CREATED_FROM_CHAT' })
+  relationType!: string
+
+  @Column({ name: 'source_message_id', type: 'varchar', length: 220, nullable: true })
+  sourceMessageId!: string | null
+
+  @Column({ name: 'is_primary', type: 'boolean', default: false })
+  isPrimary!: boolean
+
+  @Column({ name: 'created_by_user_id', type: 'int', nullable: true })
+  createdByUserId!: number | null
+}
+
 @Entity({ name: 'cc_message_link' })
 @Index(['tenantId', 'channelAccountId', 'provider', 'externalMessageId'], { unique: true, where: 'external_message_id IS NOT NULL' })
 @Index(['tenantId', 'clientMessageId'], { unique: true, where: 'client_message_id IS NOT NULL' })
@@ -259,6 +287,7 @@ export const CUSTOMER_CARE_ENTITIES = [
   CustomerCareChannelAccountEntity,
   CustomerCareContactIdentityEntity,
   CustomerCareConversationLinkEntity,
+  CustomerCareConversationOrderLinkEntity,
   CustomerCareMessageLinkEntity,
   CustomerCareConversationPreferenceEntity,
   CustomerCareInboundEventEntity,

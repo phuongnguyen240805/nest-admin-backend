@@ -22,10 +22,12 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { SkipThrottle } from '@nestjs/throttler';
 import { CurrentUser, Public, TenantGuard } from '@liora/nest-core';
 import { Bypass } from '@liora/nest-core/common/decorators/bypass.decorator';
+import { CreateOrderDto } from '../ecom-store/dto/order.dto';
 
 import {
   AssignDto,
   ContactPatchDto,
+  ConversationOrderLinkDto,
   ConversationPatchDto,
   ConversationQueryDto,
   CreateChannelDto,
@@ -120,6 +122,46 @@ export class CustomerCareController {
     @CurrentUser() user: any,
   ) {
     return this.service.getConversation(id, uid(user));
+  }
+
+  @Get('conversations/:id/orders')
+  conversationOrders(@Param('id') id: string) {
+    return this.service.conversationOrders(id);
+  }
+
+  @Post('conversations/:id/orders')
+  createConversationOrder(
+    @Param('id') id: string,
+    @Body() dto: CreateOrderDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.createConversationOrder(id, dto, uid(user));
+  }
+
+  @Post('conversations/:id/orders/:orderId/link')
+  linkConversationOrder(
+    @Param('id') id: string,
+    @Param('orderId', ParseIntPipe) orderId: number,
+    @Body() dto: ConversationOrderLinkDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.service.linkConversationOrder(id, orderId, dto, uid(user));
+  }
+
+  @Delete('conversations/:id/orders/:orderId/link')
+  unlinkConversationOrder(
+    @Param('id') id: string,
+    @Param('orderId', ParseIntPipe) orderId: number,
+  ) {
+    return this.service.unlinkConversationOrder(id, orderId);
+  }
+
+  @Put('conversations/:id/orders/:orderId/primary')
+  setPrimaryConversationOrder(
+    @Param('id') id: string,
+    @Param('orderId', ParseIntPipe) orderId: number,
+  ) {
+    return this.service.setPrimaryConversationOrder(id, orderId);
   }
   @Delete('conversations/:id')
   deleteConversation(

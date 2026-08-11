@@ -17,6 +17,7 @@ import { TenantGuard } from '@liora/nest-core'
 import {
   CreateOrderDto,
   OrderQueryDto,
+  UpdateOrderLifecycleDto,
   UpdateOrderStatusDto,
 } from '../dto/order.dto'
 import { OrderService } from '../services/order.service'
@@ -42,6 +43,14 @@ export class OrderController {
   @Post()
   create(@Body() dto: CreateOrderDto) {
     return this.orderService.create(dto)
+  }
+
+  @Patch(':id/lifecycle')
+  updateLifecycle(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateOrderLifecycleDto,
+  ) {
+    return this.orderService.updateLifecycle(id, dto)
   }
 
   @Patch(':id/status')

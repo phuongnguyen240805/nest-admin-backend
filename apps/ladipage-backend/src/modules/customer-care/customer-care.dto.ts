@@ -72,6 +72,7 @@ export class SyncQueryDto {
 }
 
 export class ZaloInboundDto {
+  /** @deprecated Ignored. Tenant is resolved server-side from connectionKey. */
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) tenant_id?: number
   @IsString() event_id!: string
   @IsString() provider!: string
@@ -88,4 +89,22 @@ export class ZaloInboundDto {
 
 export class FacebookLoginDto {
   @IsString() @MaxLength(65536) cookie!: string
+}
+
+
+export const CUSTOMER_CARE_ORDER_RELATION_TYPES = [
+  'CREATED_FROM_CHAT',
+  'DISCUSSED',
+  'SUPPORT',
+  'RETURN',
+  'COMPLAINT',
+  'MANUAL',
+] as const
+
+export type CustomerCareOrderRelationType = typeof CUSTOMER_CARE_ORDER_RELATION_TYPES[number]
+
+export class ConversationOrderLinkDto {
+  @IsOptional() @IsIn(CUSTOMER_CARE_ORDER_RELATION_TYPES) relationType?: CustomerCareOrderRelationType
+  @IsOptional() @IsString() @MaxLength(220) sourceMessageId?: string
+  @IsOptional() @IsBoolean() isPrimary?: boolean
 }

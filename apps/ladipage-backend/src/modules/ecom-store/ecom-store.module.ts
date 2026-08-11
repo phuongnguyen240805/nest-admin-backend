@@ -37,6 +37,7 @@ import { EcomCustomFieldService } from './services/custom-field.service'
 import { DeliveryNoteService } from './services/delivery-note.service'
 import { InventoryService } from './services/inventory.service'
 import { OrderCustomerResolver } from './services/order-customer.resolver'
+import { OrderLifecycleService } from './services/order-lifecycle.service'
 import { OrderService } from './services/order.service'
 import { ProductService } from './services/product.service'
 import { ReviewService } from './services/review.service'
@@ -82,6 +83,7 @@ import { ShippingService } from './shipping/shipping.service'
   ],
   providers: [
     OrderCustomerResolver,
+    OrderLifecycleService,
     OrderService,
     ProductService,
     CategoryService,
@@ -95,6 +97,6 @@ import { ShippingService } from './shipping/shipping.service'
     ShippingIntegrationService,
     ShippingService,
   ],
-  exports: [TypeOrmModule, ShippingIntegrationService, ShippingService],
+  exports: [TypeOrmModule, OrderService, OrderLifecycleService, ShippingIntegrationService, ShippingService],
 })
 export class EcomStoreModule {}

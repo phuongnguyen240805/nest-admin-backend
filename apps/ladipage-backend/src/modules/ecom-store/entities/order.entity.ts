@@ -2,7 +2,12 @@ import { Column, Entity, Index } from 'typeorm'
 
 import { TenantScopedEntity } from '@liora/nest-core/common/entities/tenant-scoped.entity'
 
-import { OrderStatus } from '../common/enums'
+import {
+  OrderBusinessStatus,
+  OrderFulfillmentStatus,
+  OrderPaymentStatus,
+  OrderStatus,
+} from '../common/enums'
 
 @Entity('lp_order')
 @Index(['tenantId', 'code'], { unique: true })
@@ -18,6 +23,27 @@ export class OrderEntity extends TenantScopedEntity {
 
   @Column({ type: 'varchar', length: 20, default: OrderStatus.PENDING })
   status: OrderStatus
+
+  @Column({ name: 'business_status', type: 'varchar', length: 30, default: OrderBusinessStatus.CONFIRMED })
+  businessStatus: OrderBusinessStatus
+
+  @Column({ name: 'payment_status', type: 'varchar', length: 30, default: OrderPaymentStatus.UNKNOWN })
+  paymentStatus: OrderPaymentStatus
+
+  @Column({ name: 'fulfillment_status', type: 'varchar', length: 30, default: OrderFulfillmentStatus.UNFULFILLED })
+  fulfillmentStatus: OrderFulfillmentStatus
+
+  @Column({ name: 'confirmed_at', type: 'timestamptz', nullable: true })
+  confirmedAt: Date | null
+
+  @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
+  completedAt: Date | null
+
+  @Column({ name: 'cancelled_at', type: 'timestamptz', nullable: true })
+  cancelledAt: Date | null
+
+  @Column({ name: 'cancel_reason', type: 'text', nullable: true })
+  cancelReason: string | null
 
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
   total: number

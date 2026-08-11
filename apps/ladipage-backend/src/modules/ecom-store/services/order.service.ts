@@ -7,11 +7,13 @@ import { Pagination } from '@liora/nest-core/helper/paginate/pagination'
 import { TenantContextService } from '@liora/nest-core'
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 import { OrderCustomerResolver } from './order-customer.resolver'
+import { OrderLifecycleService } from './order-lifecycle.service'
 
 import { OrderStatus } from '../common/enums'
 import {
   CreateOrderDto,
   OrderQueryDto,
+  UpdateOrderLifecycleDto,
   UpdateOrderStatusDto,
 } from '../dto/order.dto'
 import {
@@ -43,6 +45,7 @@ export class OrderService extends TenantScopedService {
     @InjectRepository(ShipmentEntity)
     private readonly shipmentRepository: Repository<ShipmentEntity>,
     private readonly orderCustomerResolver: OrderCustomerResolver,
+    private readonly orderLifecycle: OrderLifecycleService,
     private readonly dataSource: DataSource,
   ) {
     super(tenantContext)
@@ -117,7 +120,7 @@ export class OrderService extends TenantScopedService {
     }
   }
 
-  async create(dto: CreateOrderDto) {
+  async create(dto: CreateOrderDto, manager?: EntityManager) {
     const tenantId = this.requireTenantId()
     const customer = await this.orderCustomerResolver.resolve({
       name: dto.customerName,
@@ -130,17 +133,32 @@ export class OrderService extends TenantScopedService {
       0,
     ) + (dto.shippingFee ?? 0)
 
-    return this.dataSource.transaction(async (manager) => {
-      const orderRepo = manager.getRepository(OrderEntity)
-      const itemRepo = manager.getRepository(OrderItemEntity)
-      const tagMapRepo = manager.getRepository(OrderTagMapEntity)
+    const createWithManager = async (tx: EntityManager) => {
+      const orderRepo = tx.getRepository(OrderEntity)
+      const itemRepo = tx.getRepository(OrderItemEntity)
+      const tagMapRepo = tx.getRepository(OrderTagMapEntity)
 
+      const legacyStatus = dto.status ?? OrderStatus.PENDING
+      const isIncomplete = dto.isIncomplete ?? false
+      const lifecycle = this.orderLifecycle.initializeForCreate({
+        status: legacyStatus,
+        isIncomplete,
+        paymentMethod: dto.paymentMethod ?? null,
+      })
+      const now = new Date()
       const order = await orderRepo.save({
         tenantId,
         code: await this.generateOrderCode(orderRepo, tenantId),
         customerId: customer.customerId,
         personId: customer.personId,
-        status: dto.status ?? OrderStatus.PENDING,
+        status: legacyStatus,
+        businessStatus: lifecycle.businessStatus,
+        paymentStatus: lifecycle.paymentStatus,
+        fulfillmentStatus: lifecycle.fulfillmentStatus,
+        confirmedAt: lifecycle.businessStatus === 'CONFIRMED' ? now : null,
+        completedAt: lifecycle.businessStatus === 'COMPLETED' ? now : null,
+        cancelledAt: null,
+        cancelReason: null,
         total,
         paymentMethod: dto.paymentMethod ?? null,
         source: dto.source ?? null,
@@ -150,7 +168,7 @@ export class OrderService extends TenantScopedService {
         customerPhone: dto.customerPhone,
         customerEmail: dto.customerEmail ?? null,
         notes: dto.notes ?? null,
-        isIncomplete: dto.isIncomplete ?? false,
+        isIncomplete,
       })
 
       await itemRepo.save(
@@ -170,21 +188,21 @@ export class OrderService extends TenantScopedService {
         )
       }
 
-      return this.detail(order.id, manager)
-    })
+      return this.detail(order.id, tx)
+    }
+
+    return manager
+      ? createWithManager(manager)
+      : this.dataSource.transaction(createWithManager)
   }
 
   async updateStatus(id: number, dto: UpdateOrderStatusDto) {
-    const order = await this.findOneForTenantOrFail(
-      this.orderRepository,
-      { id },
-      'Order not found',
-    )
-    order.status = dto.status
-    if (dto.status === OrderStatus.COMPLETED) {
-      order.isIncomplete = false
-    }
-    await this.orderRepository.save(order)
+    await this.orderLifecycle.applyLegacyStatus(id, dto.status)
+    return this.detail(id)
+  }
+
+  async updateLifecycle(id: number, dto: UpdateOrderLifecycleDto) {
+    await this.orderLifecycle.update(id, dto)
     return this.detail(id)
   }
 
@@ -206,6 +224,9 @@ export class OrderService extends TenantScopedService {
       quantity,
       totalPrice: Number(order.total),
       status: order.status,
+      businessStatus: order.businessStatus,
+      paymentStatus: order.paymentStatus,
+      fulfillmentStatus: order.fulfillmentStatus,
       createdAt: order.createdAt,
       orderId: order.id,
       customerId: order.customerId,
@@ -221,7 +242,23 @@ export class OrderService extends TenantScopedService {
     repo: Repository<OrderEntity>,
     tenantId: number,
   ): Promise<string> {
-    const count = await repo.count({ where: { tenantId } })
-    return `DH${1000 + count + 1}`
+    // Order creation already runs inside a transaction. Serialize code allocation
+    // per tenant so concurrent creates cannot allocate the same DHxxxx code.
+    await repo.manager.query(
+      'SELECT pg_advisory_xact_lock($1::int, $2::int)',
+      [tenantId, 7301],
+    )
+    const rows = await repo.manager.query(
+      `SELECT COALESCE(MAX(
+        CASE WHEN "code" ~ '^DH[0-9]+$'
+          THEN substring("code" from 3)::int
+          ELSE NULL
+        END
+      ), 1000) AS "maxCode"
+      FROM "lp_order"
+      WHERE "tenantId" = $1`,
+      [tenantId],
+    )
+    return `DH${Number(rows?.[0]?.maxCode ?? 1000) + 1}`
   }
 }

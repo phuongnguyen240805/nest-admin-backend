@@ -5,7 +5,8 @@ import { Repository } from 'typeorm'
 import { TenantContextService } from '@liora/nest-core'
 
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
-import { OrderStatus } from '../common/enums'
+import { fulfillmentFromShipmentStatus } from '../common/order-lifecycle'
+import { OrderLifecycleService } from '../services/order-lifecycle.service'
 import {
   CreateShipmentDto,
   ShippingQuoteDto,
@@ -39,6 +40,7 @@ export class ShippingService extends TenantScopedService {
     @InjectRepository(ShippingIntegrationEntity)
     private readonly integrations: Repository<ShippingIntegrationEntity>,
     private readonly integrationService: ShippingIntegrationService,
+    private readonly orderLifecycle: OrderLifecycleService,
   ) {
     super(tenantContext)
   }
@@ -180,9 +182,10 @@ export class ShippingService extends TenantScopedService {
     })
     await this.shipments.save(shipment)
     await this.recordEvent(shipment, providerStatus, normalizedStatus, providerOrder)
-    order.status =
-      order.status === OrderStatus.COMPLETED ? order.status : OrderStatus.SHIPPED
-    await this.orders.save(order)
+    await this.orderLifecycle.setFulfillmentStatus(
+      order.id,
+      fulfillmentFromShipmentStatus(normalizedStatus),
+    )
     return this.toResponse(shipment)
   }
 
@@ -215,6 +218,10 @@ export class ShippingService extends TenantScopedService {
     shipment.lastTrackedAt = new Date()
     await this.shipments.save(shipment)
     await this.recordEvent(shipment, providerStatus, normalizedStatus, tracking)
+    await this.orderLifecycle.setFulfillmentStatus(
+      shipment.orderId,
+      fulfillmentFromShipmentStatus(normalizedStatus),
+    )
     return this.toResponse(shipment)
   }
 
@@ -239,6 +246,10 @@ export class ShippingService extends TenantScopedService {
       'CANCELLED',
       ShipmentStatus.CANCELLED,
       { source: 'manual' },
+    )
+    await this.orderLifecycle.setFulfillmentStatus(
+      shipment.orderId,
+      fulfillmentFromShipmentStatus(ShipmentStatus.CANCELLED),
     )
     return this.toResponse(shipment)
   }
