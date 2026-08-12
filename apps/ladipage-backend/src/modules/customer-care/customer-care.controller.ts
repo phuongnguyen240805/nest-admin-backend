@@ -134,8 +134,9 @@ export class CustomerCareController {
     @Param('id') id: string,
     @Body() dto: CreateOrderDto,
     @CurrentUser() user: any,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    return this.service.createConversationOrder(id, dto, uid(user));
+    return this.service.createConversationOrder(id, dto, uid(user), idempotencyKey);
   }
 
   @Post('conversations/:id/orders/:orderId/link')

@@ -122,6 +122,7 @@ export class CustomerCareConversationLinkEntity extends CustomerCareTenantEntity
 @Index(['tenantId', 'conversationLinkId', 'orderId'], { unique: true })
 @Index(['tenantId', 'orderId'])
 @Index(['tenantId', 'conversationLinkId'], { unique: true, where: 'is_primary = true' })
+@Index(['tenantId', 'conversationLinkId', 'creationKey'], { unique: true, where: 'creation_key IS NOT NULL' })
 export class CustomerCareConversationOrderLinkEntity extends CustomerCareTenantEntity {
   @Column({ name: 'conversation_link_id', type: 'int' })
   conversationLinkId!: number
@@ -137,6 +138,9 @@ export class CustomerCareConversationOrderLinkEntity extends CustomerCareTenantE
 
   @Column({ name: 'source_message_id', type: 'varchar', length: 220, nullable: true })
   sourceMessageId!: string | null
+
+  @Column({ name: 'creation_key', type: 'varchar', length: 120, nullable: true })
+  creationKey!: string | null
 
   @Column({ name: 'is_primary', type: 'boolean', default: false })
   isPrimary!: boolean

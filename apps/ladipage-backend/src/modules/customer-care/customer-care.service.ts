@@ -283,7 +283,6 @@ export class CustomerCareService {
   }
 
   private async ensureLibreDeskInbox(row: CustomerCareChannelAccountEntity) {
-    if (row.metadata?.libreDeskInboxId) return;
     const facebook = row.provider === 'facebook_personal';
     const connectorToken = this.config.get<string>(facebook
       ? 'CUSTOMER_CARE_FACEBOOK_CONNECTOR_TOKEN'
@@ -294,27 +293,34 @@ export class CustomerCareService {
       : 'CUSTOMER_CARE_ZALO_CONNECTOR_URL') || (facebook
       ? 'http://facebook-connector:3200'
       : 'http://zalo-connector:3100');
-    const inbox = await this.libreDesk.request<Record<string, unknown>>('/inboxes', {
-      method: 'POST',
-      body: JSON.stringify({
-        name: row.name,
-        channel: row.provider,
-        enabled: true,
-        csat_enabled: false,
-        prompt_tags_on_reply: false,
-        from: '',
-        from_name_template: '',
-        config: {
-          channel_connection_key: row.connectionKey,
-          connector_url: connectorUrl,
-          connector_token: connectorToken,
-          account_id: row.externalAccountId,
-          request_timeout: facebook ? '30s' : '15s',
-        },
-      }),
+    const inboxPayload = {
+      name: row.name,
+      channel: row.provider,
+      enabled: true,
+      csat_enabled: false,
+      prompt_tags_on_reply: false,
+      from: '',
+      from_name_template: '',
+      config: {
+        channel_connection_key: row.connectionKey,
+        connector_url: connectorUrl,
+        connector_token: connectorToken,
+        account_id: row.externalAccountId,
+        request_timeout: facebook ? '30s' : '15s',
+      },
+    };
+    const existingInboxId = row.metadata?.libreDeskInboxId;
+    const inbox = await this.libreDesk.request<Record<string, unknown>>(
+      existingInboxId
+        ? `/inboxes/${encodeURIComponent(String(existingInboxId))}`
+        : '/inboxes', {
+      method: existingInboxId ? 'PUT' : 'POST',
+      body: JSON.stringify(inboxPayload),
     });
-    row.metadata = { ...row.metadata, libreDeskInboxId: inbox.id };
-    await this.channels.save(row);
+    if (!existingInboxId) {
+      row.metadata = { ...row.metadata, libreDeskInboxId: inbox.id };
+      await this.channels.save(row);
+    }
   }
 
   private connectorAccountId(status: Record<string, unknown>) {
@@ -1801,6 +1807,7 @@ export class CustomerCareService {
       orderId: row.orderId,
       relationType: row.relationType,
       sourceMessageId: row.sourceMessageId,
+      creationKey: row.creationKey,
       isPrimary: row.isPrimary,
       createdByUserId: row.createdByUserId,
       createdAt: row.createdAt,
@@ -1828,17 +1835,33 @@ export class CustomerCareService {
     conversationId: string,
     dto: CreateOrderDto,
     userId: number,
+    idempotencyKey?: string,
   ) {
     const tenantId = this.getTenantId();
     const conversation = await this.requireConversationLink(conversationId, tenantId);
+    const creationKey = idempotencyKey?.trim() || null;
+    if (creationKey && creationKey.length > 120)
+      throw new BadRequestException('Idempotency-Key must not exceed 120 characters');
 
     const result = await this.dataSource.transaction(async (manager) => {
       await this.lockConversationOrderLinks(manager, tenantId, conversation.id);
+      const repo = manager.getRepository(CustomerCareConversationOrderLinkEntity);
+      if (creationKey) {
+        const existing = await repo.findOne({
+          where: { tenantId, conversationLinkId: conversation.id, creationKey },
+        });
+        if (existing) {
+          return {
+            ...(await this.orderService.detail(existing.orderId, manager)),
+            conversationOrderLink: this.mapConversationOrderLink(existing),
+            idempotentReplay: true,
+          };
+        }
+      }
       const order = await this.orderService.create(
         { ...dto, source: `customer-care:${conversation.provider}` },
         manager,
       );
-      const repo = manager.getRepository(CustomerCareConversationOrderLinkEntity);
 
       await repo.update(
         { tenantId, conversationLinkId: conversation.id, isPrimary: true },
@@ -1853,6 +1876,7 @@ export class CustomerCareService {
           orderId: Number(order.id),
           relationType: 'CREATED_FROM_CHAT',
           sourceMessageId: null,
+          creationKey,
           isPrimary: true,
           createdByUserId: userId > 0 ? userId : null,
         }),
@@ -1861,15 +1885,18 @@ export class CustomerCareService {
       return {
         ...order,
         conversationOrderLink: this.mapConversationOrderLink(link),
+        idempotentReplay: false,
       };
     });
 
-    await this.publish(tenantId, 'conversation-order.updated', conversationId, {
-      conversationId,
-      orderId: Number(result.id),
-      action: 'created',
-      link: result.conversationOrderLink,
-    });
+    if (!result.idempotentReplay) {
+      await this.publish(tenantId, 'conversation-order.updated', conversationId, {
+        conversationId,
+        orderId: Number(result.id),
+        action: 'created',
+        link: result.conversationOrderLink,
+      });
+    }
     return result;
   }
 

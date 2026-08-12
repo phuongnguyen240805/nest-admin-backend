@@ -1,4 +1,4 @@
-import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator'
+import { IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator'
 
 export class GenerateCustomerCareAiReplyDto {
   @IsOptional() @IsString() @MaxLength(2000) instruction?: string
@@ -23,6 +23,7 @@ export class CustomerCareAiActionDecisionDto {
 
 export class UpdateCustomerCareAiConfigDto {
   @IsOptional() @IsBoolean() enabled?: boolean
+  @IsOptional() @IsIn(['copilot', 'autopilot']) mode?: 'copilot' | 'autopilot'
   @IsOptional() @IsString() @MaxLength(160) model?: string
   @IsOptional() @IsNumber() @Min(0) @Max(2) temperature?: number
   @IsOptional() @IsInt() @Min(128) @Max(8192) maxOutputTokens?: number

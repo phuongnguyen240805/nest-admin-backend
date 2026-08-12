@@ -90,7 +90,7 @@ export class CustomerCareAiAutomationService {
       }
 
       const config = await this.configs.findOne({ where: { tenantId: event.tenantId } })
-      if (!config?.enabled || !config.autoReplyEnabled) {
+      if (!config?.enabled || config.mode !== 'autopilot' || !config.autoReplyEnabled) {
         await this.finish(event, 'ignored', 'tenant-auto-reply-disabled')
         this.metrics.recordAutomation('skipped')
         return

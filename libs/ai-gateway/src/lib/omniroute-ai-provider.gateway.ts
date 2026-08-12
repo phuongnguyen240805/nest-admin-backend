@@ -57,6 +57,7 @@ export class OmniRouteAiProviderGateway implements AiProviderGateway {
     const response = await this.post<OpenAiChatResponse>('chat/completions', {
       model: request.modelHint ?? process.env.OMNIROUTE_DEFAULT_TEXT_MODEL ?? 'auto',
       messages: request.messages.map((message) => this.toOpenAiMessage(message)),
+      stream: false,
       temperature: request.temperature ?? 0.3,
       max_tokens: request.maxTokens,
       ...(request.responseFormat === 'json'
@@ -203,10 +204,66 @@ export class OmniRouteAiProviderGateway implements AiProviderGateway {
     }
 
     try {
-      return { body: raw ? JSON.parse(raw) as T : {} as T, headers: response.headers }
+      return { body: raw ? this.parseJsonOrSse(raw) as T : {} as T, headers: response.headers }
     }
     catch {
-      throw new ServiceUnavailableException('OmniRoute returned invalid JSON')
+      const contentType = response.headers.get('content-type') ?? 'unknown'
+      throw new ServiceUnavailableException(
+        `OmniRoute returned invalid JSON (content-type=${contentType})`,
+      )
+    }
+  }
+
+  private parseJsonOrSse(raw: string): unknown {
+    try {
+      return JSON.parse(raw)
+    }
+    catch {
+      const chunks = raw
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith('data:'))
+        .map((line) => line.slice(5).trim())
+        .filter((line) => line && line !== '[DONE]')
+        .map((line) => JSON.parse(line) as any)
+
+      if (chunks.length === 0) throw new Error('No JSON or SSE data found')
+      if (chunks.length === 1) return chunks[0]
+
+      const complete = [...chunks].reverse().find((chunk) => chunk?.choices?.[0]?.message)
+      if (complete) return complete
+
+      const toolCalls = new Map<number, any>()
+      let content = ''
+      for (const chunk of chunks) {
+        const delta = chunk?.choices?.[0]?.delta
+        if (typeof delta?.content === 'string') content += delta.content
+        for (const call of delta?.tool_calls ?? []) {
+          const index = Number(call?.index ?? 0)
+          const current = toolCalls.get(index) ?? {
+            id: call?.id,
+            type: call?.type ?? 'function',
+            function: { name: '', arguments: '' },
+          }
+          if (call?.id) current.id = call.id
+          if (call?.function?.name) current.function.name += call.function.name
+          if (call?.function?.arguments) current.function.arguments += call.function.arguments
+          toolCalls.set(index, current)
+        }
+      }
+
+      const last = chunks[chunks.length - 1]
+      return {
+        id: chunks.find((chunk) => chunk?.id)?.id,
+        choices: [{
+          message: {
+            role: 'assistant',
+            content,
+            ...(toolCalls.size ? { tool_calls: [...toolCalls.values()] } : {}),
+          },
+        }],
+        usage: last?.usage,
+      }
     }
   }
 
@@ -342,6 +399,8 @@ export class OmniRouteAiProviderGateway implements AiProviderGateway {
   }
 
   private redact(value: string): string {
-    return value.replace(/Bearer\s+[A-Za-z0-9._~+/-]+/gi, 'Bearer [redacted]')
+    return value
+      .replace(/Bearer\s+[A-Za-z0-9._~+/-]+/gi, 'Bearer [redacted]')
+      .replace(/\b(sk-(?:or-)?[A-Za-z0-9_-]{8,}|AIza[A-Za-z0-9_-]{12,})\b/g, '[redacted]')
   }
 }

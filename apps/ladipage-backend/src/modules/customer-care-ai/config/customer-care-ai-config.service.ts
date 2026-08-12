@@ -9,6 +9,7 @@ import { CUSTOMER_CARE_PROMPT_VERSION } from '../prompts/customer-care-system.pr
 
 export interface UpdateCustomerCareAiConfigInput {
   enabled?: boolean
+  mode?: 'copilot' | 'autopilot'
   model?: string | null
   temperature?: number
   maxOutputTokens?: number
@@ -45,10 +46,15 @@ export class CustomerCareAiConfigService {
   async update(input: UpdateCustomerCareAiConfigInput) {
     const row = await this.getOrCreate()
     if (input.enabled !== undefined) row.enabled = input.enabled
+    if (input.mode !== undefined) row.mode = input.mode
     if (input.model !== undefined) row.model = input.model?.trim() || null
     if (input.temperature !== undefined) row.temperature = input.temperature
     if (input.maxOutputTokens !== undefined) row.maxOutputTokens = input.maxOutputTokens
-    if (input.autoReplyEnabled !== undefined) row.autoReplyEnabled = input.autoReplyEnabled
+    if (input.autoReplyEnabled !== undefined) {
+      row.autoReplyEnabled = input.autoReplyEnabled
+      if (input.autoReplyEnabled) row.mode = 'autopilot'
+    }
+    if (row.mode !== 'autopilot') row.autoReplyEnabled = false
     // Auto actions deliberately remain disabled until a separately reviewed policy is implemented.
     row.autoActionEnabled = false
     row.promptVersion = CUSTOMER_CARE_PROMPT_VERSION

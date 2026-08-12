@@ -206,6 +206,9 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       DB_TYPE: postgres
+      # Keep authentication/control-plane data on the same primary database as
+      # Ladipage so JWT organization/tenant ids resolve against the same rows.
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
@@ -269,9 +272,7 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       DB_SSL: "false"
-      # TypeORM prefers DATABASE_URL over DB_HOST. Root .env often points at Supabase
-      # pooler → getaddrinfo EAI_AGAIN breaks AI-SEO scan. Force local compose Postgres.
-      DATABASE_URL: ""
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
@@ -361,6 +362,9 @@ services:
       target: development
     container_name: liora-ladipage-worker-dev
     restart: unless-stopped
+    # Dependencies are baked into the development image. Do not run pnpm
+    # install against the read-only Windows bind-mounted lockfile on startup.
+    entrypoint: []
     env_file:
       - ../.env
     environment:
@@ -373,7 +377,7 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       DB_SSL: "false"
-      DATABASE_URL: ""
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0

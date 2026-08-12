@@ -61,16 +61,24 @@ export class CustomerCareContextService {
       input.recentMessageLimit ?? 30,
     )
 
+    // The conversation mapper only exposes the local contact identity. Enrich it
+    // with the tenant-scoped CRM record before sending authoritative context to AI.
+    const conversationCustomer = (conversation as any)?.customer ?? null
+    const localContactId = Number(conversationCustomer?.id)
+    const customer = Number.isInteger(localContactId) && localContactId > 0
+      ? await this.customerCare.getContact(localContactId).catch(() => conversationCustomer)
+      : conversationCustomer
+
     return this.budget.sanitize({
       conversation,
-      customer: (conversation as any)?.customer ?? null,
+      customer,
       primaryOrder: primary,
       linkedOrders: orderContexts,
       recentMessages,
       previousConversations: Array.isArray(previousConversations)
         ? previousConversations.slice(0, 10)
         : [],
-      customerNotes: (conversation as any)?.customer?.note ?? null,
+      customerNotes: customer?.note ?? null,
       productsReferenced: this.extractProducts(orderContexts),
       timeline,
       contextVersion: 'cc-context-v1',
