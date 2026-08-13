@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import axios, { type AxiosRequestConfig, type Method } from 'axios'
 
 import {
@@ -10,26 +9,6 @@ import {
 import type { ShippingProvider } from './core'
 
 type ActionName = 'test' | 'calculateFee' | 'createOrder' | 'getTracking' | 'cancelOrder'
-
-const DEFAULT_BASE_URLS: Partial<Record<ShippingProvider, string>> = {
-  viettel_post: 'https://partner.viettelpost.vn',
-  ahamove: 'https://api.ahamove.com',
-}
-
-const DEFAULT_PATHS: Partial<Record<ShippingProvider, Partial<Record<ActionName, string>>>> = {
-  viettel_post: {
-    calculateFee: '/v2/order/getPriceAll',
-    createOrder: '/v2/order/createOrder',
-    getTracking: '/v2/order/getOrderJourney',
-    cancelOrder: '/v2/order/UpdateOrder',
-  },
-  ahamove: {
-    calculateFee: '/v3/orders/estimated_fee',
-    createOrder: '/v3/orders',
-    getTracking: '/v3/orders/{trackingCode}',
-    cancelOrder: '/v1/order/{trackingCode}/cancel',
-  },
-}
 
 /**
  * Contract-driven adapter for carriers whose production contract supplies
@@ -82,7 +61,7 @@ export class PartnerHttpShippingAdapter extends ShippingAdapter {
       method,
       headers,
       timeout: 15_000,
-      ...(method === 'GET' ? { params: payload } : this.isJtSigned() ? { data: this.jtForm(payload) } : { data: payload }),
+      ...(method === 'GET' ? { params: payload } : { data: payload }),
     }
     const response = await axios.request(request)
     return response.data as Record<string, unknown>
@@ -90,7 +69,7 @@ export class PartnerHttpShippingAdapter extends ShippingAdapter {
 
   private baseUrl() {
     const configured = String(this.config.settings.baseUrl ?? '').trim()
-    const value = configured || DEFAULT_BASE_URLS[this.provider]
+    const value = configured
     if (!value) throw new Error(`${this.name}: thiếu baseUrl API do hãng cấp`)
     return value.endsWith('/') ? value : `${value}/`
   }
@@ -98,7 +77,7 @@ export class PartnerHttpShippingAdapter extends ShippingAdapter {
   private path(action: ActionName, required = true) {
     const endpoints = (this.config.settings.endpoints ?? {}) as Record<string, unknown>
     const configured = String(endpoints[action] ?? '').trim()
-    const value = configured || DEFAULT_PATHS[this.provider]?.[action]
+    const value = configured
     if (!value && required) throw new Error(`${this.name}: thiếu endpoint ${action}`)
     return value ?? ''
   }
@@ -117,13 +96,6 @@ export class PartnerHttpShippingAdapter extends ShippingAdapter {
       const prefix = String(this.config.settings.tokenPrefix ?? '')
       headers[header] = `${prefix}${token}`
     }
-    if (this.isJtSigned()) {
-      const raw = JSON.stringify(this.payload(params))
-      const digest = createHash('md5').update(raw + this.config.credentials.privateKey).digest('base64')
-      headers.apiAccount = this.config.credentials.apiAccount
-      headers.digest = digest
-      headers['Content-Type'] = 'application/x-www-form-urlencoded'
-    }
     return headers
   }
 
@@ -133,17 +105,6 @@ export class PartnerHttpShippingAdapter extends ShippingAdapter {
       customerCode: params.customerCode ?? this.config.credentials.customerCode,
       username: params.username ?? this.config.credentials.username,
     }
-  }
-
-  private jtForm(payload: Record<string, unknown>) {
-    const form = new URLSearchParams()
-    form.set('bizContent', JSON.stringify(payload))
-    return form.toString()
-  }
-
-  private isJtSigned() {
-    return this.provider === 'jt_express'
-      && Boolean(this.config.credentials.apiAccount && this.config.credentials.privateKey)
   }
 
   private interpolate(path: string, params: Record<string, unknown>) {

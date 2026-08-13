@@ -7,7 +7,6 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Interval } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
 import {
@@ -28,8 +27,9 @@ import { CrmFacade } from '../crm/crm.facade';
 import { OrderEntity } from '../ecom-store/entities/order.entity';
 import { OrderItemEntity } from '../ecom-store/entities/order-item.entity';
 import { ShipmentEntity } from '../ecom-store/entities/shipment.entity';
-import { CreateOrderDto } from '../ecom-store/dto/order.dto';
+import { CreateOrderWithShipmentDto } from '../ecom-store/dto/shipping.dto';
 import { OrderService } from '../ecom-store/services/order.service';
+import { ShippingService } from '../ecom-store/shipping/shipping.service';
 import { DomainEventOutboxService } from '../domain-events/domain-event-outbox.service';
 
 import {
@@ -171,6 +171,7 @@ export class CustomerCareService {
     @InjectRepository(ShipmentEntity)
     private readonly shipments: Repository<ShipmentEntity>,
     private readonly orderService: OrderService,
+    private readonly shippingService: ShippingService,
     private readonly domainEvents: DomainEventOutboxService,
     private readonly dataSource: DataSource,
   ) {}
@@ -2087,7 +2088,7 @@ export class CustomerCareService {
 
   async createConversationOrder(
     conversationId: string,
-    dto: CreateOrderDto,
+    dto: CreateOrderWithShipmentDto,
     userId: number,
     idempotencyKey?: string,
   ) {
@@ -2102,6 +2103,10 @@ export class CustomerCareService {
         'Idempotency-Key must not exceed 120 characters',
       );
 
+    const verifiedShippingFee = dto.shipping
+      ? await this.shippingService.verifiedFee(dto.shipping)
+      : undefined;
+    const { shipping, ...orderInput } = dto;
     const result = await this.dataSource.transaction(async (manager) => {
       await this.lockConversationOrderLinks(manager, tenantId, conversation.id);
       const repo = manager.getRepository(
@@ -2120,7 +2125,11 @@ export class CustomerCareService {
         }
       }
       const order = await this.orderService.create(
-        { ...dto, source: `customer-care:${conversation.provider}` },
+        {
+          ...orderInput,
+          shippingFee: verifiedShippingFee ?? orderInput.shippingFee,
+          source: `customer-care:${conversation.provider}`,
+        },
         manager,
       );
 
@@ -2150,6 +2159,10 @@ export class CustomerCareService {
       };
     });
 
+    const shipment = shipping
+      ? await this.shippingService.create(Number(result.id), shipping)
+      : null;
+
     if (!result.idempotentReplay) {
       await this.publish(
         tenantId,
@@ -2163,7 +2176,7 @@ export class CustomerCareService {
         },
       );
     }
-    return result;
+    return { ...result, shipment };
   }
 
   async linkConversationOrder(
@@ -3072,7 +3085,6 @@ export class CustomerCareService {
     }
   }
 
-  @Interval(10_000)
   async flushOutbox() {
     const rows = await this.outbox.find({
       where: {
@@ -3211,7 +3223,6 @@ export class CustomerCareService {
     return null;
   }
 
-  @Interval(6 * 60 * 60_000)
   async cleanupOperationalEvents() {
     const now = Date.now();
     const syncCutoff = new Date(now - 30 * 24 * 60 * 60_000);

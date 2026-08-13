@@ -38,7 +38,12 @@ export const SHIPPING_CAPABILITIES: Record<ShippingProvider, ShippingCapabilitie
     wardApi: true,
   },
   ghtk: { ...BASE_CAPABILITIES, services: false },
-  viettel_post: { ...BASE_CAPABILITIES },
+  viettel_post: {
+    ...BASE_CAPABILITIES,
+    provinceApi: true,
+    districtApi: true,
+    wardApi: true,
+  },
   jt_express: { ...BASE_CAPABILITIES },
   vnpost: { ...BASE_CAPABILITIES },
   best_express: { ...BASE_CAPABILITIES },

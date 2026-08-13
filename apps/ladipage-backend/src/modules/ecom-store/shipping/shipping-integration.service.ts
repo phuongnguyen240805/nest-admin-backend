@@ -68,7 +68,7 @@ export class ShippingIntegrationService extends TenantScopedService {
 
   async save(provider: ShippingProvider, dto: SaveShippingIntegrationDto) {
     this.requireRegisteredProvider(provider)
-    this.validateSettings(dto.settings)
+    this.validateSettings(provider, dto.settings)
     const tenantId = this.requireTenantId()
     let row = await this.repository.findOne({ where: { tenantId, provider } })
     const previous = row ? this.decrypt(row) : {}
@@ -86,12 +86,7 @@ export class ShippingIntegrationService extends TenantScopedService {
       ...this.credentialPatch(dto, 'username'),
       ...this.credentialPatch(dto, 'password'),
     }
-    if (!credentials.token && !credentials.apiAccount && !credentials.username) {
-      throw new BadRequestException('Provider credentials are required')
-    }
-    if (provider === 'ghn' && !credentials.shopId) {
-      throw new BadRequestException('GHN shopId is required')
-    }
+    this.validateCredentials(provider, credentials)
     const encrypted = this.vault.encrypt(
       this.scope(tenantId, provider),
       credentials,
@@ -139,6 +134,9 @@ export class ShippingIntegrationService extends TenantScopedService {
     if (requireEnabled && !row.enabled) {
       throw new BadRequestException(`${SHIPPING_PROVIDER_NAMES[provider]} đang tắt`)
     }
+    if (requireEnabled && !row.connectedAt) {
+      throw new BadRequestException(`${SHIPPING_PROVIDER_NAMES[provider]} chua duoc kiem tra ket noi`)
+    }
     const config = {
       id: row.id,
       provider,
@@ -173,8 +171,16 @@ export class ShippingIntegrationService extends TenantScopedService {
     return value && value !== '••••' ? { [key]: value } : {}
   }
 
-  private validateSettings(settings?: Record<string, unknown>) {
+  private validateSettings(provider: ShippingProvider, settings?: Record<string, unknown>) {
     if (!settings) return
+    if (provider === 'ghn') {
+      const fromDistrictId = Number(settings.fromDistrictId)
+      if (settings.fromDistrictId != null
+        && settings.fromDistrictId !== ''
+        && (!Number.isInteger(fromDistrictId) || fromDistrictId <= 0)) {
+        throw new BadRequestException('GHN yêu cầu ID quận/huyện lấy hàng hợp lệ')
+      }
+    }
     if (settings.baseUrl) {
       let url: URL
       try {
@@ -192,12 +198,45 @@ export class ShippingIntegrationService extends TenantScopedService {
       if (url.protocol !== 'https:' || privateHost) {
         throw new BadRequestException('Shipping baseUrl must be a public HTTPS URL')
       }
+      const builtInHosts: Partial<Record<ShippingProvider, string[]>> = {
+        viettel_post: ['partner.viettelpost.vn', 'partnerdev.viettelpost.vn'],
+        jt_express: ['ylopenapi.jtexpress.vn', 'demoopenapi.jtexpress.vn'],
+        ahamove: ['partner-api.ahamove.com', 'partner-apistg.ahamove.com'],
+      }
+      const environmentHosts = String(process.env.SHIPPING_ALLOWED_HOSTS ?? '')
+        .split(',')
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean)
+      const allowedHosts = [...(builtInHosts[provider] ?? []), ...environmentHosts]
+      if (!allowedHosts.includes(host)) {
+        throw new BadRequestException(
+          `Shipping API host ${host} is not allowlisted; configure SHIPPING_ALLOWED_HOSTS`,
+        )
+      }
     }
     const endpoints = settings.endpoints as Record<string, unknown> | undefined
     for (const value of Object.values(endpoints ?? {})) {
       if (value && !String(value).startsWith('/')) {
         throw new BadRequestException('Shipping endpoints must be relative paths')
       }
+    }
+  }
+
+  private validateCredentials(provider: ShippingProvider, credentials: Record<string, string>) {
+    const required: Partial<Record<ShippingProvider, string[]>> = {
+      ghn: ['token', 'shopId'],
+      ghtk: ['token'],
+      viettel_post: ['token'],
+      jt_express: ['apiAccount', 'privateKey', 'customerCode', 'password'],
+      ahamove: ['token'],
+    }
+    if ((provider === 'vnpost' || provider === 'best_express')
+      && !credentials.token && !credentials.apiAccount && !credentials.username) {
+      throw new BadRequestException(`${SHIPPING_PROVIDER_NAMES[provider]} thiếu thông tin xác thực theo hợp đồng API`)
+    }
+    const missing = (required[provider] ?? []).filter(key => !credentials[key])
+    if (missing.length) {
+      throw new BadRequestException(`${SHIPPING_PROVIDER_NAMES[provider]} thiếu thông tin: ${missing.join(', ')}`)
     }
   }
 }

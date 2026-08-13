@@ -22,7 +22,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { SkipThrottle } from '@nestjs/throttler';
 import { CurrentUser, Public, TenantGuard } from '@liora/nest-core';
 import { Bypass } from '@liora/nest-core/common/decorators/bypass.decorator';
-import { CreateOrderDto } from '../ecom-store/dto/order.dto';
+import { CreateOrderWithShipmentDto } from '../ecom-store/dto/shipping.dto';
 
 import {
   AssignDto,
@@ -132,7 +132,7 @@ export class CustomerCareController {
   @Post('conversations/:id/orders')
   createConversationOrder(
     @Param('id') id: string,
-    @Body() dto: CreateOrderDto,
+    @Body() dto: CreateOrderWithShipmentDto,
     @CurrentUser() user: any,
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {

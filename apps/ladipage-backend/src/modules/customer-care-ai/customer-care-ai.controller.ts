@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 
-import { CurrentUser, TenantGuard } from '@liora/nest-core'
+import { CurrentUser, RequestTimeoutMs, TenantGuard } from '@liora/nest-core'
 import { AnalyzeCustomerCareConversationDto, CustomerCareAiActionDecisionDto, CustomerCareAiFeedbackDto, GenerateCustomerCareAiReplyDto, UpdateCustomerCareAiConfigDto } from './dto/customer-care-ai.dto'
 import { CustomerCareAiFeedbackService } from './orchestration/customer-care-ai-feedback.service'
 import { CustomerCareAiActionService } from './actions/customer-care-ai-action.service'
@@ -27,11 +27,13 @@ export class CustomerCareAiController {
   ) {}
 
   @Post('conversations/:id/ai/reply')
+  @RequestTimeoutMs(110_000)
   reply(@Param('id') id: string, @Body() dto: GenerateCustomerCareAiReplyDto, @CurrentUser() user: any) {
     return this.orchestrator.reply(id, uid(user), dto)
   }
 
   @Post('conversations/:id/ai/analyze')
+  @RequestTimeoutMs(110_000)
   analyze(@Param('id') id: string, @Body() dto: AnalyzeCustomerCareConversationDto, @CurrentUser() user: any) {
     return this.orchestrator.analyze(id, uid(user), dto)
   }

@@ -10,6 +10,7 @@ import { CUSTOMER_CARE_ENTITIES } from './customer-care.entities'
 import { CustomerCareGateway } from './customer-care.gateway'
 import { FacebookConnectorClient, LibreDeskClient, ZaloConnectorClient } from './customer-care.clients'
 import { CustomerCareService } from './customer-care.service'
+import { CustomerCareOperationalWorker } from './customer-care-operational.worker'
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { CustomerCareService } from './customer-care.service'
     EcomStoreModule,
   ],
   controllers: [CustomerCareController, CustomerCareInternalController],
-  providers: [CustomerCareGateway, LibreDeskClient, ZaloConnectorClient, FacebookConnectorClient, CustomerCareService],
+  providers: [CustomerCareGateway, LibreDeskClient, ZaloConnectorClient, FacebookConnectorClient, CustomerCareService, CustomerCareOperationalWorker],
   exports: [CustomerCareService],
 })
 export class CustomerCareModule {}

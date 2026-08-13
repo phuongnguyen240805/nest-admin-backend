@@ -130,10 +130,12 @@ export class OrderService extends TenantScopedService {
       email: dto.customerEmail ?? null,
     })
 
-    const total = dto.items.reduce(
+    const subtotal = dto.items.reduce(
       (sum, item) => sum + item.unitPrice * item.quantity,
       0,
-    ) + (dto.shippingFee ?? 0)
+    )
+    const shippingFee = dto.shippingFee ?? 0
+    const total = subtotal + shippingFee
 
     const createWithManager = async (tx: EntityManager) => {
       const orderRepo = tx.getRepository(OrderEntity)
@@ -162,6 +164,11 @@ export class OrderService extends TenantScopedService {
         cancelledAt: null,
         cancelReason: null,
         total,
+        subtotal,
+        shippingFee,
+        discount: 0,
+        shippingPayer: 'customer',
+        shippingQuoteId: null,
         paymentMethod: dto.paymentMethod ?? null,
         source: dto.source ?? null,
         assigneeId: dto.assigneeId ?? null,

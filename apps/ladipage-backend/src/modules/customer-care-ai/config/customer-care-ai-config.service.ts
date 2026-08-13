@@ -33,7 +33,11 @@ export class CustomerCareAiConfigService {
       tenantId,
       enabled: process.env.CUSTOMER_CARE_AI_ENABLED !== 'false',
       mode: automationEnabled ? 'autopilot' : 'copilot',
-      model: process.env.CUSTOMER_CARE_AI_MODEL ?? null,
+      // CUSTOMER_CARE_AI_MODEL may be an ordered, semicolon-delimited fallback
+      // chain. Persist only the primary model because tenant config stores one
+      // preferred model; the orchestrator reads the remaining global fallbacks
+      // directly from the environment.
+      model: this.primaryEnvModel(),
       temperature: Number(process.env.CUSTOMER_CARE_AI_TEMPERATURE ?? 0.2),
       maxOutputTokens: Number(process.env.CUSTOMER_CARE_AI_MAX_OUTPUT_TOKENS ?? 1200),
       promptVersion: CUSTOMER_CARE_PROMPT_VERSION,
@@ -76,5 +80,12 @@ export class CustomerCareAiConfigService {
     const tenantId = this.tenantContext.getTenantId()
     if (tenantId == null) throw new ForbiddenException('Tenant ID is required')
     return tenantId
+  }
+
+  private primaryEnvModel(): string | null {
+    return (process.env.CUSTOMER_CARE_AI_MODEL ?? '')
+      .split(';')
+      .map((model) => model.trim())
+      .find(Boolean) ?? null
   }
 }

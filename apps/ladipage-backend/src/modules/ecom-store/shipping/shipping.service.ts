@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 
@@ -17,6 +17,7 @@ import {
   OrderItemEntity,
   ShipmentEntity,
   ShipmentEventEntity,
+  ShippingQuoteEntity,
   ShippingIntegrationEntity,
   ShippingProvider,
 } from '../entities'
@@ -40,6 +41,8 @@ export class ShippingService extends TenantScopedService {
     private readonly shipmentEvents: Repository<ShipmentEventEntity>,
     @InjectRepository(ShippingIntegrationEntity)
     private readonly integrations: Repository<ShippingIntegrationEntity>,
+    @InjectRepository(ShippingQuoteEntity)
+    private readonly quotes: Repository<ShippingQuoteEntity>,
     private readonly integrationService: ShippingIntegrationService,
     private readonly orderLifecycle: OrderLifecycleService,
     private readonly domainEvents: DomainEventOutboxService,
@@ -77,7 +80,7 @@ export class ShippingService extends TenantScopedService {
   }
 
   services(provider: ShippingProvider, toDistrict: number) {
-    this.requireGhnLocations(provider)
+    if (provider !== 'ghn') throw new BadRequestException('Service catalog is only available for GHN')
     return this.integrationService.execute(provider, 'getServices', {
       toDistrict,
     })
@@ -91,11 +94,32 @@ export class ShippingService extends TenantScopedService {
       params,
     )
     const raw = (result.fee ?? result) as Record<string, unknown>
-    return {
+    const total = Number(raw.total ?? raw.total_fee ?? raw.TotalServiceCost ?? raw.fee ?? raw.delivery ?? raw.price ?? 0)
+    if (!Number.isFinite(total) || total < 0) {
+      throw new ServiceUnavailableException('Shipping provider returned an invalid fee')
+    }
+    const serviceFee = Number(raw.service_fee ?? raw.ship_fee_only ?? 0)
+    const insuranceFee = Number(raw.insurance_fee ?? 0)
+    const quote = await this.quotes.save(this.quotes.create({
+      tenantId: this.requireTenantId(),
       provider: dto.provider,
-      total: Number(raw.total ?? raw.total_fee ?? raw.TotalServiceCost ?? raw.fee ?? raw.delivery ?? raw.price ?? 0),
-      serviceFee: Number(raw.service_fee ?? raw.ship_fee_only ?? 0),
-      insuranceFee: Number(raw.insurance_fee ?? 0),
+      serviceCode: dto.serviceCode ?? (dto.serviceId ? String(dto.serviceId) : dto.serviceTypeId ? String(dto.serviceTypeId) : null),
+      serviceName: null,
+      total,
+      serviceFee,
+      insuranceFee,
+      requestPayload: dto as unknown as Record<string, unknown>,
+      providerPayload: raw,
+      expiresAt: new Date(Date.now() + 10 * 60_000),
+      consumedAt: null,
+    }))
+    return {
+      quoteId: quote.id,
+      provider: dto.provider,
+      total,
+      serviceFee,
+      insuranceFee,
+      expiresAt: quote.expiresAt,
       raw,
     }
   }
@@ -107,18 +131,31 @@ export class ShippingService extends TenantScopedService {
     return row ? this.toResponse(row) : null
   }
 
+  async verifiedFee(dto: CreateShipmentDto) {
+    if (!dto.quoteId) {
+      throw new BadRequestException('quoteId is required for automatic order shipping')
+    }
+    const quote = await this.resolveQuote(dto)
+    return Number(quote!.total)
+  }
+
   async create(orderId: number, dto: CreateShipmentDto) {
     const tenantId = this.requireTenantId()
+    if (!dto.idempotencyKey?.trim()) {
+      throw new BadRequestException('idempotencyKey is required to create a shipment')
+    }
     if (dto.idempotencyKey) {
       const retried = await this.shipments.findOne({
         where: { tenantId, idempotencyKey: dto.idempotencyKey },
       })
-      if (retried) return this.toResponse(retried)
+      if (retried && !['PENDING_PROVIDER', 'FAILED_RETRYABLE'].includes(retried.status)) {
+        return this.toResponse(retried)
+      }
     }
     const existing = await this.shipments.findOne({
       where: { tenantId, orderId },
     })
-    if (existing && existing.status !== 'CANCELLED') {
+    if (existing && !['CANCELLED', 'PENDING_PROVIDER', 'FAILED_RETRYABLE'].includes(existing.status)) {
       throw new BadRequestException('Order already has an active shipment')
     }
     const order = await this.findOneForTenantOrFail(
@@ -131,12 +168,57 @@ export class ShippingService extends TenantScopedService {
       tenantId,
       provider: dto.provider,
     })
-    const payload = this.buildCreatePayload(dto, order, items, integration.settings)
-    const result = await this.integrationService.execute(
-      dto.provider,
-      'createOrder',
-      payload,
+    if (!dto.quoteId) {
+      throw new BadRequestException('quoteId is required to create a shipment')
+    }
+    const quote = await this.resolveQuote(dto)
+    const serverFee = Number(quote.total)
+    const payload = this.buildCreatePayload(
+      { ...dto, fee: serverFee },
+      order,
+      items,
+      integration.settings,
     )
+    const pending = this.shipments.create({
+      ...(existing ?? {}),
+      tenantId,
+      orderId,
+      integrationId: integration.id,
+      quoteId: quote.id,
+      provider: dto.provider,
+      trackingCode: existing?.trackingCode ?? null,
+      providerOrderId: existing?.providerOrderId ?? null,
+      idempotencyKey: dto.idempotencyKey.trim(),
+      serviceCode: dto.serviceCode ?? (dto.serviceId ? String(dto.serviceId) : dto.serviceTypeId ? String(dto.serviceTypeId) : null),
+      serviceName: dto.serviceName ?? null,
+      status: 'PENDING_PROVIDER',
+      providerStatus: 'PENDING_PROVIDER',
+      fee: serverFee,
+      codAmount: Number(dto.codAmount ?? order.total),
+      recipientName: dto.recipientName,
+      recipientPhone: dto.recipientPhone,
+      address: dto.address.address,
+      province: dto.address.province,
+      district: dto.address.district,
+      ward: dto.address.ward,
+      providerPayload: existing?.providerPayload ?? {},
+      requestPayload: payload,
+      attemptCount: Number(existing?.attemptCount ?? 0) + 1,
+      lastError: null,
+      lastTrackedAt: existing?.lastTrackedAt ?? null,
+      estimatedDeliveryAt: existing?.estimatedDeliveryAt ?? null,
+    })
+    await this.shipments.save(pending)
+    let result: Record<string, unknown>
+    try {
+      result = await this.integrationService.execute(dto.provider, 'createOrder', payload)
+    } catch (error) {
+      pending.status = 'FAILED_RETRYABLE'
+      pending.providerStatus = 'FAILED_RETRYABLE'
+      pending.lastError = error instanceof Error ? error.message.slice(0, 2000) : String(error).slice(0, 2000)
+      await this.shipments.save(pending)
+      throw new ServiceUnavailableException('Carrier rejected or timed out while creating shipment; retry is safe with the same idempotency key')
+    }
     const providerOrder = (result.order ?? result) as Record<string, unknown>
     const trackingCode = String(
         providerOrder.order_code ??
@@ -160,7 +242,7 @@ export class ShippingService extends TenantScopedService {
     const providerStatus = String(providerOrder.status ?? providerOrder.orderStatus ?? providerOrder.Status ?? 'CREATED')
     const normalizedStatus = normalizeShipmentStatus(providerStatus, dto.provider)
     const shipment = this.shipments.create({
-      ...(existing ?? {}),
+      ...pending,
       tenantId,
       orderId,
       integrationId: integration.id,
@@ -176,7 +258,7 @@ export class ShippingService extends TenantScopedService {
       serviceName: dto.serviceName ?? null,
       status: normalizedStatus,
       providerStatus,
-      fee: Number(dto.fee ?? providerOrder.total_fee ?? providerOrder.TotalServiceCost ?? providerOrder.fee ?? providerOrder.price ?? 0),
+      fee: serverFee,
       codAmount: Number(dto.codAmount ?? order.total),
       recipientName: dto.recipientName,
       recipientPhone: dto.recipientPhone,
@@ -185,10 +267,18 @@ export class ShippingService extends TenantScopedService {
       district: dto.address.district,
       ward: dto.address.ward,
       providerPayload: providerOrder,
+      requestPayload: payload,
+      lastError: null,
       lastTrackedAt: new Date(),
       estimatedDeliveryAt: null,
     })
     await this.shipments.save(shipment)
+    quote.consumedAt = new Date()
+    await this.quotes.save(quote)
+    order.shippingQuoteId = quote.id
+    order.shippingFee = serverFee
+    order.total = Number(order.subtotal) - Number(order.discount) + serverFee
+    await this.orders.save(order)
     await this.recordEvent(shipment, providerStatus, normalizedStatus, providerOrder)
     await this.orderLifecycle.setFulfillmentStatus(
       order.id,
@@ -226,6 +316,72 @@ export class ShippingService extends TenantScopedService {
     shipment.lastTrackedAt = new Date()
     await this.shipments.save(shipment)
     await this.recordEvent(shipment, providerStatus, normalizedStatus, tracking)
+    await this.orderLifecycle.setFulfillmentStatus(
+      shipment.orderId,
+      fulfillmentFromShipmentStatus(normalizedStatus),
+    )
+    return this.toResponse(shipment)
+  }
+
+  async retryPending(orderId: number) {
+    const shipment = await this.requireShipment(orderId)
+    if (!['PENDING_PROVIDER', 'FAILED_RETRYABLE'].includes(shipment.status)) {
+      return this.toResponse(shipment)
+    }
+    shipment.status = 'PENDING_PROVIDER'
+    shipment.providerStatus = 'PENDING_PROVIDER'
+    shipment.attemptCount += 1
+    shipment.lastError = null
+    await this.shipments.save(shipment)
+    let result: Record<string, unknown>
+    try {
+      result = await this.integrationService.execute(
+        shipment.provider,
+        'createOrder',
+        shipment.requestPayload,
+      )
+    } catch (error) {
+      shipment.status = 'FAILED_RETRYABLE'
+      shipment.providerStatus = 'FAILED_RETRYABLE'
+      shipment.lastError = error instanceof Error ? error.message.slice(0, 2000) : String(error).slice(0, 2000)
+      await this.shipments.save(shipment)
+      return this.toResponse(shipment)
+    }
+    const providerOrder = (result.order ?? result) as Record<string, unknown>
+    const trackingCode = String(
+      providerOrder.order_code ?? providerOrder.orderCode ?? providerOrder.OrderCode
+      ?? providerOrder.billCode ?? providerOrder.trackingCode ?? providerOrder.label
+      ?? providerOrder.label_id ?? providerOrder.tracking_id ?? '',
+    )
+    const providerOrderId = String(
+      providerOrder.order_id ?? providerOrder.orderId ?? providerOrder.OrderId
+      ?? providerOrder.partner_id ?? providerOrder.id ?? trackingCode,
+    )
+    const providerStatus = String(providerOrder.status ?? providerOrder.orderStatus ?? providerOrder.Status ?? 'CREATED')
+    const normalizedStatus = normalizeShipmentStatus(providerStatus, shipment.provider)
+    shipment.trackingCode = trackingCode || null
+    shipment.providerOrderId = providerOrderId || null
+    shipment.providerStatus = providerStatus
+    shipment.status = normalizedStatus
+    shipment.providerPayload = providerOrder
+    shipment.lastError = null
+    shipment.lastTrackedAt = new Date()
+    await this.shipments.save(shipment)
+    if (shipment.quoteId) {
+      const quote = await this.quotes.findOne({ where: { id: shipment.quoteId, tenantId: shipment.tenantId } })
+      if (quote && !quote.consumedAt) {
+        quote.consumedAt = new Date()
+        await this.quotes.save(quote)
+      }
+      const order = await this.orders.findOne({ where: { id: shipment.orderId, tenantId: shipment.tenantId } })
+      if (order) {
+        order.shippingQuoteId = shipment.quoteId
+        order.shippingFee = Number(shipment.fee)
+        order.total = Number(order.subtotal) - Number(order.discount) + Number(shipment.fee)
+        await this.orders.save(order)
+      }
+    }
+    await this.recordEvent(shipment, providerStatus, normalizedStatus, providerOrder)
     await this.orderLifecycle.setFulfillmentStatus(
       shipment.orderId,
       fulfillmentFromShipmentStatus(normalizedStatus),
@@ -304,12 +460,17 @@ export class ShippingService extends TenantScopedService {
     if (dto.provider !== 'ghtk') {
       return {
         provider: dto.provider,
-        recipient: dto.address,
+        recipient: {
+          name: dto.recipientName,
+          phone: dto.recipientPhone,
+          ...dto.address,
+        },
         pickup: pickup ?? integration.settings.pickup,
         parcel,
         insuranceValue: dto.insuranceValue ?? 0,
         serviceId: dto.serviceId,
         serviceTypeId: dto.serviceTypeId,
+        serviceCode: dto.serviceCode,
       }
     }
     return {
@@ -325,6 +486,17 @@ export class ShippingService extends TenantScopedService {
       value: dto.insuranceValue ?? 0,
       transport: 'road',
     }
+  }
+
+  private async resolveQuote(dto: CreateShipmentDto) {
+    if (!dto.quoteId) throw new BadRequestException('quoteId is required')
+    const quote = await this.quotes.findOne({
+      where: { id: dto.quoteId, tenantId: this.requireTenantId(), provider: dto.provider },
+    })
+    if (!quote) throw new BadRequestException('Shipping quote not found')
+    if (quote.consumedAt) throw new BadRequestException('Shipping quote was already used')
+    if (quote.expiresAt.getTime() <= Date.now()) throw new BadRequestException('Shipping quote expired; calculate the fee again')
+    return quote
   }
 
   private buildCreatePayload(
@@ -348,6 +520,7 @@ export class ShippingService extends TenantScopedService {
           payment_type_id: 2,
           note: dto.note ?? order.notes ?? '',
           required_note: dto.requiredNote ?? 'KHONGCHOXEMHANG',
+          client_order_code: dto.idempotencyKey,
           to_name: dto.recipientName,
           to_phone: dto.recipientPhone,
           to_address: dto.address.address,
@@ -390,6 +563,7 @@ export class ShippingService extends TenantScopedService {
         insuranceValue: Number(order.total),
         serviceId: dto.serviceId,
         serviceTypeId: dto.serviceTypeId,
+        serviceCode: dto.serviceCode,
         note: dto.note ?? order.notes ?? '',
       }
     }
@@ -435,8 +609,8 @@ export class ShippingService extends TenantScopedService {
   }
 
   private requireGhnLocations(provider: ShippingProvider) {
-    if (provider !== 'ghn') {
-      throw new BadRequestException('Location catalog is only available for GHN')
+    if (provider !== 'ghn' && provider !== 'viettel_post') {
+      throw new BadRequestException('Location catalog is only available for GHN and Viettel Post')
     }
   }
 

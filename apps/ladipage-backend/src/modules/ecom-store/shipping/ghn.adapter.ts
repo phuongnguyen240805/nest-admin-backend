@@ -32,7 +32,11 @@ export class GhnShippingAdapter extends ShippingAdapter {
 
   async testConnection(): Promise<ShippingTestResult> {
     try {
-      const response = await axios.get(`${this.baseUrl}/v2/shop/all`, {
+      const response = await axios.post(`${this.baseUrl}/v2/shop/all`, {
+        offset: 0,
+        limit: 200,
+        client_phone: '',
+      }, {
         headers: this.tokenHeaders,
         timeout: 10_000,
       })
@@ -90,27 +94,41 @@ export class GhnShippingAdapter extends ShippingAdapter {
           params: { province_id: params.provinceId },
           timeout: 10_000,
         })
-        return { districts: response.data?.data ?? [] }
+        return { districts: this.activeLocations(response.data?.data, 'DistrictName') }
       }
       case 'getWards': {
+        const districtId = Number(params.districtId)
+        if (!Number.isInteger(districtId) || districtId <= 0) {
+          throw new Error('GHN districtId không hợp lệ')
+        }
         const response = await axios.post(
           `${this.baseUrl}/master-data/ward`,
-          { district_id: Number(params.districtId) },
-          { headers: this.tokenHeaders, timeout: 10_000 },
+          { district_id: districtId },
+          {
+            headers: this.tokenHeaders,
+            params: { district_id: districtId },
+            timeout: 10_000,
+          },
         )
-        return { wards: response.data?.data ?? [] }
+        return { wards: this.activeLocations(response.data?.data, 'WardName') }
       }
       case 'getServices': {
+        const fromDistrict = await this.resolvePickupDistrict(params.fromDistrict)
+        const toDistrict = Number(params.toDistrict)
+        if (!Number.isInteger(fromDistrict) || fromDistrict <= 0) {
+          throw new Error('GHN chưa cấu hình đúng ID quận/huyện lấy hàng')
+        }
+        if (!Number.isInteger(toDistrict) || toDistrict <= 0) {
+          throw new Error('GHN districtId người nhận không hợp lệ')
+        }
         const response = await axios.post(
           `${this.baseUrl}/v2/shipping-order/available-services`,
           {
             shop_id: Number(
               params.shopId ?? this.config.credentials.shopId,
             ),
-            from_district: Number(
-              params.fromDistrict ?? this.config.settings.fromDistrictId,
-            ),
-            to_district: Number(params.toDistrict),
+            from_district: fromDistrict,
+            to_district: toDistrict,
           },
           { headers: this.tokenHeaders, timeout: 10_000 },
         )
@@ -119,5 +137,50 @@ export class GhnShippingAdapter extends ShippingAdapter {
       default:
         throw new Error(`GHN không hỗ trợ action: ${action}`)
     }
+  }
+
+  private activeLocations(value: unknown, nameKey: 'DistrictName' | 'WardName') {
+    if (!Array.isArray(value)) return []
+    const unique = new Map<string, Record<string, unknown>>()
+    for (const item of value) {
+      if (!item || typeof item !== 'object') continue
+      const location = item as Record<string, unknown>
+      if (Number(location.Status ?? 1) !== 1) continue
+      const code = String(location.WardCode ?? location.DistrictID ?? '')
+      if (!code) continue
+      const name = String(location[nameKey] ?? '').trim()
+      if (!name) continue
+      unique.set(code, { ...location, [nameKey]: name })
+    }
+    return [...unique.values()].sort((left, right) =>
+      String(left[nameKey]).localeCompare(String(right[nameKey]), 'vi'),
+    )
+  }
+
+  private async resolvePickupDistrict(explicitValue: unknown) {
+    const explicit = Number(explicitValue)
+    if (Number.isInteger(explicit) && explicit > 0) return explicit
+
+    // The GHN shop is the source of truth after administrative-boundary
+    // changes. This avoids keeping a stale district ID in LadiPage settings.
+    const response = await axios.post(`${this.baseUrl}/v2/shop/all`, {
+      offset: 0,
+      limit: 200,
+      client_phone: '',
+    }, {
+      headers: this.tokenHeaders,
+      timeout: 10_000,
+    })
+    const shops = Array.isArray(response.data?.data?.shops)
+      ? response.data.data.shops as Record<string, unknown>[]
+      : []
+    const shopId = Number(this.config.credentials.shopId)
+    const shop = shops.find(item => Number(item._id ?? item.shop_id) === shopId)
+    const liveDistrict = Number(shop?.district_id)
+    if (Number.isInteger(liveDistrict) && liveDistrict > 0) return liveDistrict
+
+    const configured = Number(this.config.settings.fromDistrictId)
+    if (Number.isInteger(configured) && configured > 0) return configured
+    throw new Error('GHN không tìm thấy quận/huyện lấy hàng của Shop ID đã cấu hình')
   }
 }

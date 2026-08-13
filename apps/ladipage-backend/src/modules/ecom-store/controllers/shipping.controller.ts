@@ -98,6 +98,11 @@ export class ShippingController {
     return this.shipping.refresh(orderId)
   }
 
+  @Post('orders/:orderId/retry')
+  retry(@Param('orderId', ParseIntPipe) orderId: number) {
+    return this.shipping.retryPending(orderId)
+  }
+
   @Get('orders/:orderId/events')
   events(@Param('orderId', ParseIntPipe) orderId: number) {
     return this.shipping.events(orderId)

@@ -11,6 +11,7 @@ export interface BuildCustomerCareContextInput {
   actorUserId?: number
   recentMessageLimit?: number
   timelineLimit?: number
+  compactForAi?: boolean
 }
 
 @Injectable()
@@ -69,7 +70,7 @@ export class CustomerCareContextService {
       ? await this.customerCare.getContact(localContactId).catch(() => conversationCustomer)
       : conversationCustomer
 
-    return this.budget.sanitize({
+    const result = this.budget.sanitize({
       conversation,
       customer,
       primaryOrder: primary,
@@ -83,6 +84,39 @@ export class CustomerCareContextService {
       timeline,
       contextVersion: 'cc-context-v1',
       generatedAt: new Date().toISOString(),
+    })
+    return input.compactForAi ? this.compactForAi(result) : result
+  }
+
+  private compactForAi(context: any) {
+    const conversation = context?.conversation ?? {}
+    const customer = context?.customer ?? {}
+    return this.budget.sanitize({
+      conversation: {
+        id: conversation.id ?? conversation.uuid ?? null,
+        status: conversation.status ?? null,
+        channel: conversation.channel ?? conversation.channelProvider ?? null,
+        assignee: conversation.assignee ?? null,
+      },
+      customer: {
+        id: customer.id ?? null,
+        name: customer.name ?? customer.displayName ?? null,
+        phone: customer.phone ?? null,
+        email: customer.email ?? null,
+        tags: Array.isArray(customer.tags) ? customer.tags.slice(0, 20) : [],
+      },
+      primaryOrder: context?.primaryOrder ?? null,
+      recentMessages: (context?.recentMessages ?? []).slice(-20).map((message: any) => ({
+        id: message.id ?? message.uuid ?? null,
+        direction: message.direction ?? null,
+        content: String(message.content ?? '').slice(0, 2_000),
+        createdAt: message.createdAt ?? message.created_at ?? null,
+      })),
+      customerNotes: context?.customerNotes ?? null,
+      productsReferenced: (context?.productsReferenced ?? []).slice(0, 20),
+      timeline: (context?.timeline ?? []).slice(-30),
+      contextVersion: 'cc-context-v1-compact',
+      generatedAt: context?.generatedAt ?? new Date().toISOString(),
     })
   }
 

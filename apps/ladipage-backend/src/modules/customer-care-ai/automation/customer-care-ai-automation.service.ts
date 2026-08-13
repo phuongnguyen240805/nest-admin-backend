@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common'
 import { Interval } from '@nestjs/schedule'
 import { ContextIdFactory, ModuleRef } from '@nestjs/core'
 import { InjectRepository } from '@nestjs/typeorm'
-import { randomUUID } from 'node:crypto'
 import { ClsService } from 'nestjs-cls'
 import { DataSource, Repository } from 'typeorm'
 
@@ -11,6 +10,7 @@ import { DomainOutboxEventEntity } from '../../domain-events/entities/domain-out
 import { CustomerCareAiConfigService } from '../config/customer-care-ai-config.service'
 import { CustomerCareAiOrchestratorService } from '../orchestration/customer-care-ai-orchestrator.service'
 import { CustomerCareAiMetricsService } from '../observability/customer-care-ai-metrics.service'
+import { customerCareAiRetryDelayMs, customerCareAutoReplySafety, normalizeCustomerCareIntent } from './customer-care-ai-automation.policy'
 
 const INBOUND_EVENT = 'customer-care.message.inbound'
 const OUTBOUND_EVENT = 'customer-care.message.outbound'
@@ -47,9 +47,12 @@ export class CustomerCareAiAutomationService {
 
   private async claimOne(): Promise<DomainOutboxEventEntity | null> {
     return this.dataSource.transaction(async (manager) => {
+      const leaseMs = this.intEnv('CUSTOMER_CARE_AI_AUTOMATION_LEASE_MS', 5 * 60_000, 30_000, 30 * 60_000)
       const rows = await manager.query(
         `SELECT "id" FROM "domain_outbox_event"
-         WHERE "event_type" = $1 AND "status" = 'pending' AND "available_at" <= NOW()
+         WHERE "event_type" = $1
+           AND "status" IN ('pending', 'processing')
+           AND "available_at" <= NOW()
          ORDER BY "id" ASC
          FOR UPDATE SKIP LOCKED
          LIMIT 1`,
@@ -62,6 +65,9 @@ export class CustomerCareAiAutomationService {
       if (!event) return null
       event.status = 'processing'
       event.attempts += 1
+      // available_at doubles as a lease deadline while processing. If the
+      // process dies, another worker can safely reclaim the event afterwards.
+      event.availableAt = new Date(Date.now() + leaseMs)
       event.lastError = null
       return repo.save(event)
     })
@@ -107,7 +113,7 @@ export class CustomerCareAiAutomationService {
       })
 
       const allowlist = this.intentAllowlist()
-      const intent = String(result.intent ?? 'UNKNOWN').toUpperCase()
+      const intent = normalizeCustomerCareIntent(result.intent)
       const safety = this.autoReplySafety(result, intent)
       if (result.needsHuman || !allowlist.has(intent) || !String(result.reply ?? '').trim() || !safety.ok) {
         const reason = result.needsHuman
@@ -150,7 +156,9 @@ export class CustomerCareAiAutomationService {
         return customerCare.sendMessage(
           event.aggregateId,
           {
-            clientMessageId: randomUUID(),
+            // The inbound event id is already a UUID and remains stable across
+            // retries, so a crash after provider ACK cannot create a new send.
+            clientMessageId: event.eventId,
             type: 'text',
             content: String(result.reply).trim(),
           },
@@ -207,44 +215,13 @@ export class CustomerCareAiAutomationService {
 
   private intentAllowlist() {
     const raw = process.env.CUSTOMER_CARE_AI_AUTO_REPLY_INTENTS
-      ?? 'ORDER_TRACKING,ORDER_STATUS,PAYMENT_STATUS,SHIPPING_STATUS'
-    return new Set(raw.split(',').map((item) => item.trim().toUpperCase()).filter(Boolean))
+      ?? 'ORDER_DETAILS,ORDER_TRACKING,ORDER_STATUS,PAYMENT_STATUS,SHIPPING_STATUS'
+    return new Set(raw.split(',').map(normalizeCustomerCareIntent).filter(Boolean))
   }
 
   private autoReplySafety(result: any, intent: string): { ok: boolean; reason: string } {
-    const confidence = Number(result?.confidence)
     const minConfidence = this.numberEnv('CUSTOMER_CARE_AI_AUTO_REPLY_MIN_CONFIDENCE', 0.85, 0.5, 1)
-    if (!Number.isFinite(confidence) || confidence < minConfidence) {
-      return { ok: false, reason: `confidence-below-threshold:${Number.isFinite(confidence) ? confidence : 'missing'}` }
-    }
-    if (Array.isArray(result?.proposedActions) && result.proposedActions.length > 0) {
-      return { ok: false, reason: 'action-proposal-requires-human' }
-    }
-
-    const facts = Array.isArray(result?.facts) ? result.facts : []
-    const order = facts.find((fact: any) => fact?.type === 'order')
-    if (!order) return { ok: false, reason: 'authoritative-order-fact-missing' }
-
-    const known = (value: unknown) => {
-      const normalized = String(value ?? '').trim().toUpperCase()
-      return Boolean(normalized) && normalized !== 'UNKNOWN'
-    }
-    if (intent === 'ORDER_STATUS') {
-      return known(order.businessStatus)
-        ? { ok: true, reason: 'ok' }
-        : { ok: false, reason: 'business-status-unknown' }
-    }
-    if (intent === 'PAYMENT_STATUS') {
-      return known(order.paymentStatus)
-        ? { ok: true, reason: 'ok' }
-        : { ok: false, reason: 'payment-status-unknown' }
-    }
-    if (intent === 'SHIPPING_STATUS' || intent === 'ORDER_TRACKING') {
-      return known(order.fulfillmentStatus)
-        ? { ok: true, reason: 'ok' }
-        : { ok: false, reason: 'fulfillment-status-unknown' }
-    }
-    return { ok: false, reason: `unsupported-auto-reply-intent:${intent}` }
+    return customerCareAutoReplySafety(result, intent, minConfidence)
   }
 
   private numberEnv(name: string, fallback: number, min: number, max: number) {
@@ -276,7 +253,7 @@ export class CustomerCareAiAutomationService {
   private async retryOrDead(event: DomainOutboxEventEntity, error: unknown) {
     const maxAttempts = this.intEnv('CUSTOMER_CARE_AI_AUTOMATION_MAX_ATTEMPTS', 3, 1, 10)
     const dead = event.attempts >= maxAttempts
-    const delayMs = Math.min(60_000, Math.max(5_000, 5_000 * (2 ** Math.max(0, event.attempts - 1))))
+    const delayMs = customerCareAiRetryDelayMs(event.attempts, error)
     await this.events.update({ id: event.id }, {
       status: dead ? 'dead' : 'pending',
       availableAt: dead ? event.availableAt : new Date(Date.now() + delayMs),
@@ -284,4 +261,5 @@ export class CustomerCareAiAutomationService {
       lastError: error instanceof Error ? error.message : String(error),
     })
   }
+
 }

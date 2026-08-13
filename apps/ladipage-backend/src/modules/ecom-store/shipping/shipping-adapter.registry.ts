@@ -1,8 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 
+import { AhamoveShippingAdapter } from './ahamove.adapter'
+import { BestExpressShippingAdapter } from './best-express.adapter'
 import { GhnShippingAdapter } from './ghn.adapter'
 import { GhtkShippingAdapter } from './ghtk.adapter'
-import { PartnerHttpShippingAdapter } from './partner-http.adapter'
+import { JtExpressShippingAdapter } from './jt-express.adapter'
+import { ViettelPostShippingAdapter } from './viettel-post.adapter'
+import { VnpostShippingAdapter } from './vnpost.adapter'
 import {
   ShippingAdapter,
   type ShippingIntegrationConfig,
@@ -18,11 +22,11 @@ export class ShippingAdapterRegistry {
   private readonly factories = new Map<ShippingProvider, ShippingAdapterFactory>([
     ['ghn', (config) => new GhnShippingAdapter(config)],
     ['ghtk', (config) => new GhtkShippingAdapter(config)],
-    ['viettel_post', (config) => new PartnerHttpShippingAdapter(config, 'viettel_post', 'Viettel Post')],
-    ['jt_express', (config) => new PartnerHttpShippingAdapter(config, 'jt_express', 'J&T Express')],
-    ['vnpost', (config) => new PartnerHttpShippingAdapter(config, 'vnpost', 'VNPost')],
-    ['best_express', (config) => new PartnerHttpShippingAdapter(config, 'best_express', 'BEST Express')],
-    ['ahamove', (config) => new PartnerHttpShippingAdapter(config, 'ahamove', 'Ahamove')],
+    ['viettel_post', (config) => new ViettelPostShippingAdapter(config)],
+    ['jt_express', (config) => new JtExpressShippingAdapter(config)],
+    ['vnpost', (config) => new VnpostShippingAdapter(config)],
+    ['best_express', (config) => new BestExpressShippingAdapter(config)],
+    ['ahamove', (config) => new AhamoveShippingAdapter(config)],
   ])
 
   registeredProviders(): ShippingProvider[] {

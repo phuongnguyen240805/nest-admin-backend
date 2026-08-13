@@ -1,4 +1,9 @@
 import { ShippingAdapterRegistry } from './shipping-adapter.registry'
+import { AhamoveShippingAdapter } from './ahamove.adapter'
+import { BestExpressShippingAdapter } from './best-express.adapter'
+import { JtExpressShippingAdapter } from './jt-express.adapter'
+import { ViettelPostShippingAdapter } from './viettel-post.adapter'
+import { VnpostShippingAdapter } from './vnpost.adapter'
 
 describe('ShippingAdapterRegistry', () => {
   it('registers every carrier exposed by the shipping domain', () => {
@@ -38,5 +43,23 @@ describe('ShippingAdapterRegistry', () => {
       cancelShipment: true,
       tracking: true,
     })
+  })
+
+  it.each([
+    ['viettel_post', ViettelPostShippingAdapter],
+    ['jt_express', JtExpressShippingAdapter],
+    ['vnpost', VnpostShippingAdapter],
+    ['best_express', BestExpressShippingAdapter],
+    ['ahamove', AhamoveShippingAdapter],
+  ] as const)('does not route %s through another carrier adapter', (provider, AdapterClass) => {
+    const adapter = new ShippingAdapterRegistry().create({
+      id: 1,
+      provider,
+      enabled: true,
+      credentials: {},
+      settings: {},
+    })
+
+    expect(adapter).toBeInstanceOf(AdapterClass)
   })
 })

@@ -14,6 +14,9 @@ export class ShipmentEntity extends TenantScopedEntity {
   @Column({ type: 'int' })
   integrationId: number
 
+  @Column({ name: 'quote_id', type: 'int', nullable: true })
+  quoteId: number | null
+
   @Column({ type: 'varchar', length: 20 })
   provider: ShippingProvider
 
@@ -34,6 +37,15 @@ export class ShipmentEntity extends TenantScopedEntity {
 
   @Column({ type: 'varchar', length: 50, default: 'CREATED' })
   status: string
+
+  @Column({ name: 'attempt_count', type: 'int', default: 0 })
+  attemptCount: number
+
+  @Column({ name: 'last_error', type: 'text', nullable: true })
+  lastError: string | null
+
+  @Column({ name: 'request_payload', type: 'jsonb', default: () => "'{}'" })
+  requestPayload: Record<string, unknown>
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   providerStatus: string | null

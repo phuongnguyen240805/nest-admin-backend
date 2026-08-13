@@ -48,6 +48,21 @@ export class OrderEntity extends TenantScopedEntity {
   @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
   total: number
 
+  @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
+  subtotal: number
+
+  @Column({ name: 'shipping_fee', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  shippingFee: number
+
+  @Column({ type: 'decimal', precision: 14, scale: 2, default: 0 })
+  discount: number
+
+  @Column({ name: 'shipping_payer', type: 'varchar', length: 20, default: 'customer' })
+  shippingPayer: string
+
+  @Column({ name: 'shipping_quote_id', type: 'int', nullable: true })
+  shippingQuoteId: number | null
+
   @Column({ type: 'varchar', length: 50, nullable: true })
   paymentMethod: string | null
 
