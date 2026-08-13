@@ -93,7 +93,7 @@ export class ShippingService extends TenantScopedService {
     const raw = (result.fee ?? result) as Record<string, unknown>
     return {
       provider: dto.provider,
-      total: Number(raw.total ?? raw.fee ?? raw.delivery ?? 0),
+      total: Number(raw.total ?? raw.total_fee ?? raw.TotalServiceCost ?? raw.fee ?? raw.delivery ?? raw.price ?? 0),
       serviceFee: Number(raw.service_fee ?? raw.ship_fee_only ?? 0),
       insuranceFee: Number(raw.insurance_fee ?? 0),
       raw,
@@ -139,7 +139,11 @@ export class ShippingService extends TenantScopedService {
     )
     const providerOrder = (result.order ?? result) as Record<string, unknown>
     const trackingCode = String(
-      providerOrder.order_code ??
+        providerOrder.order_code ??
+        providerOrder.orderCode ??
+        providerOrder.OrderCode ??
+        providerOrder.billCode ??
+        providerOrder.trackingCode ??
         providerOrder.label ??
         providerOrder.label_id ??
         providerOrder.tracking_id ??
@@ -147,11 +151,13 @@ export class ShippingService extends TenantScopedService {
     )
     const providerOrderId = String(
       providerOrder.order_id ??
+        providerOrder.orderId ??
+        providerOrder.OrderId ??
         providerOrder.partner_id ??
         providerOrder.id ??
         trackingCode,
     )
-    const providerStatus = String(providerOrder.status ?? 'CREATED')
+    const providerStatus = String(providerOrder.status ?? providerOrder.orderStatus ?? providerOrder.Status ?? 'CREATED')
     const normalizedStatus = normalizeShipmentStatus(providerStatus, dto.provider)
     const shipment = this.shipments.create({
       ...(existing ?? {}),
@@ -170,7 +176,7 @@ export class ShippingService extends TenantScopedService {
       serviceName: dto.serviceName ?? null,
       status: normalizedStatus,
       providerStatus,
-      fee: Number(dto.fee ?? providerOrder.total_fee ?? providerOrder.fee ?? 0),
+      fee: Number(dto.fee ?? providerOrder.total_fee ?? providerOrder.TotalServiceCost ?? providerOrder.fee ?? providerOrder.price ?? 0),
       codAmount: Number(dto.codAmount ?? order.total),
       recipientName: dto.recipientName,
       recipientPhone: dto.recipientPhone,
@@ -287,13 +293,24 @@ export class ShippingService extends TenantScopedService {
     }
     const integration = await this.integrations.findOneByOrFail({
       tenantId: this.requireTenantId(),
-      provider: 'ghtk',
+      provider: dto.provider,
     })
     const pickup = integration.settings.pickup as
       | Record<string, unknown>
       | undefined
-    if (!pickup?.province || !pickup?.district) {
+    if (dto.provider === 'ghtk' && (!pickup?.province || !pickup?.district)) {
       throw new BadRequestException('GHTK pickup address is not configured')
+    }
+    if (dto.provider !== 'ghtk') {
+      return {
+        provider: dto.provider,
+        recipient: dto.address,
+        pickup: pickup ?? integration.settings.pickup,
+        parcel,
+        insuranceValue: dto.insuranceValue ?? 0,
+        serviceId: dto.serviceId,
+        serviceTypeId: dto.serviceTypeId,
+      }
     }
     return {
       pick_province: pickup.province,
@@ -352,6 +369,30 @@ export class ShippingService extends TenantScopedService {
       }
     }
     const pickup = settings.pickup as Record<string, unknown> | undefined
+    if (dto.provider !== 'ghtk') {
+      return {
+        provider: dto.provider,
+        referenceCode: order.code,
+        recipient: {
+          name: dto.recipientName,
+          phone: dto.recipientPhone,
+          ...dto.address,
+        },
+        pickup: pickup ?? settings.pickup,
+        parcel,
+        products: items.map((item) => ({
+          id: item.productId ? String(item.productId) : undefined,
+          name: item.productName,
+          quantity: item.quantity,
+          price: Number(item.unitPrice),
+        })),
+        codAmount: dto.codAmount ?? Number(order.total),
+        insuranceValue: Number(order.total),
+        serviceId: dto.serviceId,
+        serviceTypeId: dto.serviceTypeId,
+        note: dto.note ?? order.notes ?? '',
+      }
+    }
     if (!pickup?.address || !pickup?.province || !pickup?.district || !pickup?.phone) {
       throw new BadRequestException('GHTK pickup address is not configured')
     }

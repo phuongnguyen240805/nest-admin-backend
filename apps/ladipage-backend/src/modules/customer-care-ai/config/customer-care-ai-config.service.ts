@@ -28,19 +28,30 @@ export class CustomerCareAiConfigService {
     const tenantId = this.requireTenantId()
     let row = await this.configs.findOne({ where: { tenantId } })
     if (row) return row
+    const automationEnabled = process.env.CUSTOMER_CARE_AI_AUTOMATION_ENABLED === 'true'
     row = this.configs.create({
       tenantId,
       enabled: process.env.CUSTOMER_CARE_AI_ENABLED !== 'false',
-      mode: 'copilot',
+      mode: automationEnabled ? 'autopilot' : 'copilot',
       model: process.env.CUSTOMER_CARE_AI_MODEL ?? null,
       temperature: Number(process.env.CUSTOMER_CARE_AI_TEMPERATURE ?? 0.2),
       maxOutputTokens: Number(process.env.CUSTOMER_CARE_AI_MAX_OUTPUT_TOKENS ?? 1200),
       promptVersion: CUSTOMER_CARE_PROMPT_VERSION,
       dailyBudget: null,
-      autoReplyEnabled: false,
+      autoReplyEnabled: automationEnabled,
       autoActionEnabled: false,
     })
-    return this.configs.save(row)
+    try {
+      return await this.configs.save(row)
+    } catch (error: any) {
+      // Multiple backend replicas can receive the first message for a tenant
+      // concurrently. Reuse the row created by the winning replica.
+      if (error?.code === '23505') {
+        const existing = await this.configs.findOne({ where: { tenantId } })
+        if (existing) return existing
+      }
+      throw error
+    }
   }
 
   async update(input: UpdateCustomerCareAiConfigInput) {

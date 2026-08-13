@@ -68,10 +68,11 @@ export class ShippingIntegrationService extends TenantScopedService {
 
   async save(provider: ShippingProvider, dto: SaveShippingIntegrationDto) {
     this.requireRegisteredProvider(provider)
+    this.validateSettings(dto.settings)
     const tenantId = this.requireTenantId()
     let row = await this.repository.findOne({ where: { tenantId, provider } })
     const previous = row ? this.decrypt(row) : {}
-    const credentials = {
+    const credentials: Record<string, string> = {
       ...previous,
       ...(dto.token?.trim() && dto.token !== '••••'
         ? { token: dto.token.trim() }
@@ -79,8 +80,15 @@ export class ShippingIntegrationService extends TenantScopedService {
       ...(dto.shopId?.trim() && dto.shopId !== '••••'
         ? { shopId: dto.shopId.trim() }
         : {}),
+      ...this.credentialPatch(dto, 'apiAccount'),
+      ...this.credentialPatch(dto, 'customerCode'),
+      ...this.credentialPatch(dto, 'privateKey'),
+      ...this.credentialPatch(dto, 'username'),
+      ...this.credentialPatch(dto, 'password'),
     }
-    if (!credentials.token) throw new BadRequestException('Token is required')
+    if (!credentials.token && !credentials.apiAccount && !credentials.username) {
+      throw new BadRequestException('Provider credentials are required')
+    }
     if (provider === 'ghn' && !credentials.shopId) {
       throw new BadRequestException('GHN shopId is required')
     }
@@ -154,6 +162,42 @@ export class ShippingIntegrationService extends TenantScopedService {
       throw new BadRequestException(
         `Nhà vận chuyển ${String(provider)} chưa có adapter production`,
       )
+    }
+  }
+
+  private credentialPatch(
+    dto: SaveShippingIntegrationDto,
+    key: 'apiAccount' | 'customerCode' | 'privateKey' | 'username' | 'password',
+  ) {
+    const value = dto[key]?.trim()
+    return value && value !== '••••' ? { [key]: value } : {}
+  }
+
+  private validateSettings(settings?: Record<string, unknown>) {
+    if (!settings) return
+    if (settings.baseUrl) {
+      let url: URL
+      try {
+        url = new URL(String(settings.baseUrl))
+      } catch {
+        throw new BadRequestException('Shipping baseUrl is invalid')
+      }
+      const host = url.hostname.toLowerCase()
+      const privateHost = host === 'localhost'
+        || host === '127.0.0.1'
+        || host === '::1'
+        || host.startsWith('10.')
+        || host.startsWith('192.168.')
+        || /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+      if (url.protocol !== 'https:' || privateHost) {
+        throw new BadRequestException('Shipping baseUrl must be a public HTTPS URL')
+      }
+    }
+    const endpoints = settings.endpoints as Record<string, unknown> | undefined
+    for (const value of Object.values(endpoints ?? {})) {
+      if (value && !String(value).startsWith('/')) {
+        throw new BadRequestException('Shipping endpoints must be relative paths')
+      }
     }
   }
 }

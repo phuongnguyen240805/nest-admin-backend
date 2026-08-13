@@ -32,7 +32,11 @@ import { CreateOrderDto } from '../ecom-store/dto/order.dto';
 import { OrderService } from '../ecom-store/services/order.service';
 import { DomainEventOutboxService } from '../domain-events/domain-event-outbox.service';
 
-import { FacebookConnectorClient, LibreDeskClient, ZaloConnectorClient } from './customer-care.clients';
+import {
+  FacebookConnectorClient,
+  LibreDeskClient,
+  ZaloConnectorClient,
+} from './customer-care.clients';
 import {
   ContactPatchDto,
   ConversationOrderLinkDto,
@@ -89,7 +93,9 @@ interface LibreDeskConversation {
   priority?: string | null;
   assigned_user_id?: number | null;
   assigned_team_id?: number | null;
-  tags?: Array<string | { id?: number | string; name?: string; color?: string }>;
+  tags?: Array<
+    string | { id?: number | string; name?: string; color?: string }
+  >;
   meta?: {
     facebook?: {
       account_id?: string;
@@ -253,15 +259,21 @@ export class CustomerCareService {
   async createChannel(dto: CreateChannelDto) {
     const tenantId = this.getTenantId();
     const connectionKey = randomUUID();
-    const row = await this.channels.save(this.channels.create({
+    const row = await this.channels.save(
+      this.channels.create({
       tenantId,
       connectionKey,
       provider: dto.provider,
       externalAccountId: `pending:${connectionKey}`,
-      name: dto.name?.trim() || (dto.provider === 'facebook_personal' ? 'Facebook cá nhân' : 'Zalo cá nhân'),
+        name:
+          dto.name?.trim() ||
+          (dto.provider === 'facebook_personal'
+            ? 'Facebook cá nhân'
+            : 'Zalo cá nhân'),
       enabled: true,
       metadata: {},
-    }));
+      }),
+    );
     try {
       await this.ensureLibreDeskInbox(row);
       return this.mapChannel(row, { phase: 'disconnected' });
@@ -273,24 +285,85 @@ export class CustomerCareService {
 
   async deleteChannel(id: number) {
     const row = await this.getChannel(id);
-    await this.disconnectChannel(id).catch(() => undefined);
+    const client =
+      row.provider === 'facebook_personal' ? this.facebook : this.zalo;
+
+    // Closing the login dialog can race the final status poll. Preserve a
+    // draft whose connector is already authenticated and reconcile its stable
+    // social identity instead of deleting the newly connected account.
+    if (row.externalAccountId.startsWith('pending:')) {
+      const status = await client
+        .json<Record<string, unknown>>(
+          `/sessions/${row.connectionKey}/status`,
+          {},
+          true,
+        )
+        .catch(() => undefined);
+      if (status && String(status.phase || '').toLowerCase() === 'connected') {
+        const resolved = await this.reconcileChannelIdentity(row, status);
+        return {
+          deleted: false,
+          preserved: true,
+          channel: this.mapChannel(resolved.row, resolved.status),
+        };
+      }
+    }
+
+    const hasHistory = await this.conversations.exists({
+      where: { tenantId: row.tenantId, channelAccountId: row.id },
+    });
+    // Never hard-delete an account that owns conversations. The channel FK is
+    // ON DELETE CASCADE, so removing it would also remove customer-care history.
+    if (hasHistory) return this.disconnectChannel(id);
+
+    await client
+      .json(`/sessions/${row.connectionKey}`, { method: 'DELETE' }, true)
+      .catch(() => undefined);
     const inboxId = row.metadata?.libreDeskInboxId;
     if (typeof inboxId === 'number' || typeof inboxId === 'string') {
-      await this.libreDesk.request(`/inboxes/${encodeURIComponent(String(inboxId))}`, { method: 'DELETE' }).catch(() => undefined);
+      await this.libreDesk
+        .request(`/inboxes/${encodeURIComponent(String(inboxId))}`, {
+          method: 'DELETE',
+        })
+        .catch(() => undefined);
     }
     await this.channels.remove(row);
     return { deleted: true };
   }
 
+  private async setLibreDeskInboxEnabled(
+    row: CustomerCareChannelAccountEntity,
+    enabled: boolean,
+  ) {
+    const inboxId = row.metadata?.libreDeskInboxId;
+    if (typeof inboxId !== 'number' && typeof inboxId !== 'string') return;
+    const path = `/inboxes/${encodeURIComponent(String(inboxId))}`;
+    const inbox = await this.libreDesk.request<Record<string, unknown>>(path);
+    await this.libreDesk.request(path, {
+      method: 'PUT',
+      body: JSON.stringify({ ...inbox, enabled }),
+    });
+  }
+
   private async ensureLibreDeskInbox(row: CustomerCareChannelAccountEntity) {
     const facebook = row.provider === 'facebook_personal';
-    const connectorToken = this.config.get<string>(facebook
+    const connectorToken =
+      this.config.get<string>(
+        facebook
       ? 'CUSTOMER_CARE_FACEBOOK_CONNECTOR_TOKEN'
-      : 'CUSTOMER_CARE_ZALO_CONNECTOR_TOKEN') || '';
-    if (!connectorToken) throw new ServiceUnavailableException('Customer Care connector token is not configured');
-    const connectorUrl = this.config.get<string>(facebook
+          : 'CUSTOMER_CARE_ZALO_CONNECTOR_TOKEN',
+      ) || '';
+    if (!connectorToken)
+      throw new ServiceUnavailableException(
+        'Customer Care connector token is not configured',
+      );
+    const connectorUrl =
+      this.config.get<string>(
+        facebook
       ? 'CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL'
-      : 'CUSTOMER_CARE_ZALO_CONNECTOR_URL') || (facebook
+          : 'CUSTOMER_CARE_ZALO_CONNECTOR_URL',
+      ) ||
+      (facebook
       ? 'http://facebook-connector:3200'
       : 'http://zalo-connector:3100');
     const inboxPayload = {
@@ -313,10 +386,12 @@ export class CustomerCareService {
     const inbox = await this.libreDesk.request<Record<string, unknown>>(
       existingInboxId
         ? `/inboxes/${encodeURIComponent(String(existingInboxId))}`
-        : '/inboxes', {
+        : '/inboxes',
+      {
       method: existingInboxId ? 'PUT' : 'POST',
       body: JSON.stringify(inboxPayload),
-    });
+      },
+    );
     if (!existingInboxId) {
       row.metadata = { ...row.metadata, libreDeskInboxId: inbox.id };
       await this.channels.save(row);
@@ -324,35 +399,54 @@ export class CustomerCareService {
   }
 
   private connectorAccountId(status: Record<string, unknown>) {
-    return typeof status.account_id === 'string' ? status.account_id.trim() : '';
+    return typeof status.account_id === 'string'
+      ? status.account_id.trim()
+      : '';
   }
 
   private connectorProfileName(status: Record<string, unknown>) {
-    const root = status.profile && typeof status.profile === 'object'
+    const root =
+      status.profile && typeof status.profile === 'object'
       ? (status.profile as Record<string, unknown>)
       : {};
     const nested = [root.profile, root.data, root.user].find(
       (value) => value && typeof value === 'object',
     ) as Record<string, unknown> | undefined;
     const source = { ...root, ...(nested || {}) };
-    for (const key of ['displayName', 'display_name', 'name', 'username', 'zaloName']) {
+    for (const key of [
+      'displayName',
+      'display_name',
+      'name',
+      'username',
+      'zaloName',
+    ]) {
       const value = source[key];
       if (typeof value === 'string' && value.trim()) return value.trim();
     }
     return '';
   }
 
-  private shouldReplaceGeneratedChannelName(row: CustomerCareChannelAccountEntity) {
-    const value = String(row.name || '').trim().toLowerCase();
-    return !value ||
+  private shouldReplaceGeneratedChannelName(
+    row: CustomerCareChannelAccountEntity,
+  ) {
+    const value = String(row.name || '')
+      .trim()
+      .toLowerCase();
+    return (
+      !value ||
       value === 'zalo cá nhân' ||
       value === 'facebook cá nhân' ||
       value === 'zalo cskh' ||
       value === 'facebook cskh' ||
-      /\b(demo|test|sample)\b/i.test(value);
+      /\b(demo|test|sample)\b/i.test(value)
+    );
   }
 
-  private async cleanupDuplicateChannel(row: CustomerCareChannelAccountEntity, duplicateOfId: number) {
+  private async cleanupDuplicateChannel(
+    row: CustomerCareChannelAccountEntity,
+    duplicateOfId: number,
+    options: { disconnectSession?: boolean } = {},
+  ) {
     row.enabled = false;
     row.metadata = {
       ...(row.metadata || {}),
@@ -365,10 +459,39 @@ export class CustomerCareService {
     const inboxId = row.metadata?.libreDeskInboxId;
     if (typeof inboxId === 'number' || typeof inboxId === 'string') {
       await this.libreDesk
-        .request(`/inboxes/${encodeURIComponent(String(inboxId))}`, { method: 'DELETE' })
+        .request(`/inboxes/${encodeURIComponent(String(inboxId))}`, {
+          method: 'DELETE',
+        })
         .catch(() => undefined);
     }
-    const client = row.provider === 'facebook_personal' ? this.facebook : this.zalo;
+    if (options.disconnectSession !== false) {
+      const client =
+        row.provider === 'facebook_personal' ? this.facebook : this.zalo;
+      await client
+        .json(`/sessions/${row.connectionKey}`, { method: 'DELETE' }, true)
+        .catch(() => undefined);
+    }
+  }
+
+  private async retirePendingChannel(row: CustomerCareChannelAccountEntity) {
+    row.enabled = false;
+    row.metadata = {
+      ...(row.metadata || {}),
+      disabledReason: 'abandoned_login_draft',
+      disabledAt: new Date().toISOString(),
+    };
+    await this.channels.save(row).catch(() => undefined);
+
+    const inboxId = row.metadata?.libreDeskInboxId;
+    if (typeof inboxId === 'number' || typeof inboxId === 'string') {
+      await this.libreDesk
+        .request(`/inboxes/${encodeURIComponent(String(inboxId))}`, {
+          method: 'DELETE',
+        })
+        .catch(() => undefined);
+    }
+    const client =
+      row.provider === 'facebook_personal' ? this.facebook : this.zalo;
     await client
       .json(`/sessions/${row.connectionKey}`, { method: 'DELETE' }, true)
       .catch(() => undefined);
@@ -396,6 +519,46 @@ export class CustomerCareService {
     });
 
     if (duplicate && duplicate.id !== row.id) {
+      const client =
+        row.provider === 'facebook_personal' ? this.facebook : this.zalo;
+      const incomingPhase = String(status.phase || '').toLowerCase();
+      let canonicalStatus: Record<string, unknown> = await client
+        .json<
+          Record<string, unknown>
+        >(`/sessions/${duplicate.connectionKey}/status`, {}, true)
+        .catch(() => ({}));
+      let adopted = false;
+
+      // A user can log the same social account into a fresh draft while the
+      // canonical row is disconnected. Move that authenticated connector
+      // session back to the canonical connection key so its inbox and all
+      // existing conversation links keep the same channel id.
+      if (
+        incomingPhase === 'connected' &&
+        String(canonicalStatus.phase || '').toLowerCase() !== 'connected'
+      ) {
+        try {
+          canonicalStatus = await client.json<Record<string, unknown>>(
+            `/sessions/${row.connectionKey}/adopt`,
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                target_connection_key: duplicate.connectionKey,
+              }),
+            },
+            true,
+          );
+          adopted = true;
+        } catch (error) {
+          // Never delete the only connected session. Keep the fresh row for
+          // this response and retry reconciliation on a later channel probe.
+          this.logger.warn(
+            `Could not adopt ${row.provider} session ${row.connectionKey} into ${duplicate.connectionKey}: ${String(error)}`,
+          );
+          return { row, status, duplicate: false };
+        }
+      }
+
       let duplicateChanged = false;
       if (!duplicate.enabled) {
         duplicate.enabled = true;
@@ -415,13 +578,14 @@ export class CustomerCareService {
         duplicateChanged = true;
       }
       if (duplicateChanged) await this.channels.save(duplicate);
-      await this.cleanupDuplicateChannel(row, duplicate.id);
-      const canonicalClient = duplicate.provider === 'facebook_personal' ? this.facebook : this.zalo;
-      const canonicalStatus = ['zalo_personal', 'facebook_personal'].includes(duplicate.provider)
-        ? await canonicalClient
-            .json<Record<string, unknown>>(`/sessions/${duplicate.connectionKey}/status`, {}, true)
-            .catch(() => ({}))
-        : {};
+      await this.ensureLibreDeskInbox(duplicate).catch((error) => {
+        this.logger.warn(
+          `Could not restore LibreDesk inbox for channel ${duplicate.id}: ${String(error)}`,
+        );
+      });
+      await this.cleanupDuplicateChannel(row, duplicate.id, {
+        disconnectSession: !adopted,
+      });
       return {
         row: duplicate,
         status: {
@@ -439,11 +603,25 @@ export class CustomerCareService {
       changed = true;
     }
     const profileName = this.connectorProfileName(status);
-    if (profileName && this.shouldReplaceGeneratedChannelName(row) && row.name !== profileName) {
+    if (
+      profileName &&
+      this.shouldReplaceGeneratedChannelName(row) &&
+      row.name !== profileName
+    ) {
       row.name = profileName;
       changed = true;
     }
     if (changed) await this.channels.save(row);
+    if (
+      String(status.phase || '').toLowerCase() === 'connected' &&
+      (changed || !row.metadata?.libreDeskInboxId)
+    ) {
+      await this.ensureLibreDeskInbox(row).catch((error) => {
+        this.logger.warn(
+          `Could not ensure LibreDesk inbox for connected channel ${row.id}: ${String(error)}`,
+        );
+      });
+    }
     return { row, status, duplicate: false };
   }
 
@@ -453,12 +631,26 @@ export class CustomerCareService {
       where: { tenantId, enabled: true },
       order: { id: 'ASC' },
     });
+    const activeRows: CustomerCareChannelAccountEntity[] = [];
+    for (const row of rows) {
+      const abandonedDraft =
+        row.externalAccountId.startsWith('pending:') &&
+        Date.now() - row.createdAt.getTime() > 30 * 60_000;
+      if (abandonedDraft) {
+        await this.retirePendingChannel(row);
+      } else {
+        activeRows.push(row);
+      }
+    }
     const statuses = await Promise.all(
-      rows.map(async (row) => {
-        const client = row.provider === 'facebook_personal' ? this.facebook : this.zalo;
+      activeRows.map(async (row) => {
+        const client =
+          row.provider === 'facebook_personal' ? this.facebook : this.zalo;
         return ['zalo_personal', 'facebook_personal'].includes(row.provider)
           ? client
-              .json<Record<string, unknown>>(`/sessions/${row.connectionKey}/status`, {}, true)
+              .json<
+                Record<string, unknown>
+              >(`/sessions/${row.connectionKey}/status`, {}, true)
               .catch((error) => ({ phase: 'error', last_error: String(error) }))
           : {};
       }),
@@ -473,8 +665,10 @@ export class CustomerCareService {
       status: Record<string, unknown>;
       duplicate: boolean;
     }> = [];
-    for (let index = 0; index < rows.length; index += 1) {
-      probed.push(await this.reconcileChannelIdentity(rows[index], statuses[index]));
+    for (let index = 0; index < activeRows.length; index += 1) {
+      probed.push(
+        await this.reconcileChannelIdentity(activeRows[index], statuses[index]),
+      );
     }
 
     const seenRows = new Set<number>();
@@ -487,18 +681,11 @@ export class CustomerCareService {
 
       const statusAccountId = this.connectorAccountId(resolved.status);
       const pendingIdentity = row.externalAccountId.startsWith('pending:');
-      const phase = String(resolved.status.phase || 'disconnected').toLowerCase();
-      // Keep a freshly-created pending row visible for the QR/login flow, but
-      // stop returning abandoned drafts from older sessions. New UI versions
-      // delete a draft immediately when the connect dialog is cancelled.
-      const stalePending =
-        pendingIdentity &&
-        !['starting', 'qr_ready', 'connecting', 'connected'].includes(phase) &&
-        Date.now() - row.createdAt.getTime() > 30 * 60_000;
-      if (stalePending) continue;
-
-      const identity = statusAccountId || (!pendingIdentity ? row.externalAccountId : '');
-      const identityKey = identity ? `${row.provider}:${identity}` : `${row.provider}:row:${row.id}`;
+      const identity =
+        statusAccountId || (!pendingIdentity ? row.externalAccountId : '');
+      const identityKey = identity
+        ? `${row.provider}:${identity}`
+        : `${row.provider}:row:${row.id}`;
       if (seenIdentities.has(identityKey)) continue;
 
       seenRows.add(row.id);
@@ -517,8 +704,13 @@ export class CustomerCareService {
 
   async getChannelStatus(id: number) {
     const row = await this.getChannel(id);
-    const client = row.provider === 'facebook_personal' ? this.facebook : this.zalo;
-    const status = await client.json<Record<string, unknown>>(`/sessions/${row.connectionKey}/status`, {}, true);
+    const client =
+      row.provider === 'facebook_personal' ? this.facebook : this.zalo;
+    const status = await client.json<Record<string, unknown>>(
+      `/sessions/${row.connectionKey}/status`,
+      {},
+      true,
+    );
     const resolved = await this.reconcileChannelIdentity(row, status);
     return this.mapChannel(resolved.row, resolved.status);
   }
@@ -526,7 +718,9 @@ export class CustomerCareService {
   async resetChannel(id: number) {
     const row = await this.getChannel(id);
     if (row.provider !== 'zalo_personal')
-      throw new BadRequestException('Facebook does not support QR session reset');
+      throw new BadRequestException(
+        'Facebook does not support QR session reset',
+      );
     await this.ensureLibreDeskInbox(row);
     const status = await this.zalo.json<Record<string, unknown>>(
       `/sessions/${row.connectionKey}/reset`,
@@ -542,18 +736,42 @@ export class CustomerCareService {
 
   async disconnectChannel(id: number) {
     const row = await this.getChannel(id);
-    const client = row.provider === 'facebook_personal' ? this.facebook : this.zalo;
-    const status = await client.json<Record<string, unknown>>(
-      `/sessions/${row.connectionKey}`,
-      { method: 'DELETE' },
-      true,
+    const client =
+      row.provider === 'facebook_personal' ? this.facebook : this.zalo;
+    let connectorError: string | undefined;
+    await client
+      .json<
+        Record<string, unknown>
+      >(`/sessions/${row.connectionKey}`, { method: 'DELETE' }, true)
+      .catch((error) => {
+        // Logout must still close the local tenant boundary when a connector
+        // is temporarily unavailable. Disabled rows reject future webhooks.
+        connectorError = error instanceof Error ? error.message : String(error);
+      });
+
+    row.enabled = false;
+    row.metadata = {
+      ...(row.metadata || {}),
+      loggedOutAt: new Date().toISOString(),
+      ...(connectorError ? { connectorLogoutError: connectorError } : {}),
+    };
+    await this.channels.save(row);
+    await this.setLibreDeskInboxEnabled(row, false).catch((error) => {
+      this.logger.warn(
+        `Unable to disable LibreDesk inbox for channel ${row.id}: ${error instanceof Error ? error.message : String(error)}`,
     );
+    });
     await this.publish(row.tenantId, 'channel.status.changed', String(row.id), {
       channelId: String(row.id),
       phase: 'disconnected',
-      ...status,
+      removed: true,
     });
-    return status;
+    return {
+      removed: true,
+      channelId: String(row.id),
+      phase: 'disconnected',
+      connectorCleanupPending: Boolean(connectorError),
+    };
   }
 
   async getChannelQr(id: number) {
@@ -568,17 +786,27 @@ export class CustomerCareService {
     if (row.provider !== 'facebook_personal')
       throw new BadRequestException('This channel is not a Facebook account');
     if (!/(?:^|;\s*)c_user=/.test(cookie) || !/(?:^|;\s*)xs=/.test(cookie))
-      throw new BadRequestException('Facebook cookie must contain c_user and xs');
+      throw new BadRequestException(
+        'Facebook cookie must contain c_user and xs',
+      );
     await this.ensureLibreDeskInbox(row);
-    const status = await this.facebook.json<Record<string, unknown>>(`/sessions/${row.connectionKey}`, {
+    const status = await this.facebook.json<Record<string, unknown>>(
+      `/sessions/${row.connectionKey}`,
+      {
       method: 'POST',
       body: JSON.stringify({ cookie }),
-    });
+      },
+    );
     const resolved = await this.reconcileChannelIdentity(row, status);
-    await this.publish(resolved.row.tenantId, 'channel.status.changed', String(resolved.row.id), {
+    await this.publish(
+      resolved.row.tenantId,
+      'channel.status.changed',
+      String(resolved.row.id),
+      {
       channelId: String(resolved.row.id),
       ...resolved.status,
-    });
+      },
+    );
     return this.mapChannel(resolved.row, resolved.status);
   }
 
@@ -602,7 +830,9 @@ export class CustomerCareService {
     const pageSize = Math.min(100, query.limit || 50);
     const [allLinks, agents] = await Promise.all([
       this.conversations.find({
-        where: query.channelAccountId ? { tenantId, channelAccountId: query.channelAccountId } : { tenantId },
+        where: query.channelAccountId
+          ? { tenantId, channelAccountId: query.channelAccountId }
+          : { tenantId },
         order: { lastMessageAt: 'DESC' },
       }),
       this.getAgentsRaw().catch(() => []),
@@ -630,7 +860,9 @@ export class CustomerCareService {
     const identities = contactIds.length
       ? await this.contacts.find({ where: { tenantId, id: In(contactIds) } })
       : [];
-    const channelIds = [...new Set(links.map((link) => link.channelAccountId).filter(Boolean))];
+    const channelIds = [
+      ...new Set(links.map((link) => link.channelAccountId).filter(Boolean)),
+    ];
     const channelRows = channelIds.length
       ? await this.channels.find({ where: { tenantId, id: In(channelIds) } })
       : [];
@@ -714,7 +946,9 @@ export class CustomerCareService {
         })
       : null;
     const channelAccount = link.channelAccountId
-      ? await this.channels.findOne({ where: { tenantId, id: link.channelAccountId } })
+      ? await this.channels.findOne({
+          where: { tenantId, id: link.channelAccountId },
+        })
       : null;
     const agents = await this.getAgentsRaw().catch(() => []);
     const agentMap = new Map(
@@ -1003,7 +1237,10 @@ export class CustomerCareService {
     action = 'set',
   ) {
     const tenantId = this.getTenantId();
-    const conversationLink = await this.requireConversationLink(conversationId, tenantId);
+    const conversationLink = await this.requireConversationLink(
+      conversationId,
+      tenantId,
+    );
 
     // LibreDesk mutates conversation tags by tag name, while the public Nest
     // contract accepts either stable IDs or names. Resolve IDs here so the FE
@@ -1052,11 +1289,15 @@ export class CustomerCareService {
         });
         const selectedNames = new Set(selected.map((tag) => tag.name));
         const current = contact.tags || [];
-        contact.tags = action === 'set'
+        contact.tags =
+          action === 'set'
           ? selected
           : action === 'remove'
             ? current.filter((tag) => !selectedNames.has(tag.name))
-            : [...current.filter((tag) => !selectedNames.has(tag.name)), ...selected];
+              : [
+                  ...current.filter((tag) => !selectedNames.has(tag.name)),
+                  ...selected,
+                ];
         await this.contacts.save(contact);
         await this.publish(tenantId, 'contact.updated', String(contact.id), {
           contact: this.mapContact(contact),
@@ -1273,7 +1514,8 @@ export class CustomerCareService {
               : link.createdAt.toISOString(),
           sender: { name: 'Bạn' },
           senderName: 'Bạn',
-          status: link.status === 'recalled' ? 'recalled' : link.status || 'sent',
+          status:
+            link.status === 'recalled' ? 'recalled' : link.status || 'sent',
           recalled:
             link.status === 'recalled' || link.metadata?.recalled === true,
           attachments: [],
@@ -1336,9 +1578,13 @@ export class CustomerCareService {
     const tenantId = tenantOverride || this.getTenantId();
     const attachments = dto.attachments || [];
     if (!dto.content.trim() && attachments.length === 0)
-      throw new BadRequestException('Message content or an attachment is required');
+      throw new BadRequestException(
+        'Message content or an attachment is required',
+      );
     if (dto.type === 'sticker')
-      throw new BadRequestException('The connected Zalo provider does not support stickers yet');
+      throw new BadRequestException(
+        'The connected Zalo provider does not support stickers yet',
+      );
 
     const conversationLink = await this.requireConversationLink(
       conversationId,
@@ -1755,7 +2001,10 @@ export class CustomerCareService {
     if (crmContactId !== undefined) {
       const crmCustomer = await this.crm.detailCustomer(crmContactId);
       const numericId = Number(crmCustomer.id);
-      if (Number.isInteger(numericId) && String(numericId) === String(crmCustomer.id)) {
+      if (
+        Number.isInteger(numericId) &&
+        String(numericId) === String(crmCustomer.id)
+      ) {
         row.crmCustomerId = numericId;
         row.crmPersonId = null;
       } else {
@@ -1799,7 +2048,9 @@ export class CustomerCareService {
     );
   }
 
-  private mapConversationOrderLink(row: CustomerCareConversationOrderLinkEntity) {
+  private mapConversationOrderLink(
+    row: CustomerCareConversationOrderLinkEntity,
+  ) {
     return {
       id: row.id,
       conversationLinkId: row.conversationLinkId,
@@ -1817,7 +2068,10 @@ export class CustomerCareService {
 
   async conversationOrders(conversationId: string) {
     const tenantId = this.getTenantId();
-    const conversation = await this.requireConversationLink(conversationId, tenantId);
+    const conversation = await this.requireConversationLink(
+      conversationId,
+      tenantId,
+    );
     const links = await this.conversationOrdersRepo.find({
       where: { tenantId, conversationLinkId: conversation.id },
       order: { isPrimary: 'DESC', createdAt: 'DESC' },
@@ -1838,14 +2092,21 @@ export class CustomerCareService {
     idempotencyKey?: string,
   ) {
     const tenantId = this.getTenantId();
-    const conversation = await this.requireConversationLink(conversationId, tenantId);
+    const conversation = await this.requireConversationLink(
+      conversationId,
+      tenantId,
+    );
     const creationKey = idempotencyKey?.trim() || null;
     if (creationKey && creationKey.length > 120)
-      throw new BadRequestException('Idempotency-Key must not exceed 120 characters');
+      throw new BadRequestException(
+        'Idempotency-Key must not exceed 120 characters',
+      );
 
     const result = await this.dataSource.transaction(async (manager) => {
       await this.lockConversationOrderLinks(manager, tenantId, conversation.id);
-      const repo = manager.getRepository(CustomerCareConversationOrderLinkEntity);
+      const repo = manager.getRepository(
+        CustomerCareConversationOrderLinkEntity,
+      );
       if (creationKey) {
         const existing = await repo.findOne({
           where: { tenantId, conversationLinkId: conversation.id, creationKey },
@@ -1890,12 +2151,17 @@ export class CustomerCareService {
     });
 
     if (!result.idempotentReplay) {
-      await this.publish(tenantId, 'conversation-order.updated', conversationId, {
+      await this.publish(
+        tenantId,
+        'conversation-order.updated',
+        conversationId,
+        {
         conversationId,
         orderId: Number(result.id),
         action: 'created',
         link: result.conversationOrderLink,
-      });
+        },
+      );
     }
     return result;
   }
@@ -1907,14 +2173,23 @@ export class CustomerCareService {
     userId: number,
   ) {
     const tenantId = this.getTenantId();
-    const conversation = await this.requireConversationLink(conversationId, tenantId);
+    const conversation = await this.requireConversationLink(
+      conversationId,
+      tenantId,
+    );
     await this.orderService.detail(orderId);
 
     const link = await this.dataSource.transaction(async (manager) => {
       await this.lockConversationOrderLinks(manager, tenantId, conversation.id);
-      const repo = manager.getRepository(CustomerCareConversationOrderLinkEntity);
+      const repo = manager.getRepository(
+        CustomerCareConversationOrderLinkEntity,
+      );
       const currentPrimary = await repo.findOne({
-        where: { tenantId, conversationLinkId: conversation.id, isPrimary: true },
+        where: {
+          tenantId,
+          conversationLinkId: conversation.id,
+          isPrimary: true,
+        },
       });
       const makePrimary = dto.isPrimary === true || !currentPrimary;
       if (makePrimary) {
@@ -1940,9 +2215,11 @@ export class CustomerCareService {
         });
       } else {
         if (dto.relationType !== undefined) row.relationType = dto.relationType;
-        if (dto.sourceMessageId !== undefined) row.sourceMessageId = dto.sourceMessageId || null;
+        if (dto.sourceMessageId !== undefined)
+          row.sourceMessageId = dto.sourceMessageId || null;
         if (makePrimary) row.isPrimary = true;
-        if (conversation.contactIdentityId) row.contactIdentityId = conversation.contactIdentityId;
+        if (conversation.contactIdentityId)
+          row.contactIdentityId = conversation.contactIdentityId;
       }
       return repo.save(row);
     });
@@ -1961,14 +2238,20 @@ export class CustomerCareService {
 
   async unlinkConversationOrder(conversationId: string, orderId: number) {
     const tenantId = this.getTenantId();
-    const conversation = await this.requireConversationLink(conversationId, tenantId);
+    const conversation = await this.requireConversationLink(
+      conversationId,
+      tenantId,
+    );
     const removed = await this.dataSource.transaction(async (manager) => {
       await this.lockConversationOrderLinks(manager, tenantId, conversation.id);
-      const repo = manager.getRepository(CustomerCareConversationOrderLinkEntity);
+      const repo = manager.getRepository(
+        CustomerCareConversationOrderLinkEntity,
+      );
       const row = await repo.findOne({
         where: { tenantId, conversationLinkId: conversation.id, orderId },
       });
-      if (!row) throw new NotFoundException('Conversation order link not found');
+      if (!row)
+        throw new NotFoundException('Conversation order link not found');
       const wasPrimary = row.isPrimary;
       await repo.remove(row);
 
@@ -1995,14 +2278,20 @@ export class CustomerCareService {
 
   async setPrimaryConversationOrder(conversationId: string, orderId: number) {
     const tenantId = this.getTenantId();
-    const conversation = await this.requireConversationLink(conversationId, tenantId);
+    const conversation = await this.requireConversationLink(
+      conversationId,
+      tenantId,
+    );
     const link = await this.dataSource.transaction(async (manager) => {
       await this.lockConversationOrderLinks(manager, tenantId, conversation.id);
-      const repo = manager.getRepository(CustomerCareConversationOrderLinkEntity);
+      const repo = manager.getRepository(
+        CustomerCareConversationOrderLinkEntity,
+      );
       const row = await repo.findOne({
         where: { tenantId, conversationLinkId: conversation.id, orderId },
       });
-      if (!row) throw new NotFoundException('Conversation order link not found');
+      if (!row)
+        throw new NotFoundException('Conversation order link not found');
       await repo.update(
         { tenantId, conversationLinkId: conversation.id, isPrimary: true },
         { isPrimary: false },
@@ -2032,10 +2321,16 @@ export class CustomerCareService {
           ? { tenantId, customerPhone: row.phone }
           : undefined;
     const orders = where
-      ? await this.orders.find({ where, order: { createdAt: 'DESC' }, take: 50 })
+      ? await this.orders.find({
+          where,
+          order: { createdAt: 'DESC' },
+          take: 50,
+        })
       : [];
     const itemRows = orders.length
-      ? await this.orderItems.find({ where: { orderId: In(orders.map((order) => order.id)) } })
+      ? await this.orderItems.find({
+          where: { orderId: In(orders.map((order) => order.id)) },
+        })
       : [];
     const shipmentRows = orders.length
       ? await this.shipments.find({
@@ -2058,7 +2353,9 @@ export class CustomerCareService {
         quantity: products.reduce((sum, item) => sum + item.quantity, 0),
         createdAt: order.createdAt,
         shipment: (() => {
-          const shipment = shipmentRows.find((item) => item.orderId === order.id);
+          const shipment = shipmentRows.find(
+            (item) => item.orderId === order.id,
+          );
           return shipment
             ? {
                 ...shipment,
@@ -2091,12 +2388,26 @@ export class CustomerCareService {
 
   async tags() {
     const desired = [
-      'Công việc', 'Bạn bè', 'Trả lời sau', 'Đồng nghiệp',
-      'Kiểm hàng', 'Câu hỏi', 'Mua hàng', 'Đã gửi',
-      'Hết hàng', 'Trả hàng', 'Khách hàng', 'Gia đình',
+      'Công việc',
+      'Bạn bè',
+      'Trả lời sau',
+      'Đồng nghiệp',
+      'Kiểm hàng',
+      'Câu hỏi',
+      'Mua hàng',
+      'Đã gửi',
+      'Hết hàng',
+      'Trả hàng',
+      'Khách hàng',
+      'Gia đình',
     ];
-    let available = await this.libreDesk.request<Array<{ id: number; name: string }>>('/tags');
-    const names = new Set(available.map((tag) => tag.name.toLocaleLowerCase('vi')));
+    let available =
+      await this.libreDesk.request<Array<{ id: number; name: string }>>(
+        '/tags',
+      );
+    const names = new Set(
+      available.map((tag) => tag.name.toLocaleLowerCase('vi')),
+    );
     for (const name of desired) {
       if (names.has(name.toLocaleLowerCase('vi'))) continue;
       await this.libreDesk.request('/tags', {
@@ -2104,8 +2415,14 @@ export class CustomerCareService {
         body: JSON.stringify({ name }),
       });
     }
-    if (available.length !== desired.length || desired.some((name) => !names.has(name.toLocaleLowerCase('vi'))))
-      available = await this.libreDesk.request<Array<{ id: number; name: string }>>('/tags');
+    if (
+      available.length !== desired.length ||
+      desired.some((name) => !names.has(name.toLocaleLowerCase('vi')))
+    )
+      available =
+        await this.libreDesk.request<Array<{ id: number; name: string }>>(
+          '/tags',
+        );
     return available;
   }
 
@@ -2159,7 +2476,12 @@ export class CustomerCareService {
     };
   }
 
-  verifyWebhook(rawBody: string, timestamp: string, signature: string, connectionKey: string) {
+  verifyWebhook(
+    rawBody: string,
+    timestamp: string,
+    signature: string,
+    connectionKey: string,
+  ) {
     const masterSecret =
       this.config.get<string>('CUSTOMER_CARE_WEBHOOK_SECRET') || '';
     if (!masterSecret)
@@ -2182,12 +2504,22 @@ export class CustomerCareService {
   }
 
   async inbound(connectionKey: string, dto: ZaloInboundDto) {
-    let channel = await this.channels.findOne({ where: { connectionKey, enabled: true } });
-    if (!channel) throw new NotFoundException('Customer Care channel session not found');
+    let channel = await this.channels.findOne({
+      where: { connectionKey, enabled: true },
+    });
+    if (!channel)
+      throw new NotFoundException('Customer Care channel session not found');
     if (channel.provider !== dto.provider)
-      throw new BadRequestException('Webhook provider does not match channel session');
-    if (!channel.externalAccountId.startsWith('pending:') && channel.externalAccountId !== dto.account_id)
-      throw new BadRequestException('Webhook account does not match channel session');
+      throw new BadRequestException(
+        'Webhook provider does not match channel session',
+      );
+    if (
+      !channel.externalAccountId.startsWith('pending:') &&
+      channel.externalAccountId !== dto.account_id
+    )
+      throw new BadRequestException(
+        'Webhook account does not match channel session',
+      );
     if (channel.externalAccountId.startsWith('pending:')) {
       const existing = await this.channels.findOne({
         where: {
@@ -2215,7 +2547,12 @@ export class CustomerCareService {
     // Persist immediately after webhook HMAC + DTO validation. This makes
     // connector -> Nest failures observable even if channel/LibreDesk fails.
     let ingressEvent = await this.inboundEvents.findOne({
-      where: { tenantId, channelAccountId: channel.id, provider: dto.provider, eventId: dto.event_id },
+      where: {
+        tenantId,
+        channelAccountId: channel.id,
+        provider: dto.provider,
+        eventId: dto.event_id,
+      },
     });
 
     if (ingressEvent?.status === 'processed') {
@@ -2316,9 +2653,12 @@ export class CustomerCareService {
 
     if (existingMessage) {
       const existingLink = existingMessage.conversationLinkId
-        ? await this.conversations.findOne({ where: { id: existingMessage.conversationLinkId, tenantId } })
+        ? await this.conversations.findOne({
+            where: { id: existingMessage.conversationLinkId, tenantId },
+          })
         : link;
-      if (!existingLink) throw new NotFoundException('Outgoing conversation link not found');
+      if (!existingLink)
+        throw new NotFoundException('Outgoing conversation link not found');
       const restoredExistingConversation =
         await this.restoreDeletedConversationLink(existingLink);
       if (restoredExistingConversation) {
@@ -2372,7 +2712,9 @@ export class CustomerCareService {
       const echoedContent = dto.message.text.trim();
       const original = candidates.find(
         (candidate) =>
-          Boolean(candidate.clientMessageId && candidate.libreDeskMessageUuid) &&
+          Boolean(
+            candidate.clientMessageId && candidate.libreDeskMessageUuid,
+          ) &&
           String(candidate.metadata?.content || '').trim() === echoedContent,
       );
       if (original) {
@@ -2446,7 +2788,8 @@ export class CustomerCareService {
 
     // Persist through LibreDesk as well so its conversation list/preview is
     // updated. The local message link below overrides its direction to outgoing.
-    const result = await this.libreDesk.inbound<InboundResult>({
+    const result = await this.libreDesk.inbound<InboundResult>(
+      {
       tenant_key: String(tenantId),
       channel_connection_key: channel.connectionKey,
       account_id: dto.account_id,
@@ -2457,7 +2800,9 @@ export class CustomerCareService {
       occurred_at: dto.occurred_at,
       sender: dto.sender,
       message: dto.message,
-    }, dto.provider);
+      },
+      dto.provider,
+    );
     const isNewConversation = !link || restoredConversation;
 
     if (!link) {
@@ -2550,7 +2895,12 @@ export class CustomerCareService {
     channel: CustomerCareChannelAccountEntity,
   ) {
     const duplicate = await this.inboundEvents.findOne({
-      where: { tenantId, channelAccountId: channel.id, provider: dto.provider, eventId: dto.event_id },
+      where: {
+        tenantId,
+        channelAccountId: channel.id,
+        provider: dto.provider,
+        eventId: dto.event_id,
+      },
     });
     if (duplicate?.status === 'processed') {
       const data = duplicate.payload?.result as unknown as InboundResult;
@@ -2614,7 +2964,8 @@ export class CustomerCareService {
         ? await this.restoreDeletedConversationLink(link)
         : false;
       const isNewConversation = !link || restoredConversation;
-      const result = await this.libreDesk.inbound<InboundResult>({
+      const result = await this.libreDesk.inbound<InboundResult>(
+        {
         tenant_key: String(tenantId),
         channel_connection_key: channel.connectionKey,
         account_id: dto.account_id,
@@ -2625,7 +2976,9 @@ export class CustomerCareService {
         occurred_at: dto.occurred_at,
         sender: dto.sender,
         message: dto.message,
-      }, dto.provider);
+        },
+        dto.provider,
+      );
       if (!link)
         link = this.conversations.create({
           tenantId,
@@ -2774,7 +3127,9 @@ export class CustomerCareService {
         .where('event.tenant_id = :tenantId', { tenantId })
         .getRawOne<{ max: string | number }>();
       const sequence = Number(raw?.max || 0) + 1;
-      const saved = await manager.getRepository(CustomerCareSyncEventEntity).save(
+      const saved = await manager
+        .getRepository(CustomerCareSyncEventEntity)
+        .save(
         manager.getRepository(CustomerCareSyncEventEntity).create({
           tenantId,
           sequence,
@@ -2786,16 +3141,27 @@ export class CustomerCareService {
       );
       const domainType = this.customerCareDomainEventType(type, payload);
       if (domainType && aggregateId) {
-        await this.domainEvents.append({
+        await this.domainEvents.append(
+          {
           tenantId,
-          aggregateType: type.startsWith('contact.') ? 'contact' : 'conversation',
+            aggregateType: type.startsWith('contact.')
+              ? 'contact'
+              : 'conversation',
           aggregateId,
           eventType: domainType,
-          payload: { ...payload, conversationId: type.startsWith('contact.') ? undefined : aggregateId },
-          availableAt: domainType === 'customer-care.message.inbound'
+            payload: {
+              ...payload,
+              conversationId: type.startsWith('contact.')
+                ? undefined
+                : aggregateId,
+            },
+            availableAt:
+              domainType === 'customer-care.message.inbound'
             ? new Date(Date.now() + this.customerCareAiDebounceMs())
             : undefined,
-        }, manager);
+          },
+          manager,
+        );
       }
       return saved;
     });
@@ -2819,8 +3185,10 @@ export class CustomerCareService {
   }
 
   private customerCareAiDebounceMs() {
-    const value = Number(process.env.CUSTOMER_CARE_AI_DEBOUNCE_MS ?? 2_500)
-    return Number.isFinite(value) ? Math.max(1_000, Math.min(30_000, value)) : 2_500
+    const value = Number(process.env.CUSTOMER_CARE_AI_DEBOUNCE_MS ?? 2_500);
+    return Number.isFinite(value)
+      ? Math.max(1_000, Math.min(30_000, value))
+      : 2_500;
   }
 
   private customerCareDomainEventType(
@@ -2828,17 +3196,19 @@ export class CustomerCareService {
     payload: Record<string, unknown>,
   ): string | null {
     if (type === 'message.created' || type === 'conversation.created') {
-      const message = payload.message as { direction?: string } | undefined
-      if (message?.direction === 'incoming') return 'customer-care.message.inbound'
-      if (message?.direction === 'outgoing') return 'customer-care.message.outbound'
+      const message = payload.message as { direction?: string } | undefined;
+      if (message?.direction === 'incoming')
+        return 'customer-care.message.inbound';
+      if (message?.direction === 'outgoing')
+        return 'customer-care.message.outbound';
     }
     if (type === 'contact.updated') {
-      return 'customer-care.contact.linked'
+      return 'customer-care.contact.linked';
     }
     if (type === 'conversation-order.updated') {
-      return 'conversation-order.linked'
+      return 'conversation-order.linked';
     }
-    return null
+    return null;
   }
 
   @Interval(6 * 60 * 60_000)
@@ -2907,11 +3277,17 @@ export class CustomerCareService {
           },
       channel,
       channelProvider: link?.provider || item.inbox_channel || undefined,
-      channelAccountId: link?.channelAccountId ? String(link.channelAccountId) : undefined,
+      channelAccountId: link?.channelAccountId
+        ? String(link.channelAccountId)
+        : undefined,
       channelAccountName:
-        channelAccount?.name || item.inbox_name || (channel === 'zalo' ? 'Zalo cá nhân' : channel),
+        channelAccount?.name ||
+        item.inbox_name ||
+        (channel === 'zalo' ? 'Zalo cá nhân' : channel),
       channelName:
-        channelAccount?.name || item.inbox_name || (channel === 'zalo' ? 'Zalo cá nhân' : channel),
+        channelAccount?.name ||
+        item.inbox_name ||
+        (channel === 'zalo' ? 'Zalo cá nhân' : channel),
       status: mapConversationStatus(
         item.status,
         item.unread_message_count || 0,
@@ -3034,10 +3410,18 @@ function normalize(value?: string | null) {
 
 function customerCareTagColor(name: string) {
   const colors: Record<string, string> = {
-    'công việc': '#92501f', 'bạn bè': '#8a7418', 'trả lời sau': '#357058',
-    'đồng nghiệp': '#245493', 'kiểm hàng': '#354156', 'câu hỏi': '#583475',
-    'mua hàng': '#24549a', 'đã gửi': '#08623d', 'hết hàng': '#175775',
-    'trả hàng': '#9b3432', 'khách hàng': '#8d2735', 'gia đình': '#87205f',
+    'công việc': '#92501f',
+    'bạn bè': '#8a7418',
+    'trả lời sau': '#357058',
+    'đồng nghiệp': '#245493',
+    'kiểm hàng': '#354156',
+    'câu hỏi': '#583475',
+    'mua hàng': '#24549a',
+    'đã gửi': '#08623d',
+    'hết hàng': '#175775',
+    'trả hàng': '#9b3432',
+    'khách hàng': '#8d2735',
+    'gia đình': '#87205f',
   };
   return colors[name.toLocaleLowerCase('vi')] || '#65a30d';
 }
@@ -3045,7 +3429,8 @@ function customerCareTagColor(name: string) {
 function normalizeConversationTag(
   tag: string | { id?: number | string; name?: string; color?: string },
 ) {
-  const name = typeof tag === 'string'
+  const name =
+    typeof tag === 'string'
     ? tag.trim()
     : String(tag.name ?? tag.id ?? '').trim();
   return {

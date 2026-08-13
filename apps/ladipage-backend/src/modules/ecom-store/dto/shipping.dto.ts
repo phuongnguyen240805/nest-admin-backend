@@ -31,6 +31,31 @@ export class SaveShippingIntegrationDto {
   @IsString()
   shopId?: string
 
+  @ApiPropertyOptional({ description: 'Partner API account/client identifier' })
+  @IsOptional()
+  @IsString()
+  apiAccount?: string
+
+  @ApiPropertyOptional({ description: 'Partner customer/contract code' })
+  @IsOptional()
+  @IsString()
+  customerCode?: string
+
+  @ApiPropertyOptional({ description: 'Partner signing secret/private key' })
+  @IsOptional()
+  @IsString()
+  privateKey?: string
+
+  @ApiPropertyOptional({ description: 'Optional partner username' })
+  @IsOptional()
+  @IsString()
+  username?: string
+
+  @ApiPropertyOptional({ description: 'Optional partner password' })
+  @IsOptional()
+  @IsString()
+  password?: string
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsObject()

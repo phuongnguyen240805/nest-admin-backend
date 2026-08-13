@@ -8,7 +8,7 @@ import { DataSource, Repository } from 'typeorm'
 
 import { CustomerCareService } from '../../customer-care/customer-care.service'
 import { DomainOutboxEventEntity } from '../../domain-events/entities/domain-outbox-event.entity'
-import { CustomerCareAiTenantConfigEntity } from '../entities'
+import { CustomerCareAiConfigService } from '../config/customer-care-ai-config.service'
 import { CustomerCareAiOrchestratorService } from '../orchestration/customer-care-ai-orchestrator.service'
 import { CustomerCareAiMetricsService } from '../observability/customer-care-ai-metrics.service'
 
@@ -24,12 +24,9 @@ export class CustomerCareAiAutomationService {
     private readonly dataSource: DataSource,
     private readonly moduleRef: ModuleRef,
     private readonly cls: ClsService,
-    private readonly customerCare: CustomerCareService,
     private readonly metrics: CustomerCareAiMetricsService,
     @InjectRepository(DomainOutboxEventEntity)
     private readonly events: Repository<DomainOutboxEventEntity>,
-    @InjectRepository(CustomerCareAiTenantConfigEntity)
-    private readonly configs: Repository<CustomerCareAiTenantConfigEntity>,
   ) {}
 
   @Interval(5_000)
@@ -89,7 +86,11 @@ export class CustomerCareAiAutomationService {
         return
       }
 
-      const config = await this.configs.findOne({ where: { tenantId: event.tenantId } })
+      const config = await this.runInTenant(event.tenantId, async () => {
+        const contextId = ContextIdFactory.create()
+        const configService = await this.moduleRef.resolve(CustomerCareAiConfigService, contextId, { strict: false })
+        return configService.getOrCreate()
+      })
       if (!config?.enabled || config.mode !== 'autopilot' || !config.autoReplyEnabled) {
         await this.finish(event, 'ignored', 'tenant-auto-reply-disabled')
         this.metrics.recordAutomation('skipped')
@@ -143,17 +144,21 @@ export class CustomerCareAiAutomationService {
         return
       }
 
-      await this.customerCare.sendMessage(
-        event.aggregateId,
-        {
-          clientMessageId: randomUUID(),
-          type: 'text',
-          content: String(result.reply).trim(),
-        },
-        0,
-        false,
-        event.tenantId,
-      )
+      await this.runInTenant(event.tenantId, async () => {
+        const contextId = ContextIdFactory.create()
+        const customerCare = await this.moduleRef.resolve(CustomerCareService, contextId, { strict: false })
+        return customerCare.sendMessage(
+          event.aggregateId,
+          {
+            clientMessageId: randomUUID(),
+            type: 'text',
+            content: String(result.reply).trim(),
+          },
+          0,
+          false,
+          event.tenantId,
+        )
+      })
       await this.finish(event, 'processed', 'auto-reply-sent', {
         aiJobId: result.jobId,
         aiResultId: result.resultId,
