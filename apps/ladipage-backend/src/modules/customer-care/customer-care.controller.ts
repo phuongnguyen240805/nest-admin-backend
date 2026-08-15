@@ -28,6 +28,7 @@ import {
   AssignDto,
   ContactPatchDto,
   CustomerCareDeliveryStatusDto,
+  CustomerCarePresenceDto,
   ConversationOrderLinkDto,
   ConversationPatchDto,
   ConversationQueryDto,
@@ -417,5 +418,24 @@ export class CustomerCareInternalController {
         : JSON.stringify(dto);
     this.service.verifyWebhook(rawBody, timestamp, signature, connectionKey);
     return this.service.deliveryStatus(connectionKey, dto);
+  }
+
+
+  @Post('channels/:connectionKey/presence')
+  @HttpCode(HttpStatus.OK)
+  async connectorPresence(
+    @Param('connectionKey') connectionKey: string,
+    @Req() req: FastifyRequest & { rawBody?: string | Buffer },
+    @Body() dto: CustomerCarePresenceDto,
+    @Headers('x-customer-care-timestamp') timestamp: string,
+    @Headers('x-customer-care-signature') signature: string,
+  ) {
+    const rawBody = typeof req.rawBody === 'string'
+      ? req.rawBody
+      : Buffer.isBuffer(req.rawBody)
+        ? req.rawBody.toString('utf8')
+        : JSON.stringify(dto);
+    this.service.verifyWebhook(rawBody, timestamp, signature, connectionKey);
+    return this.service.presenceStatus(connectionKey, dto);
   }
 }

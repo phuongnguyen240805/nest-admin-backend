@@ -62,6 +62,12 @@ export class FlowExecutionEntity extends TenantScopedEntity {
   @Column({ name: 'last_error', type: 'text', nullable: true })
   lastError: string | null
 
+  @Column({ name: 'lock_token', type: 'uuid', nullable: true })
+  lockToken: string | null
+
+  @Column({ name: 'locked_until', type: 'timestamptz', nullable: true })
+  lockedUntil: Date | null
+
   @Column({ type: 'int', default: 1 })
   version: number
 }

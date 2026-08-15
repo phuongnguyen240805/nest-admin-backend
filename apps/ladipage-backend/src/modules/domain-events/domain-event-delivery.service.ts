@@ -42,4 +42,28 @@ export class DomainEventDeliveryService {
       throw error
     }
   }
+
+  async mark(input: {
+    eventId: string
+    tenantId: number
+    consumer: string
+    status: string
+    metadata?: Record<string, unknown>
+    lastError?: string | null
+    processed?: boolean
+  }): Promise<DomainEventDeliveryEntity> {
+    let row = await this.observe({
+      eventId: input.eventId,
+      tenantId: input.tenantId,
+      consumer: input.consumer,
+      status: input.status,
+      metadata: input.metadata,
+    })
+    row.status = input.status
+    row.metadata = { ...(row.metadata ?? {}), ...(input.metadata ?? {}) }
+    row.lastError = input.lastError ?? null
+    if (input.processed === true) row.processedAt = new Date()
+    row = await this.deliveries.save(row)
+    return row
+  }
 }

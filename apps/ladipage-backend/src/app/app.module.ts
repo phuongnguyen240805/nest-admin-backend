@@ -63,6 +63,7 @@ import { LadipageRpcModule } from '../modules/ladipage-rpc/ladipage-rpc.module';
 import { LadiflowRpcModule } from '../modules/ladiflow-rpc/ladiflow-rpc.module';
 import { LadiworkModule } from '../modules/ladiwork/ladiwork.module';
 import { AutomationModule } from '../modules/automation/automation.module';
+import { AutomationWorkerModule } from '../modules/automation/automation-worker.module';
 import { BullMqModule } from '@liora/nest-core';
 import {
   buildLadipageBullMqOptions,
@@ -87,7 +88,7 @@ const bullMqImports = isBullMqEnabled()
   ? [
       BullMqModule.forRoot(buildLadipageBullMqOptions()),
       LandingAiApiModule,
-      ...(isBullMqWorkerEnabled() ? [LandingAiWorkerModule] : []),
+      ...(isBullMqWorkerEnabled() ? [LandingAiWorkerModule, AutomationWorkerModule] : []),
     ]
   : [];
 

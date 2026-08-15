@@ -1,54 +1,34 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { Module } from '@nestjs/common'
+import { BullMqModule } from '@liora/nest-core'
 
-import { DomainEventsModule } from '../domain-events/domain-events.module';
+import { isBullMqEnabled } from '../../config/bullmq.app.config'
+import { CustomerCareModule } from '../customer-care/customer-care.module'
+import { AutomationCoreModule } from './automation-core.module'
+import { AUTOMATION_QUEUES } from './queues/constants'
+import { AutomationOutboundDispatcherService } from './services/automation-outbound-dispatcher.service'
+import { AutomationTriggerRuntimeService } from './triggers/automation-trigger-runtime.service'
+import { AutomationTriggerShadowService } from './triggers/automation-trigger-shadow.service'
 
-import {
-  AutomationTriggerEntity,
-  BroadcastEntity,
-  FlowEntity,
-  FlowExecutionEntity,
-  FlowExecutionStepEntity,
-  FlowTagEntity,
-  IntegrationEntity,
-} from './entities';
-import { LadiflowGraphAdapterService } from './graph/ladiflow-graph-adapter.service';
-import { LadiflowGraphValidatorService } from './graph/ladiflow-graph-validator.service';
-import { FlowExecutionService } from './runtime/flow-execution.service';
-import { AutomationService } from './services/automation.service';
-import { AutomationTriggerService } from './triggers/automation-trigger.service';
-import { AutomationTriggerShadowService } from './triggers/automation-trigger-shadow.service';
-import { KeywordMatcherService } from './triggers/keyword-matcher.service';
+const queueImports = isBullMqEnabled()
+  ? [
+      BullMqModule.registerQueue({
+        name: AUTOMATION_QUEUES.TRIGGER,
+        defaultJobOptions: { attempts: 5, backoff: { type: 'exponential', delay: 2_000 } },
+      }),
+      BullMqModule.registerQueue({
+        name: AUTOMATION_QUEUES.FLOW,
+        defaultJobOptions: { attempts: 5, backoff: { type: 'exponential', delay: 2_000 } },
+      }),
+    ]
+  : []
+
+const runtimeProviders = isBullMqEnabled()
+  ? [AutomationTriggerRuntimeService, AutomationOutboundDispatcherService]
+  : []
 
 @Module({
-  imports: [
-    DomainEventsModule,
-    TypeOrmModule.forFeature([
-      AutomationTriggerEntity,
-      BroadcastEntity,
-      FlowEntity,
-      FlowExecutionEntity,
-      FlowExecutionStepEntity,
-      FlowTagEntity,
-      IntegrationEntity,
-    ]),
-  ],
-  providers: [
-    AutomationService,
-    LadiflowGraphAdapterService,
-    LadiflowGraphValidatorService,
-    FlowExecutionService,
-    KeywordMatcherService,
-    AutomationTriggerService,
-    AutomationTriggerShadowService,
-  ],
-  exports: [
-    TypeOrmModule,
-    AutomationService,
-    LadiflowGraphAdapterService,
-    LadiflowGraphValidatorService,
-    FlowExecutionService,
-    AutomationTriggerService,
-  ],
+  imports: [AutomationCoreModule, CustomerCareModule, ...queueImports],
+  providers: [AutomationTriggerShadowService, ...runtimeProviders],
+  exports: [AutomationCoreModule],
 })
 export class AutomationModule {}

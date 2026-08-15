@@ -101,6 +101,18 @@ export class CustomerCareDeliveryStatusDto {
   @IsOptional() @IsString() watermark_at?: string
 }
 
+export class CustomerCarePresenceDto {
+  @IsString() event_id!: string
+  @IsIn(['zalo_personal', 'facebook_personal']) provider!: 'zalo_personal' | 'facebook_personal'
+  @IsString() account_id!: string
+  @IsString() external_thread_id!: string
+  @IsString() external_user_id!: string
+  @IsIn(['online', 'offline', 'unknown']) state!: 'online' | 'offline' | 'unknown'
+  @IsOptional() @IsString() last_active_at?: string
+  @IsString() observed_at!: string
+  @IsIn(['native', 'native_activity']) source!: 'native' | 'native_activity'
+}
+
 export class FacebookLoginDto {
   @IsString() @MaxLength(65536) cookie!: string
 }

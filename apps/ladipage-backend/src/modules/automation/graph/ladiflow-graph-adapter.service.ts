@@ -8,38 +8,8 @@ export class LadiflowGraphAdapterService {
     const raw = this.record(value)
     const schema = this.detectSchema(raw)
 
-    if (schema === 'node-graph') {
-      return {
-        schema,
-        triggers: this.records(raw.triggers),
-        steps: this.records(raw.nodes).map((node, index) => this.nodeGraphStep(node, index)),
-        raw,
-      }
-    }
-
-    if (schema === 'ladiflow') {
-      const flowConfigs = this.records(raw.flowConfigs)
-      const steps: RuntimeFlowStep[] = []
-      for (const [configIndex, config] of flowConfigs.entries()) {
-        const messages = this.records(config.messages)
-        for (const [messageIndex, message] of messages.entries()) {
-          steps.push({
-            id: this.idOf(message, `${this.idOf(config, `flow-config-${configIndex}`)}:${messageIndex}`),
-            type: String(message.type ?? config.type ?? 'UNKNOWN').toUpperCase(),
-            order: this.numberOf(config.ordering, configIndex) * 1000 + messageIndex,
-            config: { flowConfig: config, message },
-            source: message,
-          })
-        }
-      }
-      return {
-        schema,
-        triggers: this.records(raw.triggers),
-        steps,
-        raw,
-      }
-    }
-
+    if (schema === 'node-graph') return this.adaptNodeGraph(raw)
+    if (schema === 'ladiflow') return this.adaptLadiflow(raw)
     return { schema, triggers: [], steps: [], raw }
   }
 
@@ -49,15 +19,113 @@ export class LadiflowGraphAdapterService {
     return 'unknown'
   }
 
+  private adaptNodeGraph(raw: Record<string, unknown>): RuntimeFlowGraph {
+    const nodes = this.records(raw.nodes)
+    const edges = this.records(raw.edges)
+    const edgeMap = new Map<string, Array<{ target: string; handle: string }>>()
+
+    for (const edge of edges) {
+      const source = String(edge.source ?? edge.sourceId ?? '').trim()
+      const target = String(edge.target ?? edge.targetId ?? '').trim()
+      if (!source || !target) continue
+      const handle = String(edge.sourceHandle ?? edge.handle ?? '').toLowerCase()
+      const rows = edgeMap.get(source) ?? []
+      rows.push({ target, handle })
+      edgeMap.set(source, rows)
+    }
+
+    const steps = nodes.map((node, index) => {
+      const step = this.nodeGraphStep(node, index)
+      const outgoing = edgeMap.get(step.id) ?? []
+      const explicitNext = this.firstString(
+        step.config.nextStepId,
+        step.config.next_step_id,
+        node.nextStepId,
+        node.next_step_id,
+      )
+      step.nextStepId = explicitNext || outgoing[0]?.target
+      step.trueStepId = this.firstString(
+        step.config.trueStepId,
+        step.config.true_step_id,
+        step.config.onTrue,
+        step.config.on_true,
+        outgoing.find((item) => /true|yes|success|match/.test(item.handle))?.target,
+      )
+      step.falseStepId = this.firstString(
+        step.config.falseStepId,
+        step.config.false_step_id,
+        step.config.onFalse,
+        step.config.on_false,
+        outgoing.find((item) => /false|no|failure|else/.test(item.handle))?.target,
+      )
+      return step
+    })
+
+    const explicitStart = this.firstString(raw.startStepId, raw.start_step_id, raw.startNodeId, raw.start_node_id)
+    return {
+      schema: 'node-graph',
+      triggers: this.records(raw.triggers),
+      steps,
+      startStepId: explicitStart || steps[0]?.id,
+      raw,
+    }
+  }
+
+  private adaptLadiflow(raw: Record<string, unknown>): RuntimeFlowGraph {
+    const flowConfigs = this.records(raw.flowConfigs)
+    const firstStepByCode = new Map<string, string>()
+    const buckets: Array<{ config: Record<string, unknown>; steps: RuntimeFlowStep[] }> = []
+
+    for (const [configIndex, config] of flowConfigs.entries()) {
+      const messages = this.records(config.messages)
+      const steps = messages.map((message, messageIndex) => ({
+        id: this.idOf(message, `${this.idOf(config, `flow-config-${configIndex}`)}:${messageIndex}`),
+        type: String(message.type ?? config.type ?? 'UNKNOWN').toUpperCase(),
+        order: this.numberOf(config.ordering, configIndex) * 1000 + messageIndex,
+        config: { flowConfig: config, message },
+        source: message,
+      } satisfies RuntimeFlowStep))
+      const code = String(config.code ?? '').trim()
+      if (code && steps[0]) firstStepByCode.set(code, steps[0].id)
+      buckets.push({ config, steps })
+    }
+
+    const allSteps = buckets.flatMap((bucket) => bucket.steps).sort((a, b) => a.order - b.order)
+    for (const [index, step] of allSteps.entries()) {
+      step.nextStepId = allSteps[index + 1]?.id
+      const message = this.record(step.config.message)
+      if (step.type === 'NEXT_STEP') {
+        const code = String(message.next_step_code ?? message.nextStepCode ?? '').trim()
+        if (code) step.nextStepId = firstStepByCode.get(code)
+      }
+    }
+
+    return {
+      schema: 'ladiflow',
+      triggers: this.records(raw.triggers),
+      steps: allSteps,
+      startStepId: allSteps[0]?.id,
+      raw,
+    }
+  }
+
   private nodeGraphStep(node: Record<string, unknown>, index: number): RuntimeFlowStep {
     const data = this.record(node.data)
     return {
       id: this.idOf(node, `node-${index}`),
-      type: String(node.type ?? data.type ?? 'UNKNOWN'),
+      type: String(node.type ?? data.type ?? 'UNKNOWN').toUpperCase(),
       order: index,
       config: data,
       source: node,
     }
+  }
+
+  private firstString(...values: unknown[]): string | undefined {
+    for (const value of values) {
+      const text = String(value ?? '').trim()
+      if (text) return text
+    }
+    return undefined
   }
 
   private idOf(value: Record<string, unknown>, fallback: string): string {

@@ -101,9 +101,10 @@ export class AutomationTriggerService {
     const message = this.record(input.payload.message)
     const direction = String(message.direction ?? input.payload.direction ?? '').toLowerCase()
     const isSelf = message.isSelf === true || message.is_self === true || input.payload.isSelf === true || input.payload.is_self === true
-    if (input.eventType === MESSAGE_INBOUND && (direction === 'outgoing' || isSelf)) return []
+    const selfEvent = direction === 'outgoing' || isSelf
+    if (input.eventType === MESSAGE_INBOUND && selfEvent && process.env.AUTOMATION_TRIGGER_ALLOW_SELF_MESSAGES !== 'true') return []
 
-    const rows = await this.triggers.find({
+    let rows = await this.triggers.find({
       where: {
         tenantId: input.tenantId,
         eventType: input.eventType,
@@ -114,6 +115,9 @@ export class AutomationTriggerService {
     })
 
     if (input.eventType !== MESSAGE_INBOUND) return rows
+    if (selfEvent) {
+      rows = rows.filter((trigger) => trigger.config?.allowSelfMessages === true || trigger.config?.allow_self_messages === true)
+    }
     const text = String(message.content ?? message.text ?? input.payload.text ?? '')
     return rows.filter((trigger) => this.matchesMessageTrigger(text, trigger))
   }

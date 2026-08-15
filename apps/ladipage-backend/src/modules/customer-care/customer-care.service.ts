@@ -40,6 +40,7 @@ import {
 import {
   ContactPatchDto,
   CustomerCareDeliveryStatusDto,
+  CustomerCarePresenceDto,
   ConversationOrderLinkDto,
   ConversationPatchDto,
   ConversationQueryDto,
@@ -83,6 +84,8 @@ interface LibreDeskConversation {
     last_name?: string;
     email?: string | null;
     avatar_url?: string | null;
+    availability_status?: string | null;
+    last_active_at?: string | null;
   };
   inbox_channel?: string;
   inbox_name?: string;
@@ -2651,6 +2654,119 @@ export class CustomerCareService {
     };
   }
 
+  async presenceStatus(connectionKey: string, dto: CustomerCarePresenceDto) {
+    const channel = await this.channels.findOne({
+      where: { connectionKey, enabled: true },
+    });
+    if (!channel)
+      throw new NotFoundException('Customer Care channel session not found');
+    if (channel.provider !== dto.provider)
+      throw new BadRequestException('Webhook provider does not match channel session');
+    if (
+      !channel.externalAccountId.startsWith('pending:') &&
+      channel.externalAccountId !== dto.account_id
+    )
+      throw new BadRequestException('Webhook account does not match channel session');
+
+    const tenantId = channel.tenantId;
+    const link = await this.conversations.findOne({
+      where: {
+        tenantId,
+        channelAccountId: channel.id,
+        provider: dto.provider,
+        externalThreadId: dto.external_thread_id,
+      },
+    });
+    if (!link || link.threadType === 'group') return { updated: 0, ignored: 1 };
+
+    const identity = link.contactIdentityId
+      ? await this.contacts.findOne({ where: { id: link.contactIdentityId, tenantId } })
+      : await this.contacts.findOne({
+          where: {
+            tenantId,
+            channelAccountId: channel.id,
+            provider: dto.provider,
+            externalId: dto.external_user_id,
+          },
+        });
+    if (!identity) return { updated: 0, ignored: 1 };
+
+    const observedAt = this.safeCustomerCareDate(dto.observed_at);
+    const lastActiveAt = dto.last_active_at
+      ? this.safeCustomerCareDate(dto.last_active_at)
+      : undefined;
+    const current = this.readStoredCustomerPresence(identity.metadata?.presence);
+    if (current?.observedAt) {
+      const currentObservedAt = new Date(current.observedAt);
+      if (
+        !Number.isNaN(currentObservedAt.getTime()) &&
+        currentObservedAt.getTime() > observedAt.getTime()
+      ) {
+        return { conversation_uuid: link.libreDeskConversationUuid, updated: 0, ignored: 1 };
+      }
+    }
+
+    const presence = {
+      state: dto.state,
+      ...(lastActiveAt ? { lastActiveAt: lastActiveAt.toISOString() } : {}),
+      observedAt: observedAt.toISOString(),
+      source: dto.source,
+    } as const;
+    const sameState =
+      current?.state === presence.state &&
+      current?.lastActiveAt === presence.lastActiveAt &&
+      current?.source === presence.source;
+    if (sameState) {
+      return { conversation_uuid: link.libreDeskConversationUuid, updated: 0, ignored: 1 };
+    }
+
+    identity.metadata = {
+      ...(identity.metadata || {}),
+      presence,
+    };
+    await this.contacts.save(identity);
+
+    await this.publish(
+      tenantId,
+      'contact.presence.updated',
+      link.libreDeskConversationUuid,
+      {
+        conversationId: link.libreDeskConversationUuid,
+        customerId: String(identity.id),
+        presence,
+      },
+    );
+
+    return {
+      conversation_uuid: link.libreDeskConversationUuid,
+      updated: 1,
+      ignored: 0,
+    };
+  }
+
+  private readStoredCustomerPresence(value: unknown):
+    | {
+        state: 'online' | 'offline' | 'unknown';
+        lastActiveAt?: string;
+        observedAt?: string;
+        source?: 'native' | 'native_activity';
+      }
+    | undefined {
+    if (!value || typeof value !== 'object') return undefined;
+    const row = value as Record<string, unknown>;
+    const state = String(row.state || '');
+    if (!['online', 'offline', 'unknown'].includes(state)) return undefined;
+    const source = String(row.source || '');
+    return {
+      state: state as 'online' | 'offline' | 'unknown',
+      ...(typeof row.lastActiveAt === 'string' ? { lastActiveAt: row.lastActiveAt } : {}),
+      ...(typeof row.observedAt === 'string' ? { observedAt: row.observedAt } : {}),
+      ...(['native', 'native_activity'].includes(source)
+        ? { source: source as 'native' | 'native_activity' }
+        : {}),
+    };
+  }
+
   private safeCustomerCareDate(value: string): Date {
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
@@ -3554,7 +3670,25 @@ export class CustomerCareService {
       pinned: preference?.pinned || false,
       muted: preference?.muted || false,
       archived: preference?.archived || false,
+      presence:
+        this.readStoredCustomerPresence(identity?.metadata?.presence) ||
+        this.mapLibreDeskContactPresence(item.contact),
       updatedAt: item.updated_at,
+    };
+  }
+
+  private mapLibreDeskContactPresence(
+    contact: LibreDeskConversation['contact'] | undefined,
+  ) {
+    if (!contact) return undefined;
+    const availability = String(contact.availability_status || '').toLowerCase();
+    if (!availability && !contact.last_active_at) return undefined;
+    const state = availability === 'online' ? 'online' : availability ? 'offline' : 'unknown';
+    return {
+      state,
+      ...(contact.last_active_at ? { lastActiveAt: contact.last_active_at } : {}),
+      observedAt: new Date().toISOString(),
+      source: 'native_activity' as const,
     };
   }
 
@@ -3601,7 +3735,17 @@ export class CustomerCareService {
       status:
         link?.status === 'recalled' || link?.metadata?.recalled === true
           ? 'recalled'
-          : mapMessageStatus(item.status, incoming),
+          : !incoming && ['queued', 'sending', 'sent', 'delivered', 'read', 'failed'].includes(String(link?.status || ''))
+            ? link?.status
+            : mapMessageStatus(item.status, incoming),
+      deliveredAt:
+        typeof link?.metadata?.deliveredAt === 'string'
+          ? link.metadata.deliveredAt
+          : undefined,
+      readAt:
+        typeof link?.metadata?.readAt === 'string'
+          ? link.metadata.readAt
+          : undefined,
       attachments: (item.attachments || []).map((attachment) => ({
         id: attachment.uuid,
         name: attachment.name,
