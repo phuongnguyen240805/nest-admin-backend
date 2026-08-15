@@ -12,6 +12,7 @@ import { AUTOMATION_QUEUES } from '../queues/constants'
 import { FlowExecutionService } from '../runtime/flow-execution.service'
 import { isAutomationRuntimeEnabled, isAutomationTenantAllowed } from '../runtime/automation-feature-gate'
 import { FlowRuntimeService } from '../runtime/flow-runtime.service'
+import { AutomationMetricsService } from '../observability/automation-metrics.service'
 
 @Injectable()
 export class AutomationOutboundDispatcherService {
@@ -25,6 +26,7 @@ export class AutomationOutboundDispatcherService {
     private readonly customerCare: CustomerCareService,
     private readonly executions: FlowExecutionService,
     private readonly runtime: FlowRuntimeService,
+    private readonly metrics: AutomationMetricsService,
     @InjectBullQueue(AUTOMATION_QUEUES.FLOW)
     private readonly flowQueue: Queue,
   ) {}
@@ -68,6 +70,7 @@ export class AutomationOutboundDispatcherService {
   }
 
   private async deliver(dispatch: AutomationOutboundDispatchEntity): Promise<void> {
+    const startedAt = Date.now()
     if (!isAutomationRuntimeEnabled() || !isAutomationTenantAllowed(dispatch.tenantId)) {
       dispatch.status = 'PENDING'
       dispatch.availableAt = new Date(Date.now() + 60_000)
@@ -81,6 +84,7 @@ export class AutomationOutboundDispatcherService {
         dispatch.completedAt = new Date()
         dispatch.lastError = execution ? `execution-${execution.status.toLowerCase()}` : 'execution-not-found'
         await this.dispatches.save(dispatch)
+        this.metrics.recordOutbound(dispatch.tenantId, 'cancelled', Date.now() - startedAt)
         return
       }
       const type = this.messageType(dispatch.messageType)
@@ -116,6 +120,7 @@ export class AutomationOutboundDispatcherService {
         executionId: dispatch.executionId,
         contextPatch: { waitingNodeId: null, waitingReason: null, outboundDispatchId: dispatch.dispatchId },
       })
+      this.metrics.recordOutbound(dispatch.tenantId, 'sent', Date.now() - startedAt)
       await this.flowQueue.add(
         'run',
         { tenantId: dispatch.tenantId, executionId: dispatch.executionId },
@@ -130,9 +135,11 @@ export class AutomationOutboundDispatcherService {
         dispatch.completedAt = new Date()
         await this.dispatches.save(dispatch)
         await this.runtime.failWithHooks(dispatch.tenantId, dispatch.executionId, error).catch(() => undefined)
+        this.metrics.recordOutbound(dispatch.tenantId, 'dead', Date.now() - startedAt)
         return
       }
       dispatch.status = 'PENDING'
+      this.metrics.recordOutbound(dispatch.tenantId, 'retry', Date.now() - startedAt)
       const backoffMs = Math.min(5 * 60_000, 2_000 * 2 ** Math.max(0, dispatch.attemptCount - 1))
       dispatch.availableAt = new Date(Date.now() + backoffMs)
       await this.dispatches.save(dispatch)

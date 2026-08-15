@@ -6,6 +6,7 @@ import { DataSource, Repository } from 'typeorm'
 import type { LadiflowRpcContext } from '../../ladiflow-rpc/ladiflow-dispatcher.service'
 import { AutomationBroadcastRecipientEntity, BroadcastEntity, FlowEntity } from '../entities'
 import { FlowExecutionService } from '../runtime/flow-execution.service'
+import { AutomationActionDispatchService } from '../actions/automation-action-dispatch.service'
 import { AutomationOutboundDispatchService } from '../services/automation-outbound-dispatch.service'
 import { AutomationBroadcastAudienceService } from './automation-broadcast-audience.service'
 
@@ -23,6 +24,7 @@ export class AutomationBroadcastRuntimeService {
     private readonly flows: Repository<FlowEntity>,
     private readonly executions: FlowExecutionService,
     private readonly outbound: AutomationOutboundDispatchService,
+    private readonly actions: AutomationActionDispatchService,
     private readonly audience: AutomationBroadcastAudienceService,
   ) {}
 
@@ -154,6 +156,7 @@ export class AutomationBroadcastRuntimeService {
       if (!recipient.flowExecutionId) continue
       await this.executions.cancel(tenantId, recipient.flowExecutionId, 'broadcast-cancelled').catch(() => undefined)
       await this.outbound.cancelForExecution(tenantId, recipient.flowExecutionId, 'broadcast-cancelled').catch(() => undefined)
+      await this.actions.cancelForExecution(tenantId, recipient.flowExecutionId, 'broadcast-cancelled').catch(() => undefined)
       recipient.status = 'CANCELLED'
       recipient.completedAt = new Date()
       recipient.lastError = null

@@ -62,11 +62,13 @@ export class LadiflowGraphAdapterService {
     })
 
     const explicitStart = this.firstString(raw.startStepId, raw.start_step_id, raw.startNodeId, raw.start_node_id)
+    const markedStart = nodes.find((node) => this.record(node.data).isStartNode === true)
+    const markedStartId = markedStart ? this.idOf(markedStart, '') : undefined
     return {
       schema: 'node-graph',
       triggers: this.records(raw.triggers),
       steps,
-      startStepId: explicitStart || steps[0]?.id,
+      startStepId: explicitStart || markedStartId || steps[0]?.id,
       raw,
     }
   }
@@ -80,7 +82,7 @@ export class LadiflowGraphAdapterService {
       const messages = this.records(config.messages)
       const steps = messages.map((message, messageIndex) => ({
         id: this.idOf(message, `${this.idOf(config, `flow-config-${configIndex}`)}:${messageIndex}`),
-        type: String(message.type ?? config.type ?? 'UNKNOWN').toUpperCase(),
+        type: this.nodeType(message.type ?? config.type ?? 'UNKNOWN'),
         order: this.numberOf(config.ordering, configIndex) * 1000 + messageIndex,
         config: { flowConfig: config, message },
         source: message,
@@ -113,11 +115,20 @@ export class LadiflowGraphAdapterService {
     const data = this.record(node.data)
     return {
       id: this.idOf(node, `node-${index}`),
-      type: String(node.type ?? data.type ?? 'UNKNOWN').toUpperCase(),
+      type: this.nodeType(node.type ?? data.type ?? 'UNKNOWN'),
       order: index,
       config: data,
       source: node,
     }
+  }
+
+  private nodeType(value: unknown): string {
+    return String(value ?? 'UNKNOWN')
+      .trim()
+      .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+      .replace(/[^a-zA-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toUpperCase() || 'UNKNOWN'
   }
 
   private firstString(...values: unknown[]): string | undefined {

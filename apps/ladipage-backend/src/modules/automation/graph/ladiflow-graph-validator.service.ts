@@ -13,6 +13,29 @@ const SUPPORTED_RUNTIME_TYPES = new Set([
   'WAIT_FOR_REPLY',
   'NEXT_STEP',
   'END',
+  'ACTION',
+  'PERFORM_ACTION',
+  'HTTP_REQUEST',
+  'CALL_API',
+  'WEBHOOK',
+  'ADD_TAG',
+  'ADD_CONTACT_TAG',
+  'REMOVE_TAG',
+  'REMOVE_CONTACT_TAG',
+  'ASSIGN_AGENT',
+  'ASSIGN_CONVERSATION',
+  'UNASSIGN_AGENT',
+  'UNASSIGN_CONVERSATION',
+  'SET_CUSTOM_FIELD',
+  'CREATE_ORDER',
+  'UPDATE_ORDER',
+  'CREATE_PAYMENT',
+  'CHECK_PAYMENT',
+  'BOOK_SHIPPING',
+  'CHECK_SHIPPING',
+  'AI_REPLY',
+  'AI_ANALYZE',
+  'SPLIT_TRAFFIC',
 ])
 
 @Injectable()
@@ -42,6 +65,16 @@ export class LadiflowGraphValidatorService {
       ] as const) {
         if (target && !ids.has(target)) errors.push(`${step.id} references missing ${label} step: ${target}`)
       }
+      if (step.type === 'SPLIT_TRAFFIC') {
+        const details = this.record(step.config.details)
+        const splitStep = this.record(this.array(details.steps ?? step.config.steps)[0])
+        const cases = this.array(step.config.cases ?? details.cases ?? splitStep.cases)
+        for (const item of cases) {
+          const row = this.record(item)
+          const target = String(row.nodeId ?? row.nextStepId ?? row.targetNodeId ?? '').trim()
+          if (target && !ids.has(target)) errors.push(`${step.id} references missing split step: ${target}`)
+        }
+      }
       if (!SUPPORTED_RUNTIME_TYPES.has(step.type)) {
         warnings.push(`Runtime does not execute node type ${step.type} yet; an execution reaching it will fail safely.`)
       }
@@ -57,6 +90,14 @@ export class LadiflowGraphValidatorService {
     if (runtime.schema === 'node-graph' && runtime.steps.length === 0) errors.push('Node graph contains no nodes.')
 
     return { valid: errors.length === 0, schema: runtime.schema, errors, warnings }
+  }
+
+  private record(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+  }
+
+  private array(value: unknown): unknown[] {
+    return Array.isArray(value) ? value : []
   }
 
   private validateUniqueIds(ids: string[], label: string, errors: string[]) {

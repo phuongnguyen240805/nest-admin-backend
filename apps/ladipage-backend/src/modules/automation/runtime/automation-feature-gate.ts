@@ -10,6 +10,19 @@ export function isAutomationTriggerEnabled(): boolean {
   return isAutomationRuntimeEnabled() && process.env.AUTOMATION_TRIGGER_ENABLED === 'true'
 }
 
+
+export function isAutomationActionsEnabled(): boolean {
+  return isAutomationRuntimeEnabled() && process.env.AUTOMATION_ACTIONS_ENABLED === 'true'
+}
+
+export function isAutomationHttpEnabled(): boolean {
+  return isAutomationActionsEnabled() && process.env.AUTOMATION_HTTP_ENABLED === 'true'
+}
+
+export function isAutomationRichMessageEnabled(): boolean {
+  return isAutomationRuntimeEnabled() && process.env.AUTOMATION_RICH_MESSAGE_ENABLED === 'true'
+}
+
 export function isAutomationSequenceEnabled(): boolean {
   return isAutomationRuntimeEnabled() && process.env.AUTOMATION_SEQUENCE_ENABLED === 'true'
 }

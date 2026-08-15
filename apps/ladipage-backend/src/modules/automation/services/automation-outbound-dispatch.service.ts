@@ -22,6 +22,28 @@ export class AutomationOutboundDispatchService {
       .execute()
   }
 
+  async retryDead(tenantId: number, dispatchId: string): Promise<AutomationOutboundDispatchEntity | null> {
+    const row = await this.dispatches.findOne({ where: { tenantId, dispatchId } })
+    if (!row || !['DEAD', 'FAILED'].includes(row.status)) return null
+    row.status = 'PENDING'
+    row.attemptCount = 0
+    row.availableAt = new Date()
+    row.lastError = null
+    row.completedAt = null
+    return this.dispatches.save(row)
+  }
+
+  async retryDeadForExecution(tenantId: number, executionId: string): Promise<number> {
+    const result = await this.dispatches.createQueryBuilder()
+      .update(AutomationOutboundDispatchEntity)
+      .set({ status: 'PENDING', attemptCount: 0, availableAt: new Date(), lastError: null, completedAt: null })
+      .where('tenantId = :tenantId', { tenantId })
+      .andWhere('execution_id = :executionId', { executionId })
+      .andWhere("status IN ('DEAD','FAILED')")
+      .execute()
+    return Number(result.affected ?? 0)
+  }
+
   async request(input: {
     tenantId: number
     executionId: string

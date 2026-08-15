@@ -1,33 +1,25 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 
+import { AutomationMessageNormalizerService } from '../../integrations/automation-message-normalizer.service'
 import { AutomationOutboundDispatchService } from '../../services/automation-outbound-dispatch.service'
 import type { FlowNodeExecutor } from '../flow-node-executor'
 import type { FlowNodeExecutionContext, FlowNodeExecutionResult, RuntimeFlowStep } from '../automation-runtime.types'
 
-type JsonRecord = Record<string, unknown>
-
 @Injectable()
 export class AutomationSendMessageExecutor implements FlowNodeExecutor {
-  readonly types = ['TEXT', 'SEND_MESSAGE'] as const
+  readonly types = ['TEXT', 'SEND_MESSAGE', 'SENDMESSAGE'] as const
 
-  constructor(private readonly outbound: AutomationOutboundDispatchService) {}
+  constructor(
+    private readonly outbound: AutomationOutboundDispatchService,
+    private readonly messages: AutomationMessageNormalizerService,
+  ) {}
 
   async execute(step: RuntimeFlowStep, context: FlowNodeExecutionContext): Promise<FlowNodeExecutionResult> {
     if (!context.conversationId) throw new BadRequestException('SEND_MESSAGE requires conversationId')
-    const config = this.record(step.config)
-    const message = this.record(config.message)
-    const nestedContent = this.record(message.content)
-    const nestedMessage = this.record(nestedContent.message)
-    const content = this.firstString(
-      config.text,
-      config.content,
-      message.text,
-      nestedMessage.text,
-      message.title,
-    )
-    const attachments = this.numberArray(config.attachments ?? message.attachments)
+    const normalized = this.messages.normalize(step.config)
+    const { content, attachments, messageType } = normalized
     if (!content && attachments.length === 0) {
-      return { kind: 'CONTINUE', nextStepId: step.nextStepId, output: { skipped: 'empty-message' } }
+      return { kind: 'CONTINUE', nextStepId: step.nextStepId, output: { skipped: 'empty-message', warnings: normalized.warnings } }
     }
 
     const dispatch = await this.outbound.request({
@@ -36,7 +28,7 @@ export class AutomationSendMessageExecutor implements FlowNodeExecutor {
       nodeId: step.id,
       logicalIteration: context.logicalIteration,
       conversationId: context.conversationId,
-      messageType: this.firstString(config.messageType, config.message_type, message.type)?.toLowerCase() || 'text',
+      messageType,
       content,
       attachments,
     })
@@ -45,7 +37,7 @@ export class AutomationSendMessageExecutor implements FlowNodeExecutor {
       return {
         kind: 'CONTINUE',
         nextStepId: step.nextStepId,
-        output: { dispatchId: dispatch.dispatchId, clientMessageId: dispatch.clientMessageId, alreadySent: true },
+        output: { dispatchId: dispatch.dispatchId, clientMessageId: dispatch.clientMessageId, alreadySent: true, richMessageFallback: normalized.fallbackUsed, warnings: normalized.warnings },
       }
     }
     if (dispatch.status === 'DEAD' || dispatch.status === 'FAILED') {
@@ -55,24 +47,8 @@ export class AutomationSendMessageExecutor implements FlowNodeExecutor {
     return {
       kind: 'DISPATCH',
       nextStepId: step.nextStepId,
-      output: { dispatchId: dispatch.dispatchId, clientMessageId: dispatch.clientMessageId },
+      output: { dispatchId: dispatch.dispatchId, clientMessageId: dispatch.clientMessageId, richMessageFallback: normalized.fallbackUsed, warnings: normalized.warnings },
     }
   }
 
-  private firstString(...values: unknown[]): string {
-    for (const value of values) {
-      if (typeof value === 'string' && value.trim()) return value.trim()
-    }
-    return ''
-  }
-
-  private numberArray(value: unknown): number[] {
-    return Array.isArray(value)
-      ? value.map(Number).filter((item) => Number.isInteger(item) && item > 0)
-      : []
-  }
-
-  private record(value: unknown): JsonRecord {
-    return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {}
-  }
 }

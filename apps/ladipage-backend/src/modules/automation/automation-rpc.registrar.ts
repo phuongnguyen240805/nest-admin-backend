@@ -5,6 +5,8 @@ import { AutomationBroadcastRuntimeService } from './broadcast/automation-broadc
 import { AutomationSequenceService } from './sequence/automation-sequence.service'
 import { AutomationService } from './services/automation.service'
 import { AutomationTriggerService } from './triggers/automation-trigger.service'
+import { AutomationChannelCapabilityService } from './integrations/automation-channel-capability.service'
+import { AutomationOpsService } from './observability/automation-ops.service'
 
 @Injectable()
 export class AutomationRpcRegistrar implements OnModuleInit {
@@ -14,6 +16,8 @@ export class AutomationRpcRegistrar implements OnModuleInit {
     private readonly triggerService: AutomationTriggerService,
     private readonly sequenceService: AutomationSequenceService,
     private readonly broadcastRuntime: AutomationBroadcastRuntimeService,
+    private readonly channelCapabilities: AutomationChannelCapabilityService,
+    private readonly ops: AutomationOpsService,
   ) {}
 
   onModuleInit(): void {
@@ -86,5 +90,25 @@ export class AutomationRpcRegistrar implements OnModuleInit {
       this.broadcastRuntime.schedule(body, ctx))
     this.dispatcher.registerHandler('broadcast/cancel', (body, ctx) =>
       this.broadcastRuntime.cancel(body, ctx))
+
+
+    // Phase 8 safe integration capability catalog. New transports remain reference-only
+    // until a real Customer Care ingress adapter exists; protected Zalo/FB are untouched.
+    this.dispatcher.registerHandler('integration/capabilities', () =>
+      ({ items: this.channelCapabilities.list() }))
+
+    // Phase 9 operational visibility and explicit recovery controls.
+    this.dispatcher.registerHandler('automation/health', (body, ctx) =>
+      this.ops.health(body, ctx))
+    this.dispatcher.registerHandler('automation/metrics', (body, ctx) =>
+      this.ops.metricsSnapshot(body, ctx))
+    this.dispatcher.registerHandler('automation/execution-retry', (body, ctx) =>
+      this.ops.retryExecution(body, ctx))
+    this.dispatcher.registerHandler('automation/execution-cancel', (body, ctx) =>
+      this.ops.cancelExecution(body, ctx))
+    this.dispatcher.registerHandler('automation/action-retry', (body, ctx) =>
+      this.ops.retryAction(body, ctx))
+    this.dispatcher.registerHandler('automation/outbound-retry', (body, ctx) =>
+      this.ops.retryOutbound(body, ctx))
   }
 }

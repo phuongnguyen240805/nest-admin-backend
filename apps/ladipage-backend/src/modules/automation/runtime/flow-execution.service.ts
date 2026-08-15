@@ -222,6 +222,20 @@ export class FlowExecutionService {
     return this.executions.save(row)
   }
 
+  async retryFailed(tenantId: number, executionId: string): Promise<FlowExecutionEntity | null> {
+    const row = await this.find(tenantId, executionId)
+    if (!row || row.status !== 'FAILED') return null
+    row.status = 'PENDING'
+    row.failedAt = null
+    row.completedAt = null
+    row.waitingUntil = null
+    row.lockToken = null
+    row.lockedUntil = null
+    row.lastError = null
+    row.version += 1
+    return this.executions.save(row)
+  }
+
   async cancel(tenantId: number, executionId: string, reason = 'cancelled'): Promise<FlowExecutionEntity> {
     const row = await this.require(tenantId, executionId)
     if (['COMPLETED', 'FAILED', 'CANCELLED'].includes(row.status)) return row

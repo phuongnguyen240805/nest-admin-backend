@@ -40,7 +40,14 @@ export class AutomationTriggerRuntimeService {
           'delivery.event_id = event.event_id AND delivery.consumer = :consumer',
           { consumer: AUTOMATION_EVENT_CONSUMER },
         )
-        .where('event.event_type = :eventType', { eventType: 'customer-care.message.inbound' })
+        .where(`EXISTS (
+          SELECT 1
+          FROM "lp_automation_trigger" automation_trigger
+          WHERE automation_trigger."tenantId" = event.tenant_id
+            AND automation_trigger.event_type = event.event_type
+            AND automation_trigger.enabled = TRUE
+            AND automation_trigger.is_delete = FALSE
+        )`)
         .andWhere("event.created_at >= NOW() - (:lookback * INTERVAL '1 minute')", { lookback: lookbackMinutes })
         .andWhere('delivery.id IS NULL')
         .orderBy('event.created_at', 'ASC')

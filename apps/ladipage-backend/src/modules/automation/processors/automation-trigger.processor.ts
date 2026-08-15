@@ -11,6 +11,7 @@ import { FlowExecutionService } from '../runtime/flow-execution.service'
 import { isAutomationTenantAllowed, isAutomationTriggerEnabled } from '../runtime/automation-feature-gate'
 import { AutomationTriggerService } from '../triggers/automation-trigger.service'
 import { AUTOMATION_EVENT_CONSUMER } from '../triggers/automation-trigger-runtime.service'
+import { AutomationMetricsService } from '../observability/automation-metrics.service'
 
 interface AutomationTriggerJob {
   tenantId: number
@@ -27,6 +28,7 @@ export class AutomationTriggerProcessor extends BaseQueueProcessor<AutomationTri
     private readonly deliveries: DomainEventDeliveryService,
     private readonly triggers: AutomationTriggerService,
     private readonly executions: FlowExecutionService,
+    private readonly metrics: AutomationMetricsService,
     @InjectBullQueue(AUTOMATION_QUEUES.FLOW)
     private readonly flowQueue: Queue,
   ) {
@@ -54,7 +56,9 @@ export class AutomationTriggerProcessor extends BaseQueueProcessor<AutomationTri
     try {
       const conversationId = this.conversationId(event.payload, event.aggregateId)
       let resumed = 0
-      if (conversationId) resumed = await this.resumeWaitingReplies(event, conversationId)
+      if (event.eventType === 'customer-care.message.inbound' && conversationId) {
+        resumed = await this.resumeWaitingReplies(event, conversationId)
+      }
 
       const shouldStartNew = resumed === 0 || process.env.AUTOMATION_TRIGGER_START_NEW_WHILE_WAITING === 'true'
       let started = 0
@@ -91,6 +95,9 @@ export class AutomationTriggerProcessor extends BaseQueueProcessor<AutomationTri
         }
       }
 
+      if (resumed > 0) this.metrics.recordTrigger(tenantId, 'resumed')
+      if (started > 0) this.metrics.recordTrigger(tenantId, 'started')
+      if (resumed === 0 && started === 0) this.metrics.recordTrigger(tenantId, 'matched-zero')
       await this.deliveries.mark({
         eventId, tenantId, consumer: AUTOMATION_EVENT_CONSUMER, status: 'processed', processed: true,
         metadata: { resumed, started },
@@ -145,6 +152,9 @@ export class AutomationTriggerProcessor extends BaseQueueProcessor<AutomationTri
   private contactId(payload: Record<string, unknown>): string | null {
     const direct = String(payload.contactId ?? payload.contact_id ?? '').trim()
     if (direct) return direct
+    const contact = this.record(payload.contact)
+    const internal = String(contact.id ?? '').trim()
+    if (internal) return internal
     const message = this.record(payload.message)
     const sender = this.record(message.sender ?? payload.sender)
     const external = String(sender.external_id ?? sender.externalId ?? sender.id ?? '').trim()

@@ -12,6 +12,7 @@ import {
   FlowEntity,
 } from '../entities'
 import { FlowExecutionService } from '../runtime/flow-execution.service'
+import { AutomationActionDispatchService } from '../actions/automation-action-dispatch.service'
 import { AutomationOutboundDispatchService } from '../services/automation-outbound-dispatch.service'
 import { AutomationSequenceTimeService } from './automation-sequence-time.service'
 
@@ -33,6 +34,7 @@ export class AutomationSequenceService {
     private readonly flows: Repository<FlowEntity>,
     private readonly executions: FlowExecutionService,
     private readonly outbound: AutomationOutboundDispatchService,
+    private readonly actions: AutomationActionDispatchService,
     private readonly time: AutomationSequenceTimeService,
   ) {}
 
@@ -223,6 +225,7 @@ export class AutomationSequenceService {
       if (!dispatch.flowExecutionId) continue
       await this.executions.cancel(tenantId, dispatch.flowExecutionId, 'sequence-unenrolled').catch(() => undefined)
       await this.outbound.cancelForExecution(tenantId, dispatch.flowExecutionId, 'sequence-unenrolled').catch(() => undefined)
+      await this.actions.cancelForExecution(tenantId, dispatch.flowExecutionId, 'sequence-unenrolled').catch(() => undefined)
       dispatch.status = 'CANCELLED'
       dispatch.completedAt = new Date()
       dispatch.lastError = null

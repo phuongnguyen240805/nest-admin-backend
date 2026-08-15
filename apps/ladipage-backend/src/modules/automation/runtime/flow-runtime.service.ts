@@ -6,6 +6,7 @@ import { FlowEntity } from '../entities'
 import { LadiflowGraphAdapterService } from '../graph/ladiflow-graph-adapter.service'
 import { AutomationBroadcastRuntimeService } from '../broadcast/automation-broadcast-runtime.service'
 import { AutomationSequenceService } from '../sequence/automation-sequence.service'
+import { AutomationMetricsService } from '../observability/automation-metrics.service'
 import type { FlowRunResult, RuntimeFlowStep } from './automation-runtime.types'
 import { FlowExecutionService } from './flow-execution.service'
 import { FlowNodeExecutorRegistry } from './flow-node-executor.registry'
@@ -20,6 +21,7 @@ export class FlowRuntimeService {
     private readonly executorRegistry: FlowNodeExecutorRegistry,
     private readonly sequences: AutomationSequenceService,
     private readonly broadcasts: AutomationBroadcastRuntimeService,
+    private readonly metrics: AutomationMetricsService,
   ) {}
 
   async run(tenantId: number, executionId: string, options: { terminalOnError?: boolean } = {}): Promise<FlowRunResult> {
@@ -145,14 +147,20 @@ export class FlowRuntimeService {
         if (result.kind === 'DISPATCH') {
           const dispatchId = this.stringOrUndefined(result.output?.dispatchId)
           await this.executions.waitStep(activeStep, output)
+          const actionType = this.stringOrUndefined(result.output?.actionType)
+          const waitingReason = actionType ? 'action-dispatch' : 'outbound-dispatch'
           await this.executions.markWaiting({
             tenantId,
             executionId,
             currentNodeId: nextStepId,
             waitingUntil: null,
-            contextPatch: { waitingNodeId: step.id, waitingReason: 'outbound-dispatch', outboundDispatchId: dispatchId ?? null },
+            contextPatch: {
+              waitingNodeId: step.id,
+              waitingReason,
+              ...(actionType ? { actionDispatchId: dispatchId ?? null } : { outboundDispatchId: dispatchId ?? null }),
+            },
           })
-          return { executionId, status: 'WAITING', currentNodeId: nextStepId, reason: 'outbound-dispatch', waitingNodeId: step.id, dispatchId }
+          return { executionId, status: 'WAITING', currentNodeId: nextStepId, reason: waitingReason, waitingNodeId: step.id, dispatchId }
         }
       }
 
@@ -181,6 +189,7 @@ export class FlowRuntimeService {
 
   async failWithHooks(tenantId: number, executionId: string, error: unknown): Promise<void> {
     await this.executions.fail(tenantId, executionId, error)
+    this.metrics.recordFlow(tenantId, 'failed')
     await Promise.allSettled([
       this.sequences.onFlowFailed(tenantId, executionId, error),
       this.broadcasts.onFlowFailed(tenantId, executionId, error),
@@ -189,6 +198,7 @@ export class FlowRuntimeService {
 
   private async completeWithHooks(tenantId: number, executionId: string): Promise<void> {
     await this.executions.complete(tenantId, executionId)
+    this.metrics.recordFlow(tenantId, 'completed')
     await Promise.allSettled([
       this.sequences.onFlowCompleted(tenantId, executionId),
       this.broadcasts.onFlowCompleted(tenantId, executionId),
