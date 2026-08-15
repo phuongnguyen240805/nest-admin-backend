@@ -39,6 +39,7 @@ import {
 } from './customer-care.clients';
 import {
   ContactPatchDto,
+  CustomerCareDeliveryStatusDto,
   ConversationOrderLinkDto,
   ConversationPatchDto,
   ConversationQueryDto,
@@ -1463,20 +1464,27 @@ export class CustomerCareService {
         item: this.mapMessage(row, reactionMap.get(row.uuid), link),
       };
     });
-    // Older Zalo self-echoes were persisted as a second LibreDesk message.
+    // Older connector-native self-echoes were persisted as a second LibreDesk message.
     // Hide only a connector-native outgoing echo that has a matching normal
     // outgoing message in the same short send window.
     const libreDeskItems = mappedRows
       .filter((current) => {
         if (
-          current.link?.metadata?.source !== 'zalo_native' ||
+          !['zalo_native', 'facebook_native'].includes(
+            String(current.link?.metadata?.source || ''),
+          ) ||
           current.item.direction !== 'outgoing'
         )
           return true;
         const timestamp = new Date(current.item.createdAt).getTime();
         return !mappedRows.some((other) => {
           if (other.row.uuid === current.row.uuid) return false;
-          if (other.link?.metadata?.source === 'zalo_native') return false;
+          if (
+            ['zalo_native', 'facebook_native'].includes(
+              String(other.link?.metadata?.source || ''),
+            )
+          )
+            return false;
           return (
             other.item.direction === 'outgoing' &&
             other.item.content === current.item.content &&
@@ -2516,6 +2524,158 @@ export class CustomerCareService {
       throw new BadRequestException('Invalid webhook signature');
   }
 
+  async deliveryStatus(connectionKey: string, dto: CustomerCareDeliveryStatusDto) {
+    const channel = await this.channels.findOne({
+      where: { connectionKey, enabled: true },
+    });
+    if (!channel)
+      throw new NotFoundException('Customer Care channel session not found');
+    if (channel.provider !== dto.provider)
+      throw new BadRequestException('Webhook provider does not match channel session');
+    if (
+      !channel.externalAccountId.startsWith('pending:') &&
+      channel.externalAccountId !== dto.account_id
+    )
+      throw new BadRequestException('Webhook account does not match channel session');
+
+    const tenantId = channel.tenantId;
+    const link = await this.conversations.findOne({
+      where: {
+        tenantId,
+        channelAccountId: channel.id,
+        provider: dto.provider,
+        externalThreadId: dto.external_thread_id,
+      },
+    });
+    if (!link) return { updated: 0, ignored: 1 };
+
+    const ids = [...new Set([
+      dto.external_message_id,
+      ...(dto.external_message_ids || []),
+    ].filter((value): value is string => Boolean(value?.trim())))]
+      .map((value) => value.trim());
+
+    let candidates: CustomerCareMessageLinkEntity[] = [];
+    if (dto.client_message_id) {
+      const byClientId = await this.messages.findOne({
+        where: {
+          tenantId,
+          channelAccountId: channel.id,
+          provider: dto.provider,
+          conversationLinkId: link.id,
+          clientMessageId: dto.client_message_id,
+        },
+      });
+      if (byClientId) candidates = [byClientId];
+    }
+    if (!candidates.length && ids.length) {
+      candidates = await this.messages.find({
+        where: {
+          tenantId,
+          channelAccountId: channel.id,
+          provider: dto.provider,
+          conversationLinkId: link.id,
+          externalMessageId: In(ids),
+        },
+      });
+    }
+
+    // Facebook Lightspeed readReceipt is watermark-based instead of carrying
+    // message IDs. Only scan this one conversation and only rows at/before the
+    // provider watermark; no cross-conversation status changes are possible.
+    if (!candidates.length && dto.watermark_at) {
+      const watermark = new Date(dto.watermark_at);
+      if (!Number.isNaN(watermark.getTime())) {
+        candidates = await this.messages.find({
+          where: {
+            tenantId,
+            channelAccountId: channel.id,
+            provider: dto.provider,
+            conversationLinkId: link.id,
+            createdAt: LessThanOrEqual(watermark),
+          },
+          order: { createdAt: 'DESC' },
+          take: 500,
+        });
+      }
+    }
+
+    const occurredAt = this.safeCustomerCareDate(dto.occurred_at);
+    let updated = 0;
+    let ignored = 0;
+    for (const row of candidates) {
+      if (!this.isOutgoingMessageLink(row)) {
+        ignored += 1;
+        continue;
+      }
+      if (!this.canAdvanceDeliveryStatus(row.status, dto.status)) {
+        ignored += 1;
+        continue;
+      }
+
+      if (!row.externalMessageId && dto.external_message_id) {
+        row.externalMessageId = dto.external_message_id;
+      }
+      row.status = dto.status;
+      row.metadata = {
+        ...(row.metadata || {}),
+        direction: 'outgoing',
+        ...(dto.status === 'delivered'
+          ? { deliveredAt: occurredAt.toISOString() }
+          : { readAt: occurredAt.toISOString() }),
+        deliveryEventId: dto.event_id,
+      };
+      await this.messages.save(row);
+      updated += 1;
+
+      await this.publish(
+        tenantId,
+        'message.delivery.updated',
+        link.libreDeskConversationUuid,
+        {
+          conversationId: link.libreDeskConversationUuid,
+          messageId:
+            row.libreDeskMessageUuid ||
+            (row.clientMessageId ? `local:${row.clientMessageId}` : null),
+          externalMessageId: row.externalMessageId,
+          status: dto.status,
+          occurredAt: occurredAt.toISOString(),
+        },
+      );
+    }
+
+    return {
+      conversation_uuid: link.libreDeskConversationUuid,
+      updated,
+      ignored,
+    };
+  }
+
+  private safeCustomerCareDate(value: string): Date {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  }
+
+  private isOutgoingMessageLink(row: CustomerCareMessageLinkEntity): boolean {
+    return row.metadata?.direction === 'outgoing' || Boolean(row.clientMessageId);
+  }
+
+  private canAdvanceDeliveryStatus(current: string, next: 'delivered' | 'read'): boolean {
+    const rank: Record<string, number> = {
+      queued: 0,
+      pending: 0,
+      sending: 1,
+      sent: 2,
+      delivered: 3,
+      read: 4,
+    };
+    const currentRank = rank[String(current || '').toLowerCase()] ?? -1;
+    const nextRank = rank[next];
+    // failed/recalled/unknown are not overwritten by a late receipt unless the
+    // row has already reached a normal transport state.
+    return currentRank >= 0 && nextRank > currentRank;
+  }
+
   async inbound(connectionKey: string, dto: ZaloInboundDto) {
     let channel = await this.channels.findOne({
       where: { connectionKey, enabled: true },
@@ -2703,10 +2863,83 @@ export class CustomerCareService {
       ? new Date()
       : parsedOccurredAt;
 
-    // A message sent from the CSKH UI is first queued in LibreDesk, then Zalo
-    // emits the same message back as an outgoing/self event with its native ID.
-    // Reconcile that ACK with the original row instead of inserting it again as
-    // an inbound mirror.
+    // Prefer an exact connector receipt when available. Both Zalo and Facebook
+    // send client_message_id back with their native self-echo, so the ACK can
+    // update the optimistic CSKH row without relying on text/time heuristics.
+    if (dto.client_message_id) {
+      const exactOriginal = await this.messages.findOne({
+        where: {
+          tenantId,
+          channelAccountId: channel.id,
+          provider: dto.provider,
+          clientMessageId: dto.client_message_id,
+        },
+      });
+      if (exactOriginal) {
+        const exactLink = exactOriginal.conversationLinkId
+          ? await this.conversations.findOne({
+              where: { id: exactOriginal.conversationLinkId, tenantId },
+            })
+          : link;
+        if (exactLink) {
+          const restoredExactConversation =
+            await this.restoreDeletedConversationLink(exactLink);
+          exactOriginal.externalMessageId = dto.external_message_id;
+          exactOriginal.status = 'sent';
+          exactOriginal.metadata = {
+            ...(exactOriginal.metadata || {}),
+            direction: 'outgoing',
+            nativeAckAt: safeOccurredAt.toISOString(),
+            nativeSource:
+              dto.provider === 'facebook_personal'
+                ? 'facebook_native'
+                : 'zalo_native',
+          };
+          await this.messages.save(exactOriginal);
+          exactLink.lastExternalMessageId = dto.external_message_id;
+          exactLink.lastMessageAt = safeOccurredAt;
+          await this.conversations.save(exactLink);
+
+          if (restoredExactConversation) {
+            await this.publish(
+              tenantId,
+              'conversation.created',
+              exactLink.libreDeskConversationUuid,
+              { conversationId: exactLink.libreDeskConversationUuid },
+            );
+          }
+
+          const result: InboundResult = {
+            conversation_uuid: exactLink.libreDeskConversationUuid,
+            message_uuid: exactOriginal.libreDeskMessageUuid || undefined,
+          };
+          event.status = 'processed';
+          event.processedAt = new Date();
+          event.lastError = null;
+          event.payload = {
+            ...(event.payload || {}),
+            debug_stage: 'outgoing_ack_reconciled_exact',
+            result,
+          };
+          await this.inboundEvents.save(event);
+          await this.publish(
+            tenantId,
+            'message.delivery.updated',
+            exactLink.libreDeskConversationUuid,
+            {
+              conversationId: exactLink.libreDeskConversationUuid,
+              messageId: exactOriginal.libreDeskMessageUuid,
+              externalMessageId: dto.external_message_id,
+              status: 'sent',
+            },
+          );
+          return result;
+        }
+      }
+    }
+
+    // Backward compatibility for older connector events that do not carry a
+    // client_message_id: match the recent optimistic message by content/time.
     if (link) {
       const candidates = await this.messages.find({
         where: {
@@ -2849,7 +3082,10 @@ export class CustomerCareService {
         status: 'sent',
         metadata: {
           mirror: !result.message_uuid,
-          source: 'zalo_native',
+          source:
+            dto.provider === 'facebook_personal'
+              ? 'facebook_native'
+              : 'zalo_native',
           direction: 'outgoing',
           content: dto.message.text,
           type: dto.message.type || 'text',
@@ -2949,7 +3185,10 @@ export class CustomerCareService {
           provider: dto.provider,
           externalId: dto.sender.external_id,
           displayName:
-            dto.sender.display_name || `Khách Zalo ${dto.sender.external_id}`,
+            dto.sender.display_name ||
+            (dto.provider === 'facebook_personal'
+              ? `Khách Facebook ${dto.sender.external_id}`
+              : `Khách Zalo ${dto.sender.external_id}`),
           avatarUrl: dto.sender.avatar_url || null,
           phone: null,
           email: null,

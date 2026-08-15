@@ -437,12 +437,18 @@ export class ShippingService extends TenantScopedService {
       if (!dto.address.districtId || !dto.address.wardCode) {
         throw new BadRequestException('GHN requires districtId and wardCode')
       }
+      if (!dto.serviceId && !dto.serviceTypeId) {
+        throw new BadRequestException(
+          'GHN chưa có dịch vụ hợp lệ cho tuyến này; hãy tải lại danh sách dịch vụ trước khi tính phí',
+        )
+      }
       return {
-        service_id: dto.serviceId,
-        service_type_id: dto.serviceTypeId ?? 2,
+        ...(dto.serviceId
+          ? { service_id: dto.serviceId }
+          : { service_type_id: dto.serviceTypeId }),
         to_district_id: dto.address.districtId,
         to_ward_code: dto.address.wardCode,
-        insurance_value: dto.insuranceValue ?? 0,
+        insurance_value: Math.min(Number(dto.insuranceValue ?? 0), 5_000_000),
         coupon: null,
         ...parcel,
       }
@@ -454,8 +460,10 @@ export class ShippingService extends TenantScopedService {
     const pickup = integration.settings.pickup as
       | Record<string, unknown>
       | undefined
-    if (dto.provider === 'ghtk' && (!pickup?.province || !pickup?.district)) {
-      throw new BadRequestException('GHTK pickup address is not configured')
+    if (dto.provider === 'ghtk' && (!pickup?.province || !pickup?.ward)) {
+      throw new BadRequestException(
+        'GHTK pickup address is incomplete; province and ward are required',
+      )
     }
     if (dto.provider !== 'ghtk') {
       return {
@@ -482,7 +490,8 @@ export class ShippingService extends TenantScopedService {
       district: dto.address.district,
       ward: dto.address.ward,
       address: dto.address.address,
-      weight: parcel.weight / 1000,
+      // GHTK fee API expects weight in grams.
+      weight: parcel.weight,
       value: dto.insuranceValue ?? 0,
       transport: 'road',
     }

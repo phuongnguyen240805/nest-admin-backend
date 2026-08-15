@@ -81,10 +81,24 @@ export class ZaloInboundDto {
   @IsBoolean() is_self = false
   @IsString() external_thread_id!: string
   @IsString() external_message_id!: string
+  @IsOptional() @IsString() client_message_id?: string
   @IsOptional() @IsIn(['user', 'group']) thread_type = 'user'
   @IsString() occurred_at!: string
   @IsObject() sender!: { external_id: string; display_name: string; avatar_url?: string }
   @IsObject() message!: { type: string; text: string }
+}
+
+export class CustomerCareDeliveryStatusDto {
+  @IsString() event_id!: string
+  @IsIn(['zalo_personal', 'facebook_personal']) provider!: 'zalo_personal' | 'facebook_personal'
+  @IsString() account_id!: string
+  @IsString() external_thread_id!: string
+  @IsOptional() @IsString() external_message_id?: string
+  @IsOptional() @IsArray() @ArrayMaxSize(20) @IsString({ each: true }) external_message_ids?: string[]
+  @IsOptional() @IsUUID() client_message_id?: string
+  @IsIn(['delivered', 'read']) status!: 'delivered' | 'read'
+  @IsString() occurred_at!: string
+  @IsOptional() @IsString() watermark_at?: string
 }
 
 export class FacebookLoginDto {

@@ -27,6 +27,7 @@ import { CreateOrderWithShipmentDto } from '../ecom-store/dto/shipping.dto';
 import {
   AssignDto,
   ContactPatchDto,
+  CustomerCareDeliveryStatusDto,
   ConversationOrderLinkDto,
   ConversationPatchDto,
   ConversationQueryDto,
@@ -398,5 +399,23 @@ export class CustomerCareInternalController {
         : JSON.stringify(dto);
     this.service.verifyWebhook(rawBody, timestamp, signature, connectionKey);
     return this.service.inbound(connectionKey, dto);
+  }
+
+  @Post('channels/:connectionKey/delivery')
+  @HttpCode(HttpStatus.OK)
+  async connectorDeliveryStatus(
+    @Param('connectionKey') connectionKey: string,
+    @Req() req: FastifyRequest & { rawBody?: string | Buffer },
+    @Body() dto: CustomerCareDeliveryStatusDto,
+    @Headers('x-customer-care-timestamp') timestamp: string,
+    @Headers('x-customer-care-signature') signature: string,
+  ) {
+    const rawBody = typeof req.rawBody === 'string'
+      ? req.rawBody
+      : Buffer.isBuffer(req.rawBody)
+        ? req.rawBody.toString('utf8')
+        : JSON.stringify(dto);
+    this.service.verifyWebhook(rawBody, timestamp, signature, connectionKey);
+    return this.service.deliveryStatus(connectionKey, dto);
   }
 }

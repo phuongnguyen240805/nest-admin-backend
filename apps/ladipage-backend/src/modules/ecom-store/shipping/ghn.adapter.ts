@@ -40,8 +40,34 @@ export class GhnShippingAdapter extends ShippingAdapter {
         headers: this.tokenHeaders,
         timeout: 10_000,
       })
-      const count = response.data?.data?.shops?.length ?? 0
-      return { success: true, message: `Kết nối GHN thành công - ${count} shop` }
+      const shops = Array.isArray(response.data?.data?.shops)
+        ? response.data.data.shops as Record<string, unknown>[]
+        : []
+      const shopId = Number(this.config.credentials.shopId)
+      if (!Number.isInteger(shopId) || shopId <= 0) {
+        return { success: false, message: 'GHN Shop ID không hợp lệ' }
+      }
+      const shop = shops.find((item) => Number(item._id ?? item.shop_id) === shopId)
+      if (!shop) {
+        return {
+          success: false,
+          message: `Token GHN không sở hữu Shop ID ${shopId} trong môi trường đang chọn`,
+        }
+      }
+      if (Number(shop.status ?? 1) !== 1) {
+        return { success: false, message: `GHN Shop ID ${shopId} đang không hoạt động` }
+      }
+      const districtId = Number(shop.district_id)
+      if (!Number.isInteger(districtId) || districtId <= 0) {
+        return {
+          success: false,
+          message: `GHN Shop ID ${shopId} chưa có district_id lấy hàng hợp lệ`,
+        }
+      }
+      return {
+        success: true,
+        message: `Kết nối GHN thành công - Shop ${String(shop.name ?? shopId)} - district ${districtId}`,
+      }
     } catch (error) {
       return { success: false, message: `Lỗi kết nối GHN: ${providerError(error)}` }
     }
@@ -113,6 +139,10 @@ export class GhnShippingAdapter extends ShippingAdapter {
         return { wards: this.activeLocations(response.data?.data, 'WardName') }
       }
       case 'getServices': {
+        const shopId = Number(params.shopId ?? this.config.credentials.shopId)
+        if (!Number.isInteger(shopId) || shopId <= 0) {
+          throw new Error('GHN Shop ID không hợp lệ')
+        }
         const fromDistrict = await this.resolvePickupDistrict(params.fromDistrict)
         const toDistrict = Number(params.toDistrict)
         if (!Number.isInteger(fromDistrict) || fromDistrict <= 0) {
@@ -124,9 +154,7 @@ export class GhnShippingAdapter extends ShippingAdapter {
         const response = await axios.post(
           `${this.baseUrl}/v2/shipping-order/available-services`,
           {
-            shop_id: Number(
-              params.shopId ?? this.config.credentials.shopId,
-            ),
+            shop_id: shopId,
             from_district: fromDistrict,
             to_district: toDistrict,
           },
@@ -175,12 +203,18 @@ export class GhnShippingAdapter extends ShippingAdapter {
       ? response.data.data.shops as Record<string, unknown>[]
       : []
     const shopId = Number(this.config.credentials.shopId)
+    if (!Number.isInteger(shopId) || shopId <= 0) {
+      throw new Error('GHN Shop ID không hợp lệ')
+    }
     const shop = shops.find(item => Number(item._id ?? item.shop_id) === shopId)
-    const liveDistrict = Number(shop?.district_id)
+    if (!shop) {
+      throw new Error(`Token GHN không sở hữu Shop ID ${shopId} trong môi trường đang chọn`)
+    }
+    const liveDistrict = Number(shop.district_id)
     if (Number.isInteger(liveDistrict) && liveDistrict > 0) return liveDistrict
 
     const configured = Number(this.config.settings.fromDistrictId)
     if (Number.isInteger(configured) && configured > 0) return configured
-    throw new Error('GHN không tìm thấy quận/huyện lấy hàng của Shop ID đã cấu hình')
+    throw new Error(`GHN Shop ID ${shopId} chưa có quận/huyện lấy hàng hợp lệ`)
   }
 }

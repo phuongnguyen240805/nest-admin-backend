@@ -9,31 +9,45 @@ import {
 export class GhtkShippingAdapter extends ShippingAdapter {
   readonly provider = 'ghtk' as const
   readonly name = 'Giao Hàng Tiết Kiệm'
-  private readonly baseUrl = 'https://services.giaohangtietkiem.vn'
+
+  private get baseUrl() {
+    return this.config.settings.environment === 'sandbox'
+      ? 'https://services-staging.ghtklab.com'
+      : 'https://services.giaohangtietkiem.vn'
+  }
 
   private get headers() {
+    const partnerCode = String(this.config.credentials.customerCode ?? '').trim()
     return {
       Token: this.config.credentials.token,
+      ...(partnerCode ? { 'X-Client-Source': partnerCode } : {}),
       'Content-Type': 'application/json',
     }
   }
 
   async testConnection(): Promise<ShippingTestResult> {
     try {
-      const response = await axios.get(`${this.baseUrl}/services/balance`, {
+      const partnerCode = String(this.config.credentials.customerCode ?? '').trim()
+      if (!partnerCode) {
+        return {
+          success: false,
+          message: 'GHTK thiếu Partner Code / Shop Code (X-Client-Source)',
+        }
+      }
+
+      const response = await axios.get(`${this.baseUrl}/services/authenticated`, {
         headers: this.headers,
         timeout: 10_000,
       })
       if (!response.data?.success) {
         return {
           success: false,
-          message: response.data?.message || 'Không thể kết nối GHTK',
+          message: response.data?.message || 'Không thể xác thực GHTK',
         }
       }
-      const balance = Number(response.data?.data?.balance ?? 0)
       return {
         success: true,
-        message: `Kết nối GHTK thành công - Số dư: ${balance.toLocaleString('vi-VN')}đ`,
+        message: `Kết nối GHTK thành công (${this.config.settings.environment === 'sandbox' ? 'Staging' : 'Production'})`,
       }
     } catch (error) {
       return { success: false, message: `Lỗi kết nối GHTK: ${providerError(error)}` }
@@ -77,12 +91,32 @@ export class GhtkShippingAdapter extends ShippingAdapter {
         }
       }
       case 'calculateFee': {
-        const response = await axios.post(
+        const response = await axios.get(
           `${this.baseUrl}/services/shipment/fee`,
-          params,
-          { headers: this.headers, timeout: 10_000 },
+          {
+            headers: this.headers,
+            params,
+            timeout: 10_000,
+          },
         )
-        return { fee: response.data?.fee ?? response.data ?? {} }
+        if (!response.data?.success) {
+          throw new Error(response.data?.message || 'Tính phí GHTK thất bại')
+        }
+
+        const providerFee = response.data?.fee ?? {}
+        if (providerFee.delivery === false) {
+          throw new Error('GHTK chưa hỗ trợ giao tới địa chỉ này')
+        }
+        const serviceFee = Number(providerFee.fee ?? 0)
+        const insuranceFee = Number(providerFee.insurance_fee ?? 0)
+        return {
+          fee: {
+            ...providerFee,
+            total: serviceFee + insuranceFee,
+            service_fee: serviceFee,
+            insurance_fee: insuranceFee,
+          },
+        }
       }
       default:
         throw new Error(`GHTK không hỗ trợ action: ${action}`)

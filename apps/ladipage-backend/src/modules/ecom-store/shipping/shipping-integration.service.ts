@@ -98,6 +98,9 @@ export class ShippingIntegrationService extends TenantScopedService {
       name: SHIPPING_PROVIDER_NAMES[provider],
       enabled: dto.enabled ?? row?.enabled ?? true,
       settings: { ...(row?.settings ?? {}), ...(dto.settings ?? {}) },
+      // Any saved credential/settings change must be re-verified before the
+      // integration is used for quotes or shipment creation.
+      connectedAt: null,
       ...encrypted,
     })
     await this.repository.save(row)
@@ -225,7 +228,8 @@ export class ShippingIntegrationService extends TenantScopedService {
   private validateCredentials(provider: ShippingProvider, credentials: Record<string, string>) {
     const required: Partial<Record<ShippingProvider, string[]>> = {
       ghn: ['token', 'shopId'],
-      ghtk: ['token'],
+      // customerCode stores GHTK PARTNER_CODE / Shop Code used as X-Client-Source.
+      ghtk: ['token', 'customerCode'],
       viettel_post: ['token'],
       jt_express: ['apiAccount', 'privateKey', 'customerCode', 'password'],
       ahamove: ['token'],
