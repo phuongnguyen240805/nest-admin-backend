@@ -206,6 +206,9 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       DB_TYPE: postgres
+      # Keep authentication/control-plane data on the same primary database as
+      # Ladipage so JWT organization/tenant ids resolve against the same rows.
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
@@ -269,9 +272,7 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       DB_SSL: "false"
-      # TypeORM prefers DATABASE_URL over DB_HOST. Root .env often points at Supabase
-      # pooler → getaddrinfo EAI_AGAIN breaks AI-SEO scan. Force local compose Postgres.
-      DATABASE_URL: ""
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
@@ -295,9 +296,11 @@ services:
       INSTATIC_MOCK: ${INSTATIC_MOCK:-false}
       # Customer Care dependencies currently run outside this compose file.
       # Never use 127.0.0.1 here: inside liora-ladipage it points back to this container.
-      CUSTOMER_CARE_LIBREDESK_BASE_URL: ${CUSTOMER_CARE_LIBREDESK_DOCKER_BASE_URL:-http://host.docker.internal:9001/api/v1}
-      CUSTOMER_CARE_ZALO_CONNECTOR_URL: ${CUSTOMER_CARE_ZALO_CONNECTOR_DOCKER_URL:-http://host.docker.internal:3100}
-      CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL: ${CUSTOMER_CARE_FACEBOOK_CONNECTOR_DOCKER_URL:-http://host.docker.internal:3200}
+      CUSTOMER_CARE_LIBREDESK_BASE_URL: ${CUSTOMER_CARE_LIBREDESK_DOCKER_BASE_URL:-http://libredesk-app:9000/api/v1}
+      CUSTOMER_CARE_ZALO_CONNECTOR_URL: ${CUSTOMER_CARE_ZALO_CONNECTOR_DOCKER_URL:-http://zalo-connector:3100}
+      CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL: ${CUSTOMER_CARE_FACEBOOK_CONNECTOR_DOCKER_URL:-http://facebook-connector:3200}
+      AI_GATEWAY_BASE_URL: ${AI_GATEWAY_DOCKER_BASE_URL:-http://9router:20128/v1}
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
       # Unlighthouse 0.18 needs Node 22+ (image) + Chromium in container
       RUNNING_IN_DOCKER: "true"
       UNLIGHTHOUSE_MODE: ${UNLIGHTHOUSE_MODE:-cli}
@@ -347,6 +350,9 @@ services:
       liora-network:
         aliases:
           - ladipage
+      liora-platform:
+        aliases:
+          - liora-ladipage
 
   # ================== LADIPAGE BULLMQ WORKER (processors — cùng app ladipage-backend) ==================
   liora-ladipage-worker:
@@ -356,6 +362,9 @@ services:
       target: development
     container_name: liora-ladipage-worker-dev
     restart: unless-stopped
+    # Dependencies are baked into the development image. Do not run pnpm
+    # install against the read-only Windows bind-mounted lockfile on startup.
+    entrypoint: []
     env_file:
       - ../.env
     environment:
@@ -368,7 +377,7 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       DB_SSL: "false"
-      DATABASE_URL: ""
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
@@ -450,6 +459,27 @@ services:
     networks:
       - liora-network
 
+  # ================== AI GATEWAY / 9ROUTER ==================
+  # Optional profile: start with `docker compose --profile ai-gateway up -d 9router`.
+  # Provider accounts/API access are configured in the 9Router dashboard and
+  # persisted in the dedicated data volume.
+  9router:
+    image: decolua/9router:latest
+    container_name: liora-9router
+    profiles: ["ai-gateway"]
+    restart: unless-stopped
+    ports:
+      - "20128:20128"
+    environment:
+      DATA_DIR: /app/data
+      PORT: "20128"
+      HOSTNAME: "0.0.0.0"
+      NODE_ENV: production
+    volumes:
+      - nine_router_data:/app/data
+    networks:
+      - liora-platform
+
   # ================== MINIO ==================
   minio:
     image: minio/minio:latest
@@ -477,6 +507,9 @@ services:
 networks:
   liora-network:
     driver: bridge
+  liora-platform:
+    external: true
+    name: ${LIORA_PLATFORM_NETWORK:-liora-platform}
 
 volumes:
   postgres_data:
@@ -484,3 +517,4 @@ volumes:
   minio_data:
   umami_db_data:
   openseo_data:
+  nine_router_data:

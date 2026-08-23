@@ -10,8 +10,9 @@ services:
       POSTGRES_USER: ${DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_DATABASE:-liora_db}
-    ports:
-      - "5432:5432"
+    # Internal-only by default. Use docker-compose.debug.yml when a host DB client needs access.
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -52,8 +53,9 @@ services:
     image: redis:7-alpine
     container_name: liora-redis-dev
     restart: always
-    ports:
-      - "6381:6379"
+    # Internal-only by default. API/worker reach Redis by service DNS: redis:6379.
+    expose:
+      - "6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -90,8 +92,8 @@ services:
     environment:
       BACKEND_PORT: "7010"
       LOCAL_ASSET_BASE_URL: http://screenshot-to-code:7010
-    ports:
-      - "7010:7010"
+    expose:
+      - "7010"
     command: poetry run uvicorn main:app --host 0.0.0.0 --port 7010
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:7010/api/capabilities')\""]
@@ -105,9 +107,11 @@ services:
           - screenshot-to-code
 
   # ================== OPENSEO MICROSERVICE ==================
+  # Optional: docker compose --profile seo up -d openseo
   # Official self-host needs CLOUDFLARE_INCLUDE_PROCESS_ENV so AUTH_MODE reaches
   # cloudflare:workers bindings (otherwise defaults to cloudflare_access → MCP 500).
   openseo:
+    profiles: ["seo"]
     image: ${OPEN_SEO_IMAGE:-ghcr.io/every-app/open-seo:latest}
     container_name: liora-openseo-dev
     restart: unless-stopped
@@ -124,8 +128,8 @@ services:
       # Do NOT set DATAFORSEO_API_KEY: ${DATAFORSEO_API_KEY:-} here — an empty
       # host interpolation overrides env_file and breaks get_domain_overview.
       VITE_SHOW_DEVTOOLS: "false"
-    ports:
-      - "7003:7003"
+    expose:
+      - "7003"
     volumes:
       - openseo_data:/app/.wrangler
     networks:
@@ -134,9 +138,11 @@ services:
           - openseo
 
   # ================== UMAMI (AI-SEO traffic analytics) ==================
+  # Optional: docker compose --profile analytics up -d umami
   # Host: http://localhost:7004  |  Docker network: http://umami:3000
   # Default login: admin / umami  (change password after first login)
   umami-db:
+    profiles: ["analytics"]
     image: postgres:15-alpine
     container_name: liora-umami-db-dev
     restart: unless-stopped
@@ -157,6 +163,7 @@ services:
           - umami-db
 
   umami:
+    profiles: ["analytics"]
     image: ${UMAMI_IMAGE:-ghcr.io/umami-software/umami:postgresql-latest}
     container_name: liora-umami-dev
     restart: unless-stopped
@@ -194,6 +201,13 @@ services:
       target: development
     container_name: liora-nest-admin-dev
     restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "7001:7001"
     env_file:
@@ -208,11 +222,11 @@ services:
       DB_TYPE: postgres
       # Keep authentication/control-plane data on the same primary database as
       # Ladipage so JWT organization/tenant ids resolve against the same rows.
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/liora_db}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
-      S3_ENDPOINT: http://minio:9000
+      S3_ENDPOINT: ${S3_ENDPOINT_DOCKER:-http://minio:9000}
       LIBREFANG_API_URL: ${LIBREFANG_API_URL:-http://host.docker.internal:4545}
       LIBREFANG_API_KEY: ${LIBREFANG_API_KEY:-}
       # Instatic on host — 127.0.0.1 inside this container is NOT the host
@@ -231,8 +245,6 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      minio:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:7001/docs/json').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
@@ -253,6 +265,13 @@ services:
       target: development
     container_name: liora-ladipage-dev
     restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     # Dependencies are already installed in the development image. Skipping
     # the startup install avoids pnpm trying to replace the read-only bind
     # mounted lockfile on Docker Desktop for Windows (EBUSY restart loop).
@@ -272,17 +291,17 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       DB_SSL: "false"
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/liora_db}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
       LANDING_AI_MOCK_GENERATE: ${LANDING_AI_MOCK_GENERATE:-false}
-      S3_ENDPOINT: http://minio:9000
-      OPENSEO_BASE_URL: http://openseo:7003
-      OPENSEO_MCP_URL: http://openseo:7003/mcp
+      S3_ENDPOINT: ${S3_ENDPOINT_DOCKER:-http://minio:9000}
+      OPENSEO_BASE_URL: ${OPENSEO_BASE_URL_DOCKER:-http://openseo:7003}
+      OPENSEO_MCP_URL: ${OPENSEO_MCP_URL_DOCKER:-http://openseo:7003/mcp}
       # Umami inside compose network (host Nest uses localhost:7004 via .env)
-      UMAMI_ENABLED: ${UMAMI_ENABLED:-true}
-      UMAMI_BASE_URL: http://umami:3000
+      UMAMI_ENABLED: ${UMAMI_ENABLED:-false}
+      UMAMI_BASE_URL: ${UMAMI_BASE_URL_DOCKER:-http://umami:3000}
       UMAMI_PUBLIC_SCRIPT_URL: ${UMAMI_PUBLIC_SCRIPT_URL:-http://localhost:7004}
       UMAMI_API_KEY: ${UMAMI_API_KEY:-}
       UMAMI_USERNAME: ${UMAMI_USERNAME:-admin}
@@ -334,12 +353,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_healthy
-      openseo:
-        condition: service_started
-      umami:
-        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:7002/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 15s
@@ -362,6 +375,13 @@ services:
       target: development
     container_name: liora-ladipage-worker-dev
     restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     # Dependencies are baked into the development image. Do not run pnpm
     # install against the read-only Windows bind-mounted lockfile on startup.
     entrypoint: []
@@ -377,20 +397,25 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       DB_SSL: "false"
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/liora_db}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
       SCREENSHOT_TO_CODE_HTTP_URL: http://screenshot-to-code:7010
       SCREENSHOT_TO_CODE_WS_URL: ws://screenshot-to-code:7010
       LANDING_AI_MOCK_GENERATE: ${LANDING_AI_MOCK_GENERATE:-false}
-      UMAMI_ENABLED: ${UMAMI_ENABLED:-true}
-      UMAMI_BASE_URL: http://umami:3000
+      UMAMI_ENABLED: ${UMAMI_ENABLED:-false}
+      UMAMI_BASE_URL: ${UMAMI_BASE_URL_DOCKER:-http://umami:3000}
       UMAMI_PUBLIC_SCRIPT_URL: ${UMAMI_PUBLIC_SCRIPT_URL:-http://localhost:7004}
       UMAMI_USERNAME: ${UMAMI_USERNAME:-admin}
       UMAMI_PASSWORD: ${UMAMI_PASSWORD:-umami}
-      OPENSEO_BASE_URL: http://openseo:7003
-      OPENSEO_MCP_URL: http://openseo:7003/mcp
+      OPENSEO_BASE_URL: ${OPENSEO_BASE_URL_DOCKER:-http://openseo:7003}
+      OPENSEO_MCP_URL: ${OPENSEO_MCP_URL_DOCKER:-http://openseo:7003/mcp}
+      AI_GATEWAY_BASE_URL: ${AI_GATEWAY_DOCKER_BASE_URL:-http://9router:20128/v1}
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
+      CUSTOMER_CARE_LIBREDESK_BASE_URL: ${CUSTOMER_CARE_LIBREDESK_DOCKER_BASE_URL:-http://libredesk-app:9000/api/v1}
+      CUSTOMER_CARE_ZALO_CONNECTOR_URL: ${CUSTOMER_CARE_ZALO_CONNECTOR_DOCKER_URL:-http://zalo-connector:3100}
+      CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL: ${CUSTOMER_CARE_FACEBOOK_CONNECTOR_DOCKER_URL:-http://facebook-connector:3200}
       UNLIGHTHOUSE_DEBUG_KEEP_REPORT: ${UNLIGHTHOUSE_DEBUG_KEEP_REPORT:-false}
     command: ["pnpm", "nx", "serve-worker", "ladipage-backend", "--skip-nx-cache"]
     volumes:
@@ -416,7 +441,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "node -e \"const fs=require('fs');const p='/proc/1/cmdline';if(!fs.existsSync(p))process.exit(1);const c=fs.readFileSync(p,'utf8');process.exit(c.includes('serve-worker')||c.includes('worker.main')?0:1)\"",
+          "node -e \"const f=require('fs');const ok=f.readdirSync('/proc').filter(x=>/^\\d+$/.test(x)).some(x=>{try{const c=f.readFileSync('/proc/'+x+'/cmdline','utf8');return c.includes('serve-worker')||c.includes('worker.main')}catch{return false}});process.exit(ok?0:1)\"",
         ]
       interval: 30s
       timeout: 5s
@@ -427,9 +452,14 @@ services:
         aliases:
           - ladipage-worker
           - ladipage-ai-worker
+      liora-platform:
+        aliases:
+          - liora-ladipage-worker
 
   # ================== DONUT-SYNC BACKEND ==================
+  # Optional: --profile donut. This also enables MinIO to preserve the current Donut runtime.
   donut-sync:
+    profiles: ["donut"]
     build:
       context: ..
       dockerfile: apps/donut-sync-backend/Dockerfile
@@ -443,7 +473,7 @@ services:
     environment:
       PORT: "3000"
       BACKEND_INTERNAL_URL: http://nest-admin:7001
-      S3_ENDPOINT: http://minio:9000
+      S3_ENDPOINT: ${S3_ENDPOINT_DOCKER:-http://minio:9000}
     volumes:
       - ../apps:/app/apps
       - ../libs:/app/libs
@@ -468,8 +498,8 @@ services:
     container_name: liora-9router
     profiles: ["ai-gateway"]
     restart: unless-stopped
-    ports:
-      - "20128:20128"
+    expose:
+      - "20128"
     environment:
       DATA_DIR: /app/data
       PORT: "20128"
@@ -481,12 +511,14 @@ services:
       - liora-platform
 
   # ================== MINIO ==================
+  # Optional local S3-compatible storage: docker compose --profile storage up -d minio
   minio:
+    profiles: ["storage", "donut"]
     image: minio/minio:latest
     command: server /data --console-address ":9001"
-    ports:
-      - "9002:9000"
-      - "9003:9001"
+    expose:
+      - "9000"
+      - "9001"
     env_file:
       - ../.env
     environment:

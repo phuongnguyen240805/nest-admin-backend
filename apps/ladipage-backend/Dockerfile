@@ -1,12 +1,11 @@
 # =============== BASE STAGE ===============
-# Unlighthouse 0.18 + Lighthouse 13 require Node >= 22.19 (fs.promises.glob)
+# Unlighthouse 0.18 + Lighthouse 13 require Node >= 22.19 (fs.promises.glob).
 FROM node:22-alpine AS base
 WORKDIR /app
 
-# Enable pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
-# Chromium for Unlighthouse / Puppeteer inside Docker
+# Chromium is required by Unlighthouse/Puppeteer in development/build flows.
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -22,7 +21,6 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true \
     CHROME_PATH=/usr/bin/chromium-browser \
     CHROMIUM_PATH=/usr/bin/chromium-browser
 
-# Copy workspace files
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 RUN pnpm install --frozen-lockfile
 
@@ -30,21 +28,16 @@ RUN pnpm install --frozen-lockfile
 FROM base AS development
 WORKDIR /app
 
-# Alpine chromium binary name varies
 RUN if [ ! -e /usr/bin/chromium-browser ] && [ -e /usr/bin/chromium ]; then \
       ln -sf /usr/bin/chromium /usr/bin/chromium-browser; \
     fi
 
-# Copy toàn bộ source code
 COPY . .
-
-# Re-run install to pick up any lockfile changes (e.g. newly added packages)
 RUN pnpm install --frozen-lockfile
 
 COPY docker/scripts/nx-dev-entrypoint.sh /usr/local/bin/nx-dev-entrypoint.sh
 RUN chmod +x /usr/local/bin/nx-dev-entrypoint.sh
 
-# Expose port
 EXPOSE 7002
 
 ENV PORT=7002 \
@@ -52,20 +45,50 @@ ENV PORT=7002 \
     UNLIGHTHOUSE_INLINE=true \
     UNLIGHTHOUSE_ALLOW_LOCAL=true
 
-# Sync node_modules on each start (volume /app/node_modules may be stale after lockfile changes)
 ENTRYPOINT ["/usr/local/bin/nx-dev-entrypoint.sh"]
 CMD ["pnpm", "nx", "serve", "ladipage-backend", "--host=0.0.0.0", "--skip-nx-cache"]
 
-# =============== BUILD STAGE (cho production) ===============
+# =============== BUILD + DEPLOY-METADATA STAGE ===============
 FROM base AS builder
 WORKDIR /app
 COPY . .
-RUN pnpm nx build ladipage-backend --prod \
-  && pnpm nx build-worker ladipage-backend --prod
 
-# =============== PRODUCTION STAGE ===============
-FROM node:22-alpine AS production
-WORKDIR /app
+# IMPORTANT ORDER:
+# 1) API build runs first (clean=true) and generates dist/package.json.
+# 2) Worker build runs with clean=false and adds worker.main.js.
+# 3) Generate a pruned pnpm lockfile from the generated runtime package.json.
+#    Unlighthouse/Puppeteer are dynamic runtime dependencies, so keep them
+#    explicit before creating the frozen deployment lockfile.
+RUN pnpm nx build ladipage-backend --prod \
+  && pnpm nx build-worker ladipage-backend --prod \
+  && node tools/generate-deploy-lockfile.cjs \
+       ladipage-backend dist/apps/ladipage-backend \
+       @unlighthouse/cli=0.18.0 puppeteer=25.3.0
+
+# =============== PRODUCTION DEPENDENCIES STAGE ===============
+FROM node:22-alpine AS production-deps
+WORKDIR /app/dist
+
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN apk add --no-cache python3 make g++
+
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+
+COPY --from=builder /app/dist/apps/ladipage-backend ./
+
+# A few production seed/compatibility stores intentionally read contract fixture
+# JSON files at runtime. Preserve those files without copying the whole source tree.
+COPY --from=builder /app/apps/ladipage-backend/test/contract/fixtures ./test/contract/fixtures
+
+# Install only the frozen dependency set generated from the runtime package.json.
+RUN pnpm install --prod --frozen-lockfile
+
+# =============== SHARED PRODUCTION RUNTIME ===============
+FROM node:22-alpine AS production-runtime
+
+# Use the pruned deploy folder as cwd so runtime CLI lookup finds
+# /app/dist/node_modules/.bin/unlighthouse-ci without npx/network fallback.
+WORKDIR /app/dist
 ENV NODE_ENV=production
 
 RUN apk add --no-cache \
@@ -75,6 +98,7 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
+    font-noto \
   && rm -rf /var/cache/apk/* \
   && if [ ! -e /usr/bin/chromium-browser ] && [ -e /usr/bin/chromium ]; then \
        ln -sf /usr/bin/chromium /usr/bin/chromium-browser; \
@@ -83,13 +107,31 @@ RUN apk add --no-cache \
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
     CHROME_PATH=/usr/bin/chromium-browser \
-    CHROMIUM_PATH=/usr/bin/chromium-browser
+    CHROMIUM_PATH=/usr/bin/chromium-browser \
+    UNLIGHTHOUSE_BIN=/app/dist/node_modules/.bin/unlighthouse-ci
 
-# Copy built dist và node_modules
-COPY --from=builder /app/dist/apps/ladipage-backend ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/ladipage-backend/package.json ./
+COPY --from=production-deps --chown=node:node /app/dist ./
+
+USER node
+
+# =============== PRODUCTION API TARGET ===============
+FROM production-runtime AS production-api
 
 EXPOSE 7002
-ENV PORT=7002
-CMD ["node", "dist/main.js"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||process.env.LADIPAGE_PORT||7002)+'/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+CMD ["node", "main.js"]
+
+# =============== PRODUCTION WORKER TARGET ===============
+FROM production-runtime AS production-worker
+
+# Worker has no HTTP port. Scan /proc so the check also works when Docker
+# Compose inserts an init/tini process as PID 1.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+  CMD node -e "const f=require('fs');const ok=f.readdirSync('/proc').filter(x=>/^\\d+$/.test(x)).some(x=>{try{return f.readFileSync('/proc/'+x+'/cmdline','utf8').includes('worker.main')}catch{return false}});process.exit(ok?0:1)"
+
+CMD ["node", "worker.main.js"]
+
+# =============== BACKWARD-COMPATIBLE DEFAULT ===============
+FROM production-api AS production

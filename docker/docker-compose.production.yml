@@ -1,0 +1,208 @@
+# VPS / self-hosted production stack.
+# - No database container: DATABASE_URL must point to Supabase/managed PostgreSQL.
+# - Redis is private to the Compose network and persisted with AOF.
+# - No host ports are published here. Put a PaaS/reverse proxy in front of the
+#   HTTP services, or add your own edge/proxy override.
+# - Optional LibreDesk/Zalo/Facebook/9Router containers can join liora-platform.
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - liora-core
+
+  nest-admin:
+    build:
+      context: ..
+      dockerfile: apps/nest-admin-backend/Dockerfile
+      target: production
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      PORT: "7001"
+      APP_CODE: nest-admin
+      APP_SCOPED_AUTH: "false"
+      DB_TYPE: postgres
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in production}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    expose:
+      - "7001"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:7001/docs/json').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      liora-core:
+        aliases:
+          - nest-admin
+
+  ladipage-api:
+    build:
+      context: ..
+      dockerfile: apps/ladipage-backend/Dockerfile
+      target: production-api
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      PORT: "7002"
+      LADIPAGE_PORT: "7002"
+      APP_CODE: ladipage
+      APP_SCOPED_AUTH: "false"
+      DB_TYPE: postgres
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in production}
+      BULLMQ_ENABLED: "true"
+      BULLMQ_RUN_WORKERS: "false"
+      BULLMQ_PREFIX: ${BULLMQ_PREFIX:-liora:ladipage}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      RUNNING_IN_DOCKER: "true"
+      UMAMI_ENABLED: ${UMAMI_ENABLED:-false}
+      OPENSEO_BASE_URL: ${OPENSEO_BASE_URL_DOCKER:-http://openseo:7003}
+      OPENSEO_MCP_URL: ${OPENSEO_MCP_URL_DOCKER:-http://openseo:7003/mcp}
+      SCREENSHOT_TO_CODE_HTTP_URL: ${SCREENSHOT_TO_CODE_HTTP_URL:-http://screenshot-to-code:7010}
+      SCREENSHOT_TO_CODE_WS_URL: ${SCREENSHOT_TO_CODE_WS_URL:-ws://screenshot-to-code:7010}
+      CUSTOMER_CARE_LIBREDESK_BASE_URL: ${CUSTOMER_CARE_LIBREDESK_DOCKER_BASE_URL:-http://libredesk-app:9000/api/v1}
+      CUSTOMER_CARE_ZALO_CONNECTOR_URL: ${CUSTOMER_CARE_ZALO_CONNECTOR_DOCKER_URL:-http://zalo-connector:3100}
+      CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL: ${CUSTOMER_CARE_FACEBOOK_CONNECTOR_DOCKER_URL:-http://facebook-connector:3200}
+      AI_GATEWAY_BASE_URL: ${AI_GATEWAY_DOCKER_BASE_URL:-http://9router:20128/v1}
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+      CHROME_PATH: /usr/bin/chromium-browser
+      CHROMIUM_PATH: /usr/bin/chromium-browser
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+      UNLIGHTHOUSE_BIN: /app/dist/node_modules/.bin/unlighthouse-ci
+    expose:
+      - "7002"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:7002/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      liora-core:
+        aliases:
+          - ladipage
+      liora-platform:
+        aliases:
+          - liora-ladipage
+
+  ladipage-worker:
+    build:
+      context: ..
+      dockerfile: apps/ladipage-backend/Dockerfile
+      target: production-worker
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 60s
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      APP_CODE: ladipage
+      APP_SCOPED_AUTH: "false"
+      DB_TYPE: postgres
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in production}
+      BULLMQ_ENABLED: "true"
+      BULLMQ_RUN_WORKERS: "true"
+      BULLMQ_PREFIX: ${BULLMQ_PREFIX:-liora:ladipage}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      RUNNING_IN_DOCKER: "true"
+      UMAMI_ENABLED: ${UMAMI_ENABLED:-false}
+      OPENSEO_BASE_URL: ${OPENSEO_BASE_URL_DOCKER:-http://openseo:7003}
+      OPENSEO_MCP_URL: ${OPENSEO_MCP_URL_DOCKER:-http://openseo:7003/mcp}
+      SCREENSHOT_TO_CODE_HTTP_URL: ${SCREENSHOT_TO_CODE_HTTP_URL:-http://screenshot-to-code:7010}
+      SCREENSHOT_TO_CODE_WS_URL: ${SCREENSHOT_TO_CODE_WS_URL:-ws://screenshot-to-code:7010}
+      CUSTOMER_CARE_LIBREDESK_BASE_URL: ${CUSTOMER_CARE_LIBREDESK_DOCKER_BASE_URL:-http://libredesk-app:9000/api/v1}
+      CUSTOMER_CARE_ZALO_CONNECTOR_URL: ${CUSTOMER_CARE_ZALO_CONNECTOR_DOCKER_URL:-http://zalo-connector:3100}
+      CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL: ${CUSTOMER_CARE_FACEBOOK_CONNECTOR_DOCKER_URL:-http://facebook-connector:3200}
+      AI_GATEWAY_BASE_URL: ${AI_GATEWAY_DOCKER_BASE_URL:-http://9router:20128/v1}
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+      CHROME_PATH: /usr/bin/chromium-browser
+      CHROMIUM_PATH: /usr/bin/chromium-browser
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+      UNLIGHTHOUSE_BIN: /app/dist/node_modules/.bin/unlighthouse-ci
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"const f=require('fs');const ok=f.readdirSync('/proc').filter(x=>/^\\d+$/.test(x)).some(x=>{try{return f.readFileSync('/proc/'+x+'/cmdline','utf8').includes('worker.main')}catch{return false}});process.exit(ok?0:1)\"",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      liora-core:
+        aliases:
+          - ladipage-worker
+          - ladipage-ai-worker
+      liora-platform:
+        aliases:
+          - liora-ladipage-worker
+
+networks:
+  liora-core:
+    driver: bridge
+  liora-platform:
+    external: true
+    name: ${LIORA_PLATFORM_NETWORK:-liora-platform}
+
+volumes:
+  redis_data:

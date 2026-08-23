@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rtk ls *)",
+      "Bash(rtk git *)",
+      "Bash(rtk grep *)",
+      "Bash(rtk find *)",
+      "Read(//d/monorepo-project-workspace/ladipage-fe-v2/**)",
+      "Read(//d/monorepo-project-workspace/**)",
+      "Bash(rtk read *)",
+      "Bash(grep -iE \"/\\(p|preview|draft\\)[/\\\\[]\")",
+      "Bash(rtk npx *)",
+      "Bash(rtk pnpm *)",
+      "Bash(git -C d:/monorepo-project-workspace/liora-monorepo status --short)",
+      "Bash(xargs echo \"cloud-phone errors:\")"
+    ],
+    "additionalDirectories": [
+      "d:\\monorepo-project-workspace\\ladipage-fe-v2\\src\\features\\commerce\\components",
+      "d:\\monorepo-project-workspace\\ladipage-fe-v2\\src\\features\\commerce\\hooks",
+      "d:\\monorepo-project-workspace\\ladipage-fe-v2\\src\\features\\cloudphone\\dashboard",
+      "d:\\monorepo-project-workspace\\ladipage-fe-v2\\src\\features\\commerce",
+      "d:\\monorepo-project-workspace\\ladipage-fe-v2\\src\\components\\sales\\sidebar",
+      "d:\\monorepo-project-workspace\\ladipage-fe-v2\\src\\app\\(admin)\\ban-hang"
+    ]
+  }
+}

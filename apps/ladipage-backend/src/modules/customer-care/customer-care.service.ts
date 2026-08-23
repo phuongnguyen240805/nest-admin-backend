@@ -2078,6 +2078,62 @@ export class CustomerCareService {
     };
   }
 
+  private async autoLinkConversationContactToOrderCustomer(
+    manager: EntityManager,
+    tenantId: number,
+    conversation: CustomerCareConversationLinkEntity,
+    order: Record<string, unknown>,
+  ) {
+    if (!conversation.contactIdentityId) return null;
+
+    const contactRepo = manager.getRepository(CustomerCareContactIdentityEntity);
+    const contact = await contactRepo.findOne({
+      where: { id: conversation.contactIdentityId, tenantId },
+    });
+    if (!contact) return null;
+
+    // Never overwrite an explicit CRM link. If the conversation was already
+    // linked to a customer, creating an order for another recipient must not
+    // silently move the chat identity to that other customer.
+    if (contact.crmPersonId || contact.crmCustomerId) return null;
+
+    const personId =
+      typeof order.personId === 'string' && order.personId.trim()
+        ? order.personId.trim()
+        : null;
+    const numericCustomerId = Number(order.customerId);
+    const customerId =
+      Number.isInteger(numericCustomerId) && numericCustomerId > 0
+        ? numericCustomerId
+        : null;
+
+    if (!personId && !customerId) return null;
+
+    if (personId) {
+      contact.crmPersonId = personId;
+      contact.crmCustomerId = null;
+    } else {
+      contact.crmPersonId = null;
+      contact.crmCustomerId = customerId;
+    }
+
+    // The order form is the point where the agent confirms the customer's
+    // contact data. Fill the CSKH identity with that canonical information so
+    // future order/customer lookups resolve to the same CRM record.
+    if (typeof order.customerName === 'string' && order.customerName.trim()) {
+      contact.displayName = order.customerName.trim();
+    }
+    if (typeof order.customerPhone === 'string' && order.customerPhone.trim()) {
+      contact.phone = order.customerPhone.trim();
+    }
+    if (typeof order.customerEmail === 'string' && order.customerEmail.trim()) {
+      contact.email = order.customerEmail.trim();
+    }
+
+    await contactRepo.save(contact);
+    return this.mapContact(contact);
+  }
+
   async conversationOrders(conversationId: string) {
     const tenantId = this.getTenantId();
     const conversation = await this.requireConversationLink(
@@ -2128,10 +2184,22 @@ export class CustomerCareService {
           where: { tenantId, conversationLinkId: conversation.id, creationKey },
         });
         if (existing) {
+          const existingOrder = await this.orderService.detail(
+            existing.orderId,
+            manager,
+          );
+          const autoLinkedContact =
+            await this.autoLinkConversationContactToOrderCustomer(
+              manager,
+              tenantId,
+              conversation,
+              existingOrder as Record<string, unknown>,
+            );
           return {
-            ...(await this.orderService.detail(existing.orderId, manager)),
+            ...existingOrder,
             conversationOrderLink: this.mapConversationOrderLink(existing),
             idempotentReplay: true,
+            autoLinkedContact,
           };
         }
       }
@@ -2143,6 +2211,17 @@ export class CustomerCareService {
         },
         manager,
       );
+
+      // OrderService already resolves or creates the CRM customer by
+      // phone/email. Link that resolved record back to the unlinked CSKH
+      // contact so the customer appears consistently in both CSKH and CRM.
+      const autoLinkedContact =
+        await this.autoLinkConversationContactToOrderCustomer(
+          manager,
+          tenantId,
+          conversation,
+          order as Record<string, unknown>,
+        );
 
       await repo.update(
         { tenantId, conversationLinkId: conversation.id, isPrimary: true },
@@ -2167,6 +2246,7 @@ export class CustomerCareService {
         ...order,
         conversationOrderLink: this.mapConversationOrderLink(link),
         idempotentReplay: false,
+        autoLinkedContact,
       };
     });
 
@@ -2174,16 +2254,25 @@ export class CustomerCareService {
       ? await this.shippingService.create(Number(result.id), shipping)
       : null;
 
+    if (result.autoLinkedContact) {
+      await this.publish(
+        tenantId,
+        'contact.updated',
+        String(result.autoLinkedContact.id),
+        { contact: result.autoLinkedContact },
+      );
+    }
+
     if (!result.idempotentReplay) {
       await this.publish(
         tenantId,
         'conversation-order.updated',
         conversationId,
         {
-        conversationId,
-        orderId: Number(result.id),
-        action: 'created',
-        link: result.conversationOrderLink,
+          conversationId,
+          orderId: Number(result.id),
+          action: 'created',
+          link: result.conversationOrderLink,
         },
       );
     }

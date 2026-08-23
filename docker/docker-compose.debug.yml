@@ -1,0 +1,27 @@
+# Local-only port overrides. Layer this file on top of docker-compose.yml only
+# when a Windows/macOS host tool must access private services directly.
+services:
+  db:
+    ports:
+      - "127.0.0.1:${DB_DEBUG_PORT:-5432}:5432"
+
+  redis:
+    ports:
+      - "127.0.0.1:${REDIS_DEBUG_PORT:-6381}:6379"
+
+  9router:
+    ports:
+      - "127.0.0.1:${AI_GATEWAY_DEBUG_PORT:-20128}:20128"
+
+  openseo:
+    ports:
+      - "127.0.0.1:${OPENSEO_DEBUG_PORT:-7003}:7003"
+
+  screenshot-to-code:
+    ports:
+      - "127.0.0.1:${S2C_DEBUG_PORT:-7010}:7010"
+
+  minio:
+    ports:
+      - "127.0.0.1:${MINIO_API_DEBUG_PORT:-9002}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_DEBUG_PORT:-9003}:9001"

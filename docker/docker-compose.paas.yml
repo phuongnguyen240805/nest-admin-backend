@@ -1,0 +1,63 @@
+# Provider-neutral app-only reference for PaaS deployments.
+# DATABASE_URL and REDIS_URL are external/managed services here.
+# Deploy each service independently when the platform does not support Compose.
+services:
+  nest-admin:
+    build:
+      context: ..
+      dockerfile: apps/nest-admin-backend/Dockerfile
+      target: production
+    init: true
+    environment:
+      NODE_ENV: production
+      # Do not hard-code PORT on a PaaS that injects it.
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:'+(process.env.PORT||7001)+'/docs/json').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  ladipage-api:
+    build:
+      context: ..
+      dockerfile: apps/ladipage-backend/Dockerfile
+      target: production-api
+    init: true
+    environment:
+      NODE_ENV: production
+      # IMPORTANT: do not define LADIPAGE_PORT in PaaS env; let injected PORT win.
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      BULLMQ_ENABLED: "true"
+      BULLMQ_RUN_WORKERS: "false"
+      RUNNING_IN_DOCKER: "true"
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+      UNLIGHTHOUSE_BIN: /app/dist/node_modules/.bin/unlighthouse-ci
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:'+(process.env.PORT||7002)+'/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+
+  ladipage-worker:
+    profiles: ["worker"]
+    build:
+      context: ..
+      dockerfile: apps/ladipage-backend/Dockerfile
+      target: production-worker
+    init: true
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      BULLMQ_ENABLED: "true"
+      BULLMQ_RUN_WORKERS: "true"
+      RUNNING_IN_DOCKER: "true"
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+      UNLIGHTHOUSE_BIN: /app/dist/node_modules/.bin/unlighthouse-ci
