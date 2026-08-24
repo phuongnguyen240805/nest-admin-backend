@@ -103,6 +103,7 @@ export class CustomerCareDeliveryStatusDto {
 
 export class CustomerCarePresenceDto {
   @IsString() event_id!: string
+  @IsOptional() @IsIn(['presence']) event_type?: 'presence'
   @IsIn(['zalo_personal', 'facebook_personal']) provider!: 'zalo_personal' | 'facebook_personal'
   @IsString() account_id!: string
   @IsString() external_thread_id!: string
