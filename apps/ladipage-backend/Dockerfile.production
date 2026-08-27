@@ -76,6 +76,7 @@ RUN apk add --no-cache python3 make g++
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 COPY --from=builder /app/dist/apps/ladipage-backend ./
+COPY --from=builder /app/dist/apps/ladipage-backend/node_modules ./node_modules
 
 # A few production seed/compatibility stores intentionally read contract fixture
 # JSON files at runtime. Preserve those files without copying the whole source tree.
