@@ -334,7 +334,7 @@ importers:
         specifier: 10.9.1
         version: 10.9.1(@swc/core@1.15.40(@swc/helpers@0.5.23))(@types/node@20.19.9)(typescript@5.9.3)
       tslib:
-        specifier: ^2.3.0
+        specifier: ^2.8.1
         version: 2.8.1
       turbo:
         specifier: ^2.9.6
