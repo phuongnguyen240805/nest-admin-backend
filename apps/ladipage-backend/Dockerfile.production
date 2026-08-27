@@ -14,7 +14,8 @@ RUN apk add --no-cache \
     ca-certificates \
     ttf-freefont \
     font-noto \
-  && rm -rf /var/cache/apk/*
+    && ln -sf /usr/bin/chromium /usr/bin/chromium-browser \
+    && rm -rf /var/cache/apk/*
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
