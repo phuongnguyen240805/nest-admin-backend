@@ -149,12 +149,13 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true \
     CHROMIUM_PATH=/usr/bin/chromium-browser \
     UNLIGHTHOUSE_BIN=/app/dist/node_modules/.bin/unlighthouse-ci
 
-COPY --from=production-deps \
-    --chown=node:node \
-    /app/dist \
-    ./
+COPY --from=production-deps --chown=node:node /app/dist ./
 
-USER node
+# Winston DailyRotateFile writes to ./logs.
+# The application runs as non-root user `node`, so prepare a writable log dir.
+RUN mkdir -p /app/dist/logs \
+    && chown -R node:node /app/dist/logs \
+    && chmod 775 /app/dist/logs
 
 
 # =============== PRODUCTION API TARGET ===============
