@@ -67,23 +67,13 @@ WORKDIR /app
 
 COPY . .
 
-# Build order:
-# 1. API build generates dist/apps/ladipage-backend.
-# 2. Worker build adds worker.main.js.
-# 3. Generate deployment package.json / pnpm-lock.yaml.
-#
-# IMPORTANT:
-# node_modules is NOT expected inside:
-# /app/dist/apps/ladipage-backend/node_modules
-#
-# Production dependencies are installed later in production-deps.
 RUN pnpm nx build ladipage-backend \
-    && pnpm nx build-worker ladipage-backend \
-    && node tools/generate-deploy-lockfile.cjs \
-         ladipage-backend \
-         dist/apps/ladipage-backend \
-         @unlighthouse/cli=0.18.0 \
-         puppeteer=25.3.0
+  && pnpm nx build-worker ladipage-backend \
+  && node tools/generate-deploy-lockfile.cjs \
+       ladipage-backend dist/apps/ladipage-backend \
+       tslib=2.8.1 \
+       @unlighthouse/cli=0.18.0 \
+       puppeteer=25.3.0
 
 
 # =============== PRODUCTION DEPENDENCIES STAGE ===============
