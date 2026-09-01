@@ -62,4 +62,11 @@ export class CreateLabScanDto {
   @IsOptional()
   @IsBoolean()
   mock?: boolean
+
+  @ApiPropertyOptional({
+    description: 'Bypass recent successful-result cache and run a fresh scan',
+  })
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean
 }

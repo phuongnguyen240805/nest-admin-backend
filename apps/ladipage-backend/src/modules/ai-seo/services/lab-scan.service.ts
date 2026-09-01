@@ -13,10 +13,7 @@ import { randomUUID } from 'crypto'
 import { existsSync } from 'fs'
 import { Repository } from 'typeorm'
 
-import {
-  isBullMqEnabled,
-  isBullMqWorkerEnabled,
-} from '../../../config/bullmq.app.config'
+import { isBullMqEnabled } from '../../../config/bullmq.app.config'
 import { TenantScopedService } from '../../../common/services/tenant-scoped.service'
 import { PageEntity } from '../../publish/entities'
 import { CreateLabScanDto } from '../dto/create-lab-scan.dto'
@@ -34,6 +31,7 @@ import { UnlighthouseRunner } from './unlighthouse.runner'
 const LAB_JOB_PREFIX = 'lab-'
 /** Default 30s — shorter to avoid FE 30s axios timeout stacking with cooldown 429 UX */
 const COOLDOWN_MS_DEFAULT = 30_000
+const RESULT_CACHE_MS_DEFAULT = 10 * 60_000
 
 @Injectable()
 export class LabScanService extends TenantScopedService {
@@ -70,8 +68,9 @@ export class LabScanService extends TenantScopedService {
     targetUrl: string
     phase: string
     trigger: string
-    /** Present when reusing a completed scan within cooldown */
+    /** Present when reusing a completed/cached scan. */
     result?: Record<string, unknown>
+    cached?: boolean
   }> {
     const tenantId = this.requireTenantId()
     const trigger = dto.trigger
@@ -111,12 +110,45 @@ export class LabScanService extends TenantScopedService {
     }
 
     await this.assertDataOwnership(tenantId, resolved)
+    const phase = phaseForTrigger(trigger, urlCheck.kind)
 
-    // Cooldown: reuse recent job (pending or completed) — avoids 429-like spam + timeout
+    // Durable stale-while-revalidate cache: a successful Lighthouse result is
+    // already persisted in lp_seo_task. Reuse it for normal opens/list actions
+    // so the UI can render immediately. Explicit "Quét lại" sends force=true.
+    const resultCacheMs = Number(
+      this.configService.get<string>('UNLIGHTHOUSE_RESULT_CACHE_MS') ?? RESULT_CACHE_MS_DEFAULT,
+    )
+    if (!dto.force && resultCacheMs > 0) {
+      const cached = await this.findRecentSuccessfulLabJob(
+        tenantId,
+        resolved.seoProjectId,
+        resolved.seoProjectPageId,
+        resolved.websitePageId,
+        phase,
+        resultCacheMs,
+      )
+      if (cached) {
+        this.logger.log(
+          `Lab scan cache HIT job=${cached.externalTaskId} tenant=${tenantId} page=${resolved.websitePageId ?? resolved.seoProjectPageId ?? 'n/a'}`,
+        )
+        return {
+          jobId: cached.externalTaskId!,
+          status: 'success',
+          targetUrl: urlCheck.url,
+          phase,
+          trigger,
+          result: cached.result as Record<string, unknown>,
+          cached: true,
+        }
+      }
+    }
+
+    // Cooldown: reuse recent job (pending or completed) — avoids duplicate clicks /
+    // React StrictMode races. force=true intentionally bypasses this as well.
     const cooldownMs = Number(
       this.configService.get<string>('UNLIGHTHOUSE_COOLDOWN_MS') ?? COOLDOWN_MS_DEFAULT,
     )
-    if (cooldownMs > 0) {
+    if (!dto.force && cooldownMs > 0) {
       const recent = await this.findRecentLabJob(
         tenantId,
         resolved.seoProjectId,
@@ -135,16 +167,16 @@ export class LabScanService extends TenantScopedService {
             jobId: recent.externalTaskId!,
             status: done ? 'success' : 'queued',
             targetUrl: urlCheck.url,
-            phase: phaseForTrigger(trigger, urlCheck.kind),
+            phase,
             trigger,
             result: done ? (recent.result as Record<string, unknown>) : undefined,
+            cached: done,
           }
         }
       }
     }
 
     const jobId = `${LAB_JOB_PREFIX}${randomUUID()}`
-    const phase = phaseForTrigger(trigger, urlCheck.kind)
     const samples = depth === 'full' ? 3 : 1
     const mock =
       dto.mock === true ||
@@ -205,23 +237,16 @@ export class LabScanService extends TenantScopedService {
       await this.projectRepository.save(project)
     }
 
-    // Inline when: no BullMQ, no enqueue, mock, INLINE=true, or API has no worker
-    // (BULLMQ_RUN_WORKERS=false) — otherwise FE polls forever → timeout.
-    const noWorkerInThisProcess = !isBullMqWorkerEnabled()
+    // Production API must not execute Chromium inline just because this API
+    // process has BULLMQ_RUN_WORKERS=false. When BullMQ + enqueue are available,
+    // return the queued job immediately and let worker.main.ts consume it.
     const forceInline =
       !isBullMqEnabled() ||
       !this.enqueue ||
       mock ||
-      noWorkerInThisProcess ||
       this.configService.get<string>('UNLIGHTHOUSE_INLINE') === 'true'
 
     if (forceInline) {
-      if (noWorkerInThisProcess && !mock) {
-        this.logger.warn(
-          `Lab scan job=${jobId} running INLINE (BULLMQ_RUN_WORKERS=false — no queue consumer). ` +
-            `For async CLI lab, start serve-worker with BULLMQ_RUN_WORKERS=true.`,
-        )
-      }
       await this.processPayload(payload)
       // Re-read task so caller gets scores without a second GET poll loop
       const done = await this.taskRepository.findOne({
@@ -553,7 +578,6 @@ export class LabScanService extends TenantScopedService {
       !isBullMqEnabled() ||
       !this.enqueue ||
       payload.mock ||
-      !isBullMqWorkerEnabled() ||
       this.configService.get<string>('UNLIGHTHOUSE_INLINE') === 'true'
 
     try {
@@ -1042,6 +1066,40 @@ export class LabScanService extends TenantScopedService {
       // If exists for this tenant, good. If null, external pages may still be linked.
       void builder
     }
+  }
+
+  private async findRecentSuccessfulLabJob(
+    tenantId: number,
+    seoProjectId: string,
+    seoProjectPageId: string | null,
+    websitePageId: string | null,
+    phase: 'pre_publish' | 'post_publish',
+    maxAgeMs: number,
+  ): Promise<SeoTaskEntity | null> {
+    const since = new Date(Date.now() - maxAgeMs)
+    const qb = this.taskRepository
+      .createQueryBuilder('task')
+      .innerJoin(SeoProjectEntity, 'project', 'project.id = task.seoProjectId')
+      .where('project.tenantId = :tenantId', { tenantId })
+      .andWhere('task.seoProjectId = :seoProjectId', { seoProjectId })
+      .andWhere("task.externalTaskId LIKE 'lab-%'")
+      .andWhere("task.status IN ('approved', 'deployed')")
+      .andWhere("task.payload ->> 'phase' = :phase", { phase })
+      .andWhere('task.updatedAt >= :since', { since })
+      .orderBy('task.updatedAt', 'DESC')
+      .limit(1)
+
+    if (seoProjectPageId) {
+      qb.andWhere("task.payload ->> 'seoProjectPageId' = :seoProjectPageId", {
+        seoProjectPageId,
+      })
+    } else if (websitePageId) {
+      qb.andWhere("task.payload ->> 'websitePageId' = :websitePageId", {
+        websitePageId,
+      })
+    }
+
+    return qb.getOne()
   }
 
   private async findRecentLabJob(
