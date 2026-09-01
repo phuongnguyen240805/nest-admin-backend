@@ -2996,6 +2996,102 @@ export class CustomerCareService {
     }
   }
 
+  private connectorFallbackContactName(
+    provider: ZaloInboundDto['provider'],
+    externalId: string,
+  ) {
+    return provider === 'facebook_personal'
+      ? `Khách Facebook ${externalId}`
+      : `Khách Zalo ${externalId}`;
+  }
+
+  private isGeneratedConnectorContactName(
+    provider: ZaloInboundDto['provider'],
+    externalId: string,
+    value: string,
+  ) {
+    const name = String(value || '').trim();
+    if (!name) return true;
+    return (
+      name === this.connectorFallbackContactName(provider, externalId) ||
+      (provider === 'facebook_personal'
+        ? /^Khách Facebook \d+$/i.test(name)
+        : /^Khách Zalo \d+$/i.test(name))
+    );
+  }
+
+  private async upsertConnectorContactProfile(
+    dto: ZaloInboundDto,
+    tenantId: number,
+    channel: CustomerCareChannelAccountEntity,
+  ) {
+    const externalId = String(dto.sender.external_id || '').trim();
+    const incomingName = String(dto.sender.display_name || '').trim();
+    const incomingAvatar = String(dto.sender.avatar_url || '').trim();
+    const fallbackName = this.connectorFallbackContactName(
+      dto.provider,
+      externalId,
+    );
+
+    let contact = await this.contacts.findOne({
+      where: {
+        tenantId,
+        channelAccountId: channel.id,
+        provider: dto.provider,
+        externalId,
+      },
+    });
+
+    let changed = false;
+    if (!contact) {
+      contact = await this.contacts.save(
+        this.contacts.create({
+          tenantId,
+          channelAccountId: channel.id,
+          provider: dto.provider,
+          externalId,
+          displayName: incomingName || fallbackName,
+          avatarUrl: incomingAvatar || null,
+          phone: null,
+          email: null,
+          note: null,
+          crmCustomerId: null,
+          crmPersonId: null,
+          tags: [],
+          metadata: {},
+        }),
+      );
+      return { contact, changed: true };
+    }
+
+    // Never let a fast-path fallback name overwrite a real social profile.
+    if (
+      incomingName &&
+      !this.isGeneratedConnectorContactName(
+        dto.provider,
+        externalId,
+        incomingName,
+      ) &&
+      contact.displayName !== incomingName
+    ) {
+      contact.displayName = incomingName;
+      changed = true;
+    }
+
+    if (!contact.displayName) {
+      contact.displayName = incomingName || fallbackName;
+      changed = true;
+    }
+
+    if (incomingAvatar && contact.avatarUrl !== incomingAvatar) {
+      contact.avatarUrl = incomingAvatar;
+      changed = true;
+    }
+
+    if (changed) contact = await this.contacts.save(contact);
+    return { contact, changed };
+  }
+
   private async processExternalOutgoingMirror(
     dto: ZaloInboundDto,
     tenantId: number,
@@ -3007,6 +3103,18 @@ export class CustomerCareService {
       debug_stage: 'outgoing_mirror_started',
     };
     await this.inboundEvents.save(event);
+
+    // Hydrate peer identity before any duplicate/self-echo return. Connectors
+    // intentionally replay slow profile results with a distinct event_id but
+    // the same external_message_id; this updates name/avatar without duplicating
+    // the native message in LibreDesk.
+    const { contact, changed: contactProfileChanged } =
+      await this.upsertConnectorContactProfile(dto, tenantId, channel);
+    if (contactProfileChanged) {
+      await this.publish(tenantId, 'contact.updated', String(contact.id), {
+        contact: this.mapContact(contact),
+      });
+    }
 
     const existingMessage = await this.messages.findOne({
       where: {
@@ -3207,34 +3315,6 @@ export class CustomerCareService {
         );
         return result;
       }
-    }
-
-    let contact = await this.contacts.findOne({
-      where: {
-        tenantId,
-        channelAccountId: channel.id,
-        provider: dto.provider,
-        externalId: dto.sender.external_id,
-      },
-    });
-    if (!contact) {
-      contact = await this.contacts.save(
-        this.contacts.create({
-          tenantId,
-          channelAccountId: channel.id,
-          provider: dto.provider,
-          externalId: dto.sender.external_id,
-          displayName: dto.sender.display_name,
-          avatarUrl: dto.sender.avatar_url || null,
-          phone: null,
-          email: null,
-          note: null,
-          crmCustomerId: null,
-          crmPersonId: null,
-          tags: [],
-          metadata: {},
-        }),
-      );
     }
 
     // Persist through LibreDesk as well so its conversation list/preview is
