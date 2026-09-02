@@ -29,6 +29,32 @@ export class ScreenshotToCodeClient {
     return process.env.LANDING_AI_MOCK_GENERATE === 'true'
   }
 
+  /**
+   * Generate a new landing page from a text brief through screenshot-to-code.
+   *
+   * Keeping this method on the adapter makes the Landing AI processor unaware
+   * of screenshot-to-code transport details and keeps text generation easy to
+   * replace or extend later.
+   */
+  async generateText(
+    promptText: string,
+    onProgress?: S2cProgressHandler,
+  ): Promise<string> {
+    const normalizedPrompt = String(promptText ?? '').trim()
+    if (!normalizedPrompt) {
+      throw new Error('screenshot-to-code text prompt is required')
+    }
+
+    return this.generate(
+      {
+        generationType: 'create',
+        inputMode: 'text',
+        promptText: normalizedPrompt,
+      },
+      onProgress,
+    )
+  }
+
   async captureScreenshot(url: string): Promise<string> {
     const apiKey = process.env.SCREENSHOTONE_API_KEY
     if (!apiKey) {
@@ -64,6 +90,11 @@ export class ScreenshotToCodeClient {
 
     const wsUrl = `${this.wsBase.replace(/\/$/, '')}/generate-code`
     const payload = this.buildPayload(settings)
+    const correlationId = this.createCorrelationId()
+
+    this.logger.log(
+      `s2c_generate_start correlationId=${correlationId} inputMode=${settings.inputMode} ws=${wsUrl}`,
+    )
 
     return new Promise<string>((resolve, reject) => {
       let latestCode = ''
@@ -87,11 +118,26 @@ export class ScreenshotToCodeClient {
           ws.close()
         }
         catch {
-          // ignore
+          // ignore close errors after the request is already settled
         }
-        if (error) reject(error)
-        else if (!latestCode) reject(new Error('screenshot-to-code returned empty HTML'))
-        else resolve(latestCode)
+
+        if (error) {
+          this.logger.warn(
+            `s2c_generate_failed correlationId=${correlationId} error=${error.message}`,
+          )
+          reject(error)
+          return
+        }
+
+        if (!latestCode) {
+          reject(new Error('screenshot-to-code returned empty HTML'))
+          return
+        }
+
+        this.logger.log(
+          `s2c_generate_complete correlationId=${correlationId} htmlLength=${latestCode.length}`,
+        )
+        resolve(latestCode)
       }
 
       ws.on('open', () => {
@@ -111,14 +157,14 @@ export class ScreenshotToCodeClient {
             onProgress?.(event.value, 30)
           }
           if (event.type === 'thinking' && event.value) {
-            onProgress?.('AI đang phân tích thiết kế...', 45)
+            onProgress?.('AI đang phân tích yêu cầu...', 45)
           }
           if (event.type === 'setCode' && event.value) {
             latestCode = event.value
             onProgress?.('Đang hoàn thiện HTML...', 75)
           }
           if (event.type === 'variantComplete') {
-            onProgress?.('AI hoàn tất biến thể', 90)
+            onProgress?.('AI hoàn tất sinh landing page', 90)
             finish()
           }
           if (event.type === 'error') {
@@ -131,7 +177,9 @@ export class ScreenshotToCodeClient {
       })
 
       ws.on('close', () => finish())
-      ws.on('error', (error) => finish(error instanceof Error ? error : new Error(String(error))))
+      ws.on('error', (error) => {
+        finish(error instanceof Error ? error : new Error(String(error)))
+      })
     })
   }
 

@@ -37,9 +37,10 @@ export class LandingAiGenerateProcessor extends BaseQueueProcessor<LandingAiGene
     const mockMode = this.s2cClient.isMockMode()
     this.logger.log(
       `landing_ai_generate job=${data.jobId} page=${data.pageId} `
-      + `LANDING_AI_MOCK_GENERATE=${process.env.LANDING_AI_MOCK_GENERATE ?? '(unset)'} `
+      + `type=${data.type} LANDING_AI_MOCK_GENERATE=${process.env.LANDING_AI_MOCK_GENERATE ?? '(unset)'} `
       + `mockMode=${mockMode} s2cWs=${process.env.SCREENSHOT_TO_CODE_WS_URL ?? '(unset)'}`,
     )
+
     const startedAt = new Date()
     const wallStart = Date.now()
     let screenshotDurationMs: number | undefined
@@ -60,6 +61,14 @@ export class LandingAiGenerateProcessor extends BaseQueueProcessor<LandingAiGene
       await this.jobStore.appendEvent(data.jobId, message, progress ?? null)
     }
 
+    const reportS2cProgress = (message: string, progress?: number) => {
+      void onProgress(message, progress).catch((error) => {
+        this.logger.warn(
+          `landing_ai_progress_update_failed job=${data.jobId} error=${error instanceof Error ? error.message : String(error)}`,
+        )
+      })
+    }
+
     try {
       const promptText = LandingPromptBuilder.buildTextPrompt(
         data.name,
@@ -68,9 +77,11 @@ export class LandingAiGenerateProcessor extends BaseQueueProcessor<LandingAiGene
       )
 
       let html = ''
+      let aiGateway = mockMode ? 'mock' : 'screenshot-to-code'
       let aiTrace: Record<string, unknown> | undefined
       let aiUsage: Record<string, unknown> | undefined
       let aiWarnings: string[] = []
+
       if (mockMode) {
         html = HtmlToEditorConverter.buildMockHtml(
           data.name,
@@ -79,41 +90,56 @@ export class LandingAiGenerateProcessor extends BaseQueueProcessor<LandingAiGene
         )
         await onProgress('Mock mode: sinh HTML cục bộ', 80)
       }
-      else {
-        let sourceImageUrl: string | undefined
-        if (data.type === 'clone') {
-          if (!data.params.url) {
-            throw new Error('Clone job requires params.url')
-          }
-          await onProgress('Đang chụp screenshot URL nguồn...', 20)
-          const screenshotStarted = Date.now()
-          sourceImageUrl = await this.s2cClient.captureScreenshot(data.params.url)
-          screenshotDurationMs = Date.now() - screenshotStarted
+      else if (data.type === 'clone') {
+        // Preserve the existing clone flow. Text/PPC generation is migrated to
+        // screenshot-to-code first so this change does not alter clone behavior.
+        if (!data.params.url) {
+          throw new Error('Clone job requires params.url')
         }
 
-        const s2cStarted = Date.now()
-        const generated = await this.htmlGenerator.generateHtml(
-          {
-            tenantId: data.tenantId,
-            organizationId: data.organizationId,
-            jobId: data.jobId,
-            pageId: data.pageId,
-            pageName: data.name,
-            type: data.type,
-            params: data.params,
-            promptText:
-              data.type === 'clone'
-                ? `${LandingPromptBuilder.buildCloneImagePrompt(data.params)}\n${promptText}`
-                : promptText,
-            sourceImageUrl,
-          },
-        )
+        await onProgress('Đang chụp screenshot URL nguồn...', 20)
+        const screenshotStarted = Date.now()
+        const sourceImageUrl = await this.s2cClient.captureScreenshot(data.params.url)
+        screenshotDurationMs = Date.now() - screenshotStarted
+
+        const generationStarted = Date.now()
+        const generated = await this.htmlGenerator.generateHtml({
+          tenantId: data.tenantId,
+          organizationId: data.organizationId,
+          jobId: data.jobId,
+          pageId: data.pageId,
+          pageName: data.name,
+          type: data.type,
+          params: data.params,
+          promptText: `${LandingPromptBuilder.buildCloneImagePrompt(data.params)}\n${promptText}`,
+          sourceImageUrl,
+        })
+
         html = generated.html
+        aiGateway = 'omniroute'
         aiTrace = generated.trace
         aiUsage = generated.usage
         aiWarnings = generated.warnings
-        s2cDurationMs = Date.now() - s2cStarted
+        s2cDurationMs = Date.now() - generationStarted
         await onProgress('AI gateway generated landing HTML', 80)
+      }
+      else {
+        // AI and PPC jobs are text-first. The processor only supplies the
+        // business brief; screenshot-to-code owns code-generation transport.
+        const generationStarted = Date.now()
+        html = await this.s2cClient.generateText(promptText, reportS2cProgress)
+        s2cDurationMs = Date.now() - generationStarted
+
+        aiGateway = 'screenshot-to-code'
+        aiTrace = {
+          gateway: 'screenshot-to-code',
+          transport: 'websocket',
+          inputMode: 'text',
+          stack: process.env.S2C_DEFAULT_STACK ?? 'html_css',
+        }
+        aiUsage = {}
+        aiWarnings = []
+        await onProgress('Screenshot-to-code generated landing HTML', 80)
       }
 
       if (!html) {
@@ -147,7 +173,7 @@ export class LandingAiGenerateProcessor extends BaseQueueProcessor<LandingAiGene
           jobId: data.jobId,
           importMode: data.importMode ?? 'preserve',
           mock: mockMode,
-          aiGateway: mockMode ? 'mock' : 'omniroute',
+          aiGateway,
           aiTrace,
           aiUsage,
           aiWarnings,
@@ -163,13 +189,14 @@ export class LandingAiGenerateProcessor extends BaseQueueProcessor<LandingAiGene
           htmlLength: html.length,
           importMode: data.importMode ?? 'preserve',
           mock: mockMode,
-          aiGateway: mockMode ? 'mock' : 'omniroute',
+          aiGateway,
           aiTrace,
           aiUsage,
           aiWarnings,
         },
         errorMessage: null,
       })
+
       await this.jobStore.appendEvent(data.jobId, 'Hoàn thành tạo landing page', 100)
       await this.updateProgress(job, 100)
       success = true
