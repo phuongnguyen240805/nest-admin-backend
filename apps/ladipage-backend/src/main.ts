@@ -39,6 +39,9 @@ async function bootstrap() {
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept", "Idempotency-Key", "X-Customer-Care-Timestamp", "X-Customer-Care-Signature"],
+    // Cache successful CORS preflight decisions in the browser so repeat page
+    // loads do not pay an OPTIONS round-trip for every authenticated API call.
+    maxAge: 86_400,
   });
 
   // Global Prefix
