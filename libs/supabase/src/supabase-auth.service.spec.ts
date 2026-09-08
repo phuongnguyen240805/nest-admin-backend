@@ -6,11 +6,12 @@ describe('SupabaseAuthService', () => {
   const getUser = jest.fn()
   const signUp = jest.fn()
   const signInWithPassword = jest.fn()
+  const signInWithIdToken = jest.fn()
   const createUser = jest.fn()
 
   const supabaseService = {
     getClient: () => ({
-      auth: { getUser, signUp, signInWithPassword },
+      auth: { getUser, signUp, signInWithPassword, signInWithIdToken },
     }),
     hasAdminClient: jest.fn().mockReturnValue(false),
     getAdminClient: () => ({
@@ -122,7 +123,67 @@ describe('SupabaseAuthService', () => {
         supabaseUserId: 'uuid-1',
         accessToken: 'at',
         refreshToken: 'rt',
+        user: {
+          id: 'uuid-1',
+          email: undefined,
+          emailConfirmed: true,
+        },
       })
+    })
+  })
+
+  describe('signInWithGoogleIdToken', () => {
+    it('passes Google ID token and nonce to Supabase', async () => {
+      signInWithIdToken.mockResolvedValue({
+        data: {
+          user: {
+            id: 'google-uuid',
+            email: 'google@test.com',
+            confirmed_at: '2026-01-01T00:00:00Z',
+          },
+        },
+        error: null,
+      })
+
+      const result = await service.signInWithGoogleIdToken('google-id-token', 'raw-nonce')
+
+      expect(signInWithIdToken).toHaveBeenCalledWith({
+        provider: 'google',
+        token: 'google-id-token',
+        nonce: 'raw-nonce',
+      })
+      expect(result).toEqual({
+        id: 'google-uuid',
+        email: 'google@test.com',
+        emailConfirmed: true,
+      })
+    })
+
+    it('does not send nonce when caller omitted it', async () => {
+      signInWithIdToken.mockResolvedValue({
+        data: {
+          user: { id: 'google-uuid', confirmed_at: '2026-01-01' },
+        },
+        error: null,
+      })
+
+      await service.signInWithGoogleIdToken('google-id-token')
+
+      expect(signInWithIdToken).toHaveBeenCalledWith({
+        provider: 'google',
+        token: 'google-id-token',
+      })
+    })
+
+    it('rejects Supabase provider errors', async () => {
+      signInWithIdToken.mockResolvedValue({
+        data: { user: null },
+        error: { message: 'invalid google token' },
+      })
+
+      await expect(service.signInWithGoogleIdToken('bad-token')).rejects.toThrow(
+        'invalid google token',
+      )
     })
   })
 })

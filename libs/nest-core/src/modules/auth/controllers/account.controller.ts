@@ -40,8 +40,7 @@ export class AccountController {
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
   ): Promise<LoginToken> {
-    const token = await this.authService.reissueAccessToken(user.uid, ip, ua)
-    return { token }
+    return this.authService.reissueAccessToken(user.uid, ip, ua)
   }
 
   @Get('profile')

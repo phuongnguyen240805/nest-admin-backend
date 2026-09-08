@@ -6,8 +6,9 @@ import Redis from 'ioredis'
 import { InjectRedis } from '~/common/decorators/inject-redis.decorator'
 
 import { ISecurityConfig, SecurityConfig } from '~/config'
-import { genOnlineUserKey } from '~/helper/genRedisKey'
+import { genAuthPVKey, genOnlineUserKey } from '~/helper/genRedisKey'
 import { RoleService } from '~/modules/system/role/role.service'
+import { UserStatus } from '~/modules/user/constant'
 import { UserEntity } from '~/modules/user/user.entity'
 import { generateUUID } from '~/utils'
 
@@ -21,6 +22,12 @@ export interface TokenTenantContext {
   tenantId?: number
   activeTenantId?: number
   appCode?: string
+}
+
+export interface RotatedTokenPair {
+  uid: number
+  accessToken: string
+  refreshToken: string
 }
 
 /**
@@ -41,25 +48,89 @@ export class TokenService {
    * @param accessToken
    */
   async refreshToken(accessToken: AccessTokenEntity) {
-    const { user, refreshToken } = accessToken
+    if (!accessToken.refreshToken?.value)
+      return null
 
-    if (refreshToken) {
-      const now = dayjs()
-      // 判断refreshToken是否过期
-      if (now.isAfter(refreshToken.expired_at))
-        return null
+    const rotated = await this.rotateRefreshToken(accessToken.refreshToken.value)
+    if (!rotated)
+      return null
 
-      const roleIds = await this.roleService.getRoleIdsByUser(user.id)
-      const roleValues = await this.roleService.getRoleValues(roleIds)
-      const tenantContext = await this.resolveTenantContextForUser(user)
-
-      // 如果没过期则生成新的access_token和refresh_token
-      const token = await this.generateAccessToken(user.id, roleValues, tenantContext)
-
-      await accessToken.remove()
-      return token
+    return {
+      accessToken: rotated.accessToken,
+      refreshToken: rotated.refreshToken,
     }
-    return null
+  }
+
+  async rotateRefreshToken(value: string): Promise<RotatedTokenPair | null> {
+    try {
+      await this.jwtService.verifyAsync(value, {
+        secret: this.securityConfig.refreshSecret,
+      })
+    }
+    catch {
+      return null
+    }
+
+    const refreshToken = await RefreshTokenEntity.findOne({
+      where: { value },
+      relations: ['accessToken', 'accessToken.user'],
+    })
+
+    if (!refreshToken?.accessToken?.user)
+      return null
+
+    if (!dayjs().isBefore(refreshToken.expired_at))
+      return null
+
+    const { accessToken } = refreshToken
+    const { user } = accessToken
+
+    if (user.status !== UserStatus.Enabled)
+      return null
+
+    let accessPayload: IAuthUser
+    try {
+      accessPayload = await this.jwtService.verifyAsync<IAuthUser>(accessToken.value, {
+        ignoreExpiration: true,
+      })
+    }
+    catch {
+      return null
+    }
+
+    if (accessPayload.uid !== user.id)
+      return null
+
+    const currentPv = await this.redis.get(genAuthPVKey(user.id))
+    const passwordVersion = currentPv == null ? Number.NaN : Number(currentPv)
+    if (!Number.isInteger(passwordVersion) || passwordVersion !== accessPayload.pv)
+      return null
+
+    const consumed = await RefreshTokenEntity.delete({ id: refreshToken.id })
+    if (consumed.affected !== 1)
+      return null
+
+    const removedAccess = await AccessTokenEntity.delete({ id: accessToken.id })
+    if (removedAccess.affected !== 1)
+      return null
+
+    await this.redis.del(genOnlineUserKey(accessToken.id))
+
+    const roleIds = await this.roleService.getRoleIdsByUser(user.id)
+    const roleValues = await this.roleService.getRoleValues(roleIds)
+    const tenantContext = await this.resolveTenantContextForUser(user)
+    const token = await this.generateAccessToken(
+      user.id,
+      roleValues,
+      tenantContext,
+      passwordVersion,
+    )
+
+    return {
+      uid: user.id,
+      accessToken: token.accessToken,
+      refreshToken: token.refreshToken,
+    }
   }
 
   generateJwtSign(payload: any) {
@@ -72,10 +143,11 @@ export class TokenService {
     uid: number,
     roles: string[] = [],
     tenantContext?: TokenTenantContext,
+    passwordVersion = 1,
   ) {
     const payload: IAuthUser = {
       uid,
-      pv: 1,
+      pv: passwordVersion,
       roles,
       ...(tenantContext?.organizationId && { organizationId: tenantContext.organizationId }),
       ...(tenantContext?.tenantId != null && { tenantId: tenantContext.tenantId }),
@@ -119,6 +191,7 @@ export class TokenService {
 
     const refreshTokenSign = await this.jwtService.signAsync(refreshTokenPayload, {
       secret: this.securityConfig.refreshSecret,
+      expiresIn: this.securityConfig.refreshExpire,
     })
 
     const refreshToken = new RefreshTokenEntity()
@@ -160,10 +233,13 @@ export class TokenService {
   async removeAccessToken(value: string) {
     const accessToken = await AccessTokenEntity.findOne({
       where: { value },
+      relations: ['refreshToken'],
     })
     if (accessToken) {
-      this.redis.del(genOnlineUserKey(accessToken.id))
-      await accessToken.remove()
+      if (accessToken.refreshToken)
+        await RefreshTokenEntity.delete({ id: accessToken.refreshToken.id })
+      await AccessTokenEntity.delete({ id: accessToken.id })
+      await this.redis.del(genOnlineUserKey(accessToken.id))
     }
   }
 
@@ -177,10 +253,12 @@ export class TokenService {
       relations: ['accessToken'],
     })
     if (refreshToken) {
-      if (refreshToken.accessToken)
-        this.redis.del(genOnlineUserKey(refreshToken.accessToken.id))
-      await refreshToken.accessToken.remove()
-      await refreshToken.remove()
+      const accessTokenId = refreshToken.accessToken?.id
+      await RefreshTokenEntity.delete({ id: refreshToken.id })
+      if (accessTokenId) {
+        await AccessTokenEntity.delete({ id: accessTokenId })
+        await this.redis.del(genOnlineUserKey(accessTokenId))
+      }
     }
   }
 

@@ -38,6 +38,8 @@ describe('AuthService — Supabase hybrid', () => {
       accessToken: 'nest-jwt-token',
       refreshToken: 'nest-refresh',
     }),
+    rotateRefreshToken: jest.fn(),
+    removeAccessToken: jest.fn().mockResolvedValue(undefined),
   } as unknown as TokenService
 
   const organizationProvisioningService = {
@@ -52,6 +54,7 @@ describe('AuthService — Supabase hybrid', () => {
   const supabaseAuthService = {
     verifyAccessToken: jest.fn(),
     signInWithPassword: jest.fn(),
+    signInWithGoogleIdToken: jest.fn(),
   } as unknown as SupabaseAuthService
 
   const userService = {
@@ -60,6 +63,7 @@ describe('AuthService — Supabase hybrid', () => {
     findUserByUserName: jest.fn(),
     linkSupabaseUser: jest.fn(),
     findUserById: jest.fn(),
+    forbidden: jest.fn(),
   } as unknown as UserService
 
   const securityConfig = { jwtExprire: 3600, refreshSecret: 'r', refreshExpire: 86400 }
@@ -75,6 +79,7 @@ describe('AuthService — Supabase hybrid', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    appConfig.multiDeviceLogin = true
     service = new AuthService(
       redis as any,
       menuService,
@@ -99,9 +104,36 @@ describe('AuthService — Supabase hybrid', () => {
         'jest',
       )
 
-      expect(token).toBe('nest-jwt-token')
-      expect(tokenService.generateAccessToken).toHaveBeenCalledWith(42, ['admin'])
+      expect(token).toEqual({
+        token: 'nest-jwt-token',
+        refreshToken: 'nest-refresh',
+      })
+      expect(tokenService.generateAccessToken).toHaveBeenCalledWith(42, ['admin'], {
+        organizationId: 'org-uuid',
+        tenantId: 1,
+        activeTenantId: 1,
+        appCode: undefined,
+      }, 1)
       expect(loginLogService.create).toHaveBeenCalledWith(42, '127.0.0.1', 'jest')
+    })
+
+    it('preserves the current password version when issuing a new session', async () => {
+      ;(redis.get as jest.Mock).mockResolvedValueOnce('3')
+      ;(userService.findUserBySupabaseId as jest.Mock).mockResolvedValue(baseUser)
+
+      await service.exchangeSupabaseSession(
+        { id: 'supabase-uuid', email: 'u@test.com', emailConfirmed: true },
+        '127.0.0.1',
+        'jest',
+      )
+
+      expect(tokenService.generateAccessToken).toHaveBeenCalledWith(42, ['admin'], {
+        organizationId: 'org-uuid',
+        tenantId: 1,
+        activeTenantId: 1,
+        appCode: undefined,
+      }, 3)
+      expect(redis.set).toHaveBeenCalledWith(expect.any(String), 3)
     })
 
     it('rejects unconfirmed email', async () => {
@@ -134,7 +166,36 @@ describe('AuthService — Supabase hybrid', () => {
       )
 
       expect(userService.linkSupabaseUser).toHaveBeenCalledWith(7, 'new-uuid')
-      expect(token).toBe('nest-jwt-token')
+      expect(token).toEqual({
+        token: 'nest-jwt-token',
+        refreshToken: 'nest-refresh',
+      })
+    })
+
+    it('rejects email fallback when the local user is linked to another Supabase identity', async () => {
+      const linkedToAnotherIdentity = {
+        id: 7,
+        username: 'linked-user',
+        supabaseUserId: 'different-supabase-uuid',
+      } as UserEntity
+
+      ;(userService.findUserBySupabaseId as jest.Mock).mockResolvedValue(undefined)
+      ;(userService.findUserByEmail as jest.Mock).mockResolvedValue(linkedToAnotherIdentity)
+
+      try {
+        await service.exchangeSupabaseSession(
+          { id: 'incoming-supabase-uuid', email: 'linked@test.com', emailConfirmed: true },
+          '127.0.0.1',
+          'jest',
+        )
+        fail('expected BusinessException')
+      }
+      catch (error) {
+        expect(error).toBeInstanceOf(BusinessException)
+        expect((error as BusinessException).getErrorCode()).toBe(1101)
+      }
+
+      expect(userService.linkSupabaseUser).not.toHaveBeenCalled()
     })
 
     it('throws USER_NOT_FOUND when no matching sys_user', async () => {
@@ -161,11 +222,11 @@ describe('AuthService — Supabase hybrid', () => {
       ;(supabaseAuthService.signInWithPassword as jest.Mock).mockResolvedValue({
         accessToken: 'supabase-access',
         supabaseUserId: 'supabase-uuid',
-      })
-      ;(supabaseAuthService.verifyAccessToken as jest.Mock).mockResolvedValue({
-        id: 'supabase-uuid',
-        email: 'u@test.com',
-        emailConfirmed: true,
+        user: {
+          id: 'supabase-uuid',
+          email: 'u@test.com',
+          emailConfirmed: true,
+        },
       })
       ;(userService.findUserBySupabaseId as jest.Mock).mockResolvedValue(baseUser)
 
@@ -177,18 +238,22 @@ describe('AuthService — Supabase hybrid', () => {
       )
 
       expect(supabaseAuthService.signInWithPassword).toHaveBeenCalledWith('u@test.com', 'Password1')
-      expect(token).toBe('nest-jwt-token')
+      expect(token).toEqual({
+        token: 'nest-jwt-token',
+        refreshToken: 'nest-refresh',
+      })
+      expect(supabaseAuthService.verifyAccessToken).not.toHaveBeenCalled()
     })
 
     it('normalizes email before Supabase sign-in', async () => {
       ;(supabaseAuthService.signInWithPassword as jest.Mock).mockResolvedValue({
         accessToken: 'supabase-access',
         supabaseUserId: 'supabase-uuid',
-      })
-      ;(supabaseAuthService.verifyAccessToken as jest.Mock).mockResolvedValue({
-        id: 'supabase-uuid',
-        email: 'u@test.com',
-        emailConfirmed: true,
+        user: {
+          id: 'supabase-uuid',
+          email: 'u@test.com',
+          emailConfirmed: true,
+        },
       })
       ;(userService.findUserBySupabaseId as jest.Mock).mockResolvedValue(baseUser)
 
@@ -200,6 +265,7 @@ describe('AuthService — Supabase hybrid', () => {
       )
 
       expect(supabaseAuthService.signInWithPassword).toHaveBeenCalledWith('u@test.com', 'Password1')
+      expect(supabaseAuthService.verifyAccessToken).not.toHaveBeenCalled()
     })
   })
 
@@ -215,7 +281,118 @@ describe('AuthService — Supabase hybrid', () => {
       const token = await service.loginWithSupabaseAccessToken('supabase-jwt', '1.1.1.1', 'agent')
 
       expect(supabaseAuthService.verifyAccessToken).toHaveBeenCalledWith('supabase-jwt')
-      expect(token).toBe('nest-jwt-token')
+      expect(token).toEqual({
+        token: 'nest-jwt-token',
+        refreshToken: 'nest-refresh',
+      })
+    })
+  })
+
+  describe('loginWithGoogleIdToken', () => {
+    it('authenticates Google identity through Supabase then issues Nest tokens', async () => {
+      ;(supabaseAuthService.signInWithGoogleIdToken as jest.Mock).mockResolvedValue({
+        id: 'supabase-uuid',
+        email: 'u@test.com',
+        emailConfirmed: true,
+      })
+      ;(userService.findUserBySupabaseId as jest.Mock).mockResolvedValue(baseUser)
+
+      const session = await service.loginWithGoogleIdToken(
+        'google-id-token',
+        'raw-nonce',
+        '127.0.0.1',
+        'jest',
+      )
+
+      expect(supabaseAuthService.signInWithGoogleIdToken).toHaveBeenCalledWith(
+        'google-id-token',
+        'raw-nonce',
+      )
+      expect(session).toEqual({
+        token: 'nest-jwt-token',
+        refreshToken: 'nest-refresh',
+      })
+    })
+
+    it('maps provider verification failures to the Google login business error', async () => {
+      ;(supabaseAuthService.signInWithGoogleIdToken as jest.Mock).mockRejectedValue(
+        new Error('provider rejected token'),
+      )
+
+      try {
+        await service.loginWithGoogleIdToken(
+          'bad-google-token',
+          undefined,
+          '127.0.0.1',
+          'jest',
+        )
+        fail('expected BusinessException')
+      }
+      catch (error) {
+        expect(error).toBeInstanceOf(BusinessException)
+        expect((error as BusinessException).getErrorCode()).toBe(1214)
+      }
+    })
+  })
+
+  describe('clearLoginStatus', () => {
+    it('always removes the persisted token pair for the current session', async () => {
+      await service.clearLoginStatus(
+        { uid: 42, pv: 1, exp: Math.floor(Date.now() / 1000) + 300 },
+        'current-access',
+      )
+
+      expect(tokenService.removeAccessToken).toHaveBeenCalledWith('current-access')
+      expect(userService.forbidden).not.toHaveBeenCalled()
+    })
+
+    it('also clears single-device Redis session state', async () => {
+      appConfig.multiDeviceLogin = false
+
+      await service.clearLoginStatus(
+        { uid: 42, pv: 1, exp: Math.floor(Date.now() / 1000) + 300 },
+        'current-access',
+      )
+
+      expect(tokenService.removeAccessToken).toHaveBeenCalledWith('current-access')
+      expect(userService.forbidden).toHaveBeenCalledWith(42)
+    })
+  })
+
+  describe('refreshSession', () => {
+    it('rotates a Nest refresh token and refreshes permission cache', async () => {
+      ;(tokenService.rotateRefreshToken as jest.Mock).mockResolvedValue({
+        uid: 42,
+        accessToken: 'rotated-access',
+        refreshToken: 'rotated-refresh',
+      })
+
+      const session = await service.refreshSession('old-refresh')
+
+      expect(session).toEqual({
+        token: 'rotated-access',
+        refreshToken: 'rotated-refresh',
+      })
+      expect(redis.set).toHaveBeenCalledWith(
+        expect.any(String),
+        'rotated-access',
+        'EX',
+        3600,
+      )
+      expect(menuService.getPermissions).toHaveBeenCalledWith(42)
+    })
+
+    it('rejects an invalid or replayed refresh token', async () => {
+      ;(tokenService.rotateRefreshToken as jest.Mock).mockResolvedValue(null)
+
+      try {
+        await service.refreshSession('invalid-refresh')
+        fail('expected BusinessException')
+      }
+      catch (error) {
+        expect(error).toBeInstanceOf(BusinessException)
+        expect((error as BusinessException).getErrorCode()).toBe(1101)
+      }
     })
   })
 })

@@ -24,6 +24,7 @@ import { OrganizationProvisioningService } from '~/modules/tenant/organization-p
 
 import { TokenService } from './services/token.service'
 import { IAuthUser } from './interfaces/auth.interface'
+import { LoginToken } from './models/auth.model'
 
 @Injectable()
 export class AuthService {
@@ -67,7 +68,7 @@ export class AuthService {
     password: string,
     ip: string,
     ua: string,
-  ): Promise<string> {
+  ): Promise<LoginToken> {
     const user = await this.userService.findUserByEmail(this.normalizeEmail(email))
     if (isEmpty(user))
       throw new BusinessException(ErrorEnum.INVALID_USERNAME_PASSWORD)
@@ -88,19 +89,19 @@ export class AuthService {
     password: string,
     ip: string,
     ua: string,
-  ): Promise<string> {
+  ): Promise<LoginToken> {
     const normalizedEmail = this.normalizeEmail(email)
 
+    let supabaseUser: VerifiedSupabaseUser
     try {
       const signInResult = await this.supabaseAuthService.signInWithPassword(normalizedEmail, password)
-      return this.loginWithSupabaseAccessToken(signInResult.accessToken, ip, ua)
+      supabaseUser = signInResult.user
     }
-    catch (error) {
-      if (error instanceof BusinessException) {
-        throw error
-      }
+    catch {
       throw new BusinessException(ErrorEnum.INVALID_USERNAME_PASSWORD)
     }
+
+    return this.exchangeSupabaseSession(supabaseUser, ip, ua)
   }
 
   private normalizeEmail(email: string): string {
@@ -115,8 +116,25 @@ export class AuthService {
     supabaseAccessToken: string,
     ip: string,
     ua: string,
-  ): Promise<string> {
+  ): Promise<LoginToken> {
     const supabaseUser = await this.supabaseAuthService.verifyAccessToken(supabaseAccessToken)
+    return this.exchangeSupabaseSession(supabaseUser, ip, ua)
+  }
+
+  async loginWithGoogleIdToken(
+    idToken: string,
+    nonce: string | undefined,
+    ip: string,
+    ua: string,
+  ): Promise<LoginToken> {
+    let supabaseUser: VerifiedSupabaseUser
+    try {
+      supabaseUser = await this.supabaseAuthService.signInWithGoogleIdToken(idToken, nonce)
+    }
+    catch {
+      throw new BusinessException(ErrorEnum.GOOGLE_LOGIN_FAILED)
+    }
+
     return this.exchangeSupabaseSession(supabaseUser, ip, ua)
   }
 
@@ -127,7 +145,7 @@ export class AuthService {
     supabaseUser: VerifiedSupabaseUser,
     ip: string,
     ua: string,
-  ): Promise<string> {
+  ): Promise<LoginToken> {
     if (!supabaseUser.emailConfirmed) {
       throw new BusinessException('1211:Vui lòng xác nhận email trước khi đăng nhập.')
     }
@@ -135,7 +153,11 @@ export class AuthService {
     let user = await this.userService.findUserBySupabaseId(supabaseUser.id)
 
     if (isEmpty(user) && supabaseUser.email) {
-      user = await this.userService.findUserByEmail(supabaseUser.email)
+      user = await this.userService.findUserByEmail(this.normalizeEmail(supabaseUser.email))
+
+      if (user?.supabaseUserId && user.supabaseUserId !== supabaseUser.id)
+        throw new BusinessException(ErrorEnum.INVALID_LOGIN)
+
       if (user && !user.supabaseUserId) {
         await this.userService.linkSupabaseUser(user.id, supabaseUser.id)
         user = await this.userService.findUserById(user.id)
@@ -152,7 +174,7 @@ export class AuthService {
   /**
    * Re-issue Nest JWT with fresh tenant claims (for sessions created before workspace provisioning).
    */
-  async reissueAccessToken(uid: number, ip: string, ua: string): Promise<string> {
+  async reissueAccessToken(uid: number, ip: string, ua: string): Promise<LoginToken> {
     const user = await this.userService.findUserById(uid)
     if (isEmpty(user))
       throw new BusinessException(ErrorEnum.USER_NOT_FOUND)
@@ -160,7 +182,7 @@ export class AuthService {
     return this.issueLoginToken(user, ip, ua)
   }
 
-  private async issueLoginToken(user: UserEntity, ip: string, ua: string): Promise<string> {
+  private async issueLoginToken(user: UserEntity, ip: string, ua: string): Promise<LoginToken> {
     const roleIds = await this.roleService.getRoleIdsByUser(user.id)
     const roles = await this.roleService.getRoleValues(roleIds)
 
@@ -172,16 +194,47 @@ export class AuthService {
       appCode: workspace.appCode,
     }
 
-    const token = await this.tokenService.generateAccessToken(user.id, roles, tenantContext)
+    const cachedPv = await this.redis.get(genAuthPVKey(user.id))
+    const passwordVersion = cachedPv == null ? 1 : Number(cachedPv)
+    const token = await this.tokenService.generateAccessToken(
+      user.id,
+      roles,
+      tenantContext,
+      passwordVersion,
+    )
 
     await this.redis.set(genAuthTokenKey(user.id), token.accessToken, 'EX', this.securityConfig.jwtExprire)
-    await this.redis.set(genAuthPVKey(user.id), 1)
+    await this.redis.set(genAuthPVKey(user.id), passwordVersion)
 
     const permissions = await this.menuService.getPermissions(user.id)
     await this.setPermissionsCache(user.id, permissions)
     await this.loginLogService.create(user.id, ip, ua)
 
-    return token.accessToken
+    return {
+      token: token.accessToken,
+      refreshToken: token.refreshToken,
+    }
+  }
+
+  async refreshSession(refreshToken: string): Promise<LoginToken> {
+    const rotated = await this.tokenService.rotateRefreshToken(refreshToken)
+    if (!rotated)
+      throw new BusinessException(ErrorEnum.INVALID_LOGIN)
+
+    await this.redis.set(
+      genAuthTokenKey(rotated.uid),
+      rotated.accessToken,
+      'EX',
+      this.securityConfig.jwtExprire,
+    )
+
+    const permissions = await this.menuService.getPermissions(rotated.uid)
+    await this.setPermissionsCache(rotated.uid, permissions)
+
+    return {
+      token: rotated.accessToken,
+      refreshToken: rotated.refreshToken,
+    }
   }
 
   /**
@@ -214,10 +267,9 @@ export class AuthService {
   async clearLoginStatus(user: IAuthUser, accessToken: string): Promise<void> {
     const exp = user.exp ? (user.exp - Date.now() / 1000).toFixed(0) : this.securityConfig.jwtExprire
     await this.redis.set(genTokenBlacklistKey(accessToken), accessToken, 'EX', exp)
-    if (this.appConfig.multiDeviceLogin)
-      await this.tokenService.removeAccessToken(accessToken)
-    else
-      await this.userService.forbidden(user.uid, accessToken)
+    await this.tokenService.removeAccessToken(accessToken)
+    if (!this.appConfig.multiDeviceLogin)
+      await this.userService.forbidden(user.uid)
   }
 
   /**

@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
+import type { User } from '@supabase/supabase-js'
 
 import { ISupabaseConfig, SupabaseConfig } from './supabase.config'
 import { SupabaseService } from './supabase.service'
@@ -17,6 +18,7 @@ export interface SupabaseSignInResult {
   supabaseUserId: string
   accessToken: string
   refreshToken?: string
+  user: VerifiedSupabaseUser
   message?: string
 }
 
@@ -99,7 +101,7 @@ export class SupabaseAuthService {
     }
 
     const userId = data.user.id
-    const isConfirmed = data.user.confirmed_at !== undefined
+    const isConfirmed = data.user.confirmed_at != null
     const sessionExists = data.session !== null
 
     let message: string | undefined
@@ -120,7 +122,7 @@ export class SupabaseAuthService {
 
   /**
    * Sign in with email/password via Supabase Auth (server-side helper).
-   * Primary login flow should use Supabase client SDK; this is for tooling/tests.
+   * Used by the backend-owned login flow so the frontend never handles Supabase sessions.
    */
   async signInWithPassword(email: string, password: string): Promise<SupabaseSignInResult> {
     const client = this.supabaseService.getClient()
@@ -141,7 +143,7 @@ export class SupabaseAuthService {
       throw new Error('Supabase did not return a valid session.')
     }
 
-    const isConfirmed = data.user.confirmed_at !== undefined
+    const isConfirmed = data.user.confirmed_at != null
     let message: string | undefined
     if (!isConfirmed) {
       message = 'Please confirm your email before signing in.'
@@ -152,8 +154,33 @@ export class SupabaseAuthService {
       supabaseUserId: data.user.id,
       accessToken: data.session.access_token,
       refreshToken: data.session.refresh_token,
+      user: this.toVerifiedUser(data.user),
       message,
     }
+  }
+
+  async signInWithGoogleIdToken(
+    idToken: string,
+    nonce?: string,
+  ): Promise<VerifiedSupabaseUser> {
+    const client = this.supabaseService.getClient()
+
+    const { data, error } = await client.auth.signInWithIdToken({
+      provider: 'google',
+      token: idToken,
+      ...(nonce ? { nonce } : {}),
+    })
+
+    if (error) {
+      this.logger.warn(`Supabase Google sign-in failed: ${error.message}`)
+      throw new Error(error.message)
+    }
+
+    if (!data.user) {
+      throw new Error('Supabase did not return a Google user.')
+    }
+
+    return this.toVerifiedUser(data.user)
   }
 
   /**
@@ -173,10 +200,14 @@ export class SupabaseAuthService {
       throw new Error('Supabase token is valid but no user was returned.')
     }
 
+    return this.toVerifiedUser(data.user)
+  }
+
+  private toVerifiedUser(user: User): VerifiedSupabaseUser {
     return {
-      id: data.user.id,
-      email: data.user.email,
-      emailConfirmed: data.user.confirmed_at !== undefined && data.user.confirmed_at !== null,
+      id: user.id,
+      email: user.email,
+      emailConfirmed: user.confirmed_at !== undefined && user.confirmed_at !== null,
     }
   }
 }

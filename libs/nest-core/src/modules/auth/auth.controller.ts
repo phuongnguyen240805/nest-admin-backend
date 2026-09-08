@@ -7,12 +7,13 @@ import { SupabaseAuthService } from '@liora/supabase'
 import { ApiResult } from '~/common/decorators/api-result.decorator'
 import { BusinessException } from '~/common/exceptions/biz.exception'
 import { Ip } from '~/common/decorators/http.decorator'
+import { ErrorEnum } from '~/constants/error-code.constant'
 
 import { UserService } from '../user/user.service'
 
 import { AuthService } from './auth.service'
 import { Public } from './decorators/public.decorator'
-import { LoginDto, RegisterDto, SupabaseExchangeDto } from './dto/auth.dto'
+import { GoogleLoginDto, LoginDto, RefreshTokenDto, RegisterDto, SupabaseExchangeDto } from './dto/auth.dto'
 import { AntiSpamRegisterGuard } from './guards/anti-spam-register.guard'
 import { LocalGuard } from './guards/local.guard'
 import { LoginToken } from './models/auth.model'
@@ -42,22 +43,20 @@ export class AuthController {
     const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
 
     if (useSupabase) {
-      const token = await this.authService.loginWithSupabasePassword(
+      return this.authService.loginWithSupabasePassword(
         dto.email,
         dto.password,
         ip,
         ua,
       )
-      return { token }
     }
 
-    const token = await this.authService.login(
+    return this.authService.login(
       dto.email,
       dto.password,
       ip,
       ua,
     )
-    return { token }
   }
 
   @Post('exchange')
@@ -70,15 +69,37 @@ export class AuthController {
   ): Promise<LoginToken> {
     const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
     if (!useSupabase) {
-      throw new BusinessException('1213:Supabase Auth chưa được bật (USE_SUPABASE_AUTH=false).')
+      throw new BusinessException(ErrorEnum.SUPABASE_AUTH_DISABLED)
     }
 
-    const token = await this.authService.loginWithSupabaseAccessToken(
+    return this.authService.loginWithSupabaseAccessToken(
       dto.supabaseAccessToken,
       ip,
       ua,
     )
-    return { token }
+  }
+
+  @Post('google')
+  @ApiOperation({ summary: 'Login with Google via backend-owned Supabase Auth' })
+  @ApiResult({ type: LoginToken })
+  async googleLogin(
+    @Body() dto: GoogleLoginDto,
+    @Ip() ip: string,
+    @Headers('user-agent') ua: string,
+  ): Promise<LoginToken> {
+    const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
+    if (!useSupabase) {
+      throw new BusinessException(ErrorEnum.SUPABASE_AUTH_DISABLED)
+    }
+
+    return this.authService.loginWithGoogleIdToken(dto.idToken, dto.nonce, ip, ua)
+  }
+
+  @Post('refresh')
+  @ApiOperation({ summary: 'Rotate Nest access and refresh tokens' })
+  @ApiResult({ type: LoginToken })
+  async refresh(@Body() dto: RefreshTokenDto): Promise<LoginToken> {
+    return this.authService.refreshSession(dto.refreshToken)
   }
 
   @Post('register')

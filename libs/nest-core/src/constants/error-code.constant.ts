@@ -35,6 +35,8 @@ export enum ErrorEnum {
   TOO_MANY_REQUESTS = '1201:请求频率过快，请一分钟后再试',
   MAXIMUM_FIVE_VERIFICATION_CODES_PER_DAY = '1202:一天最多发送5条验证码',
   VERIFICATION_CODE_SEND_FAILED = '1203:验证码发送失败',
+  SUPABASE_AUTH_DISABLED = '1213:Supabase Auth chưa được bật (USE_SUPABASE_AUTH=false).',
+  GOOGLE_LOGIN_FAILED = '1214:Đăng nhập Google thất bại.',
 
   INSECURE_MISSION = '1301:不安全的任务，确保执行的加入@Mission注解',
   EXECUTED_MISSION_NOT_FOUND = '1302:所执行的任务不存在',

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger'
 
-import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator'
+import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator'
 
 export class LoginDto {
   @ApiProperty({ description: '邮箱' })
@@ -29,6 +29,28 @@ export class SupabaseExchangeDto {
   @IsString()
   @MinLength(10)
   supabaseAccessToken: string
+}
+
+export class GoogleLoginDto {
+  @ApiProperty({ description: 'Google ID token returned by Google Identity Services' })
+  @IsString()
+  @MinLength(20)
+  idToken: string
+
+  @ApiProperty({
+    required: false,
+    description: 'Raw nonce used when requesting the Google ID token',
+  })
+  @IsOptional()
+  @IsString()
+  nonce?: string
+}
+
+export class RefreshTokenDto {
+  @ApiProperty({ description: 'Nest refresh token' })
+  @IsString()
+  @MinLength(20)
+  refreshToken: string
 }
 
 export class RegisterDto {

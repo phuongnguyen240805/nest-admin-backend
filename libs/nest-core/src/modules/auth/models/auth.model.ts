@@ -11,4 +11,7 @@ export class ImageCaptcha {
 export class LoginToken {
   @ApiProperty({ description: 'JWT身份Token' })
   token: string
+
+  @ApiProperty({ description: 'Nest refresh token' })
+  refreshToken: string
 }
