@@ -37,6 +37,8 @@ export enum ErrorEnum {
   VERIFICATION_CODE_SEND_FAILED = '1203:验证码发送失败',
   SUPABASE_AUTH_DISABLED = '1213:Supabase Auth chưa được bật (USE_SUPABASE_AUTH=false).',
   GOOGLE_LOGIN_FAILED = '1214:Đăng nhập Google thất bại.',
+  GOOGLE_REGISTER_FAILED = '1215:Đăng ký Google thất bại.',
+  GOOGLE_ACCOUNT_ALREADY_REGISTERED = '1216:Tài khoản Google đã được đăng ký. Hãy đăng nhập bằng Google.',
 
   INSECURE_MISSION = '1301:不安全的任务，确保执行的加入@Mission注解',
   EXECUTED_MISSION_NOT_FOUND = '1302:所执行的任务不存在',

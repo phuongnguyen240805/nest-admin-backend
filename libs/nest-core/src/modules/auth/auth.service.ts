@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common'
+import { randomBytes } from 'node:crypto'
 import Redis from 'ioredis'
 
 import { isEmpty } from 'lodash'
@@ -136,6 +137,71 @@ export class AuthService {
     }
 
     return this.exchangeSupabaseSession(supabaseUser, ip, ua)
+  }
+
+  async registerWithGoogleIdToken(
+    idToken: string,
+    nonce?: string,
+  ): Promise<{ message: string }> {
+    let supabaseUser: VerifiedSupabaseUser
+    try {
+      supabaseUser = await this.supabaseAuthService.signInWithGoogleIdToken(idToken, nonce)
+    }
+    catch {
+      throw new BusinessException(ErrorEnum.GOOGLE_REGISTER_FAILED)
+    }
+
+    if (!supabaseUser.emailConfirmed) {
+      throw new BusinessException('1211:Vui lòng xác nhận email trước khi đăng ký.')
+    }
+    if (!supabaseUser.email) {
+      throw new BusinessException(ErrorEnum.GOOGLE_REGISTER_FAILED)
+    }
+
+    const normalizedEmail = this.normalizeEmail(supabaseUser.email)
+    const existingBySupabaseId = await this.userService.findUserBySupabaseId(supabaseUser.id)
+    if (existingBySupabaseId) {
+      throw new BusinessException(ErrorEnum.GOOGLE_ACCOUNT_ALREADY_REGISTERED)
+    }
+
+    const existingByEmail = await this.userService.findUserByEmail(normalizedEmail)
+    if (existingByEmail) {
+      if (existingByEmail.supabaseUserId && existingByEmail.supabaseUserId !== supabaseUser.id) {
+        throw new BusinessException(ErrorEnum.INVALID_LOGIN)
+      }
+
+      if (!existingByEmail.supabaseUserId) {
+        await this.userService.linkSupabaseUser(existingByEmail.id, supabaseUser.id)
+      }
+
+      return {
+        message: 'Tài khoản đã tồn tại và đã được liên kết với Google. Hãy đăng nhập bằng Google.',
+      }
+    }
+
+    const username = this.buildGoogleRegistrationUsername(normalizedEmail, supabaseUser.id)
+    const generatedPassword = `A1${randomBytes(11).toString('base64url').slice(0, 14)}`
+
+    await this.userService.register({
+      username,
+      email: normalizedEmail,
+      password: generatedPassword,
+      lang: 'VI',
+    }, supabaseUser.id)
+
+    return {
+      message: 'Đăng ký Google thành công. Hãy đăng nhập bằng Google.',
+    }
+  }
+
+  private buildGoogleRegistrationUsername(email: string, supabaseUserId: string): string {
+    const localPart = email.split('@')[0] ?? 'google'
+    const safeLocalPart = localPart
+      .replace(/[^a-z0-9._-]/gi, '-')
+      .replace(/-+/g, '-')
+      .replace(/^[-_.]+|[-_.]+$/g, '') || 'google'
+    const suffix = supabaseUserId.replace(/-/g, '').slice(0, 8)
+    return `${safeLocalPart.slice(0, 55)}-${suffix}`
   }
 
   /**

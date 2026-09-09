@@ -95,6 +95,19 @@ export class AuthController {
     return this.authService.loginWithGoogleIdToken(dto.idToken, dto.nonce, ip, ua)
   }
 
+  @Post('google/register')
+  @ApiOperation({ summary: 'Register a local account from a verified Google identity' })
+  async googleRegister(
+    @Body() dto: GoogleLoginDto,
+  ): Promise<{ message: string }> {
+    const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
+    if (!useSupabase) {
+      throw new BusinessException(ErrorEnum.SUPABASE_AUTH_DISABLED)
+    }
+
+    return this.authService.registerWithGoogleIdToken(dto.idToken, dto.nonce)
+  }
+
   @Post('refresh')
   @ApiOperation({ summary: 'Rotate Nest access and refresh tokens' })
   @ApiResult({ type: LoginToken })

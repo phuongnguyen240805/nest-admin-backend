@@ -64,6 +64,7 @@ describe('AuthService — Supabase hybrid', () => {
     linkSupabaseUser: jest.fn(),
     findUserById: jest.fn(),
     forbidden: jest.fn(),
+    register: jest.fn(),
   } as unknown as UserService
 
   const securityConfig = { jwtExprire: 3600, refreshSecret: 'r', refreshExpire: 86400 }
@@ -92,6 +93,76 @@ describe('AuthService — Supabase hybrid', () => {
       securityConfig as any,
       appConfig as any,
     )
+  })
+
+  describe('registerWithGoogleIdToken', () => {
+    it('creates a local user from a verified Google identity without issuing a login session', async () => {
+      ;(supabaseAuthService.signInWithGoogleIdToken as jest.Mock).mockResolvedValue({
+        id: '12345678-1234-1234-1234-123456789abc',
+        email: ' New.User@gmail.com ',
+        emailConfirmed: true,
+      })
+      ;(userService.findUserBySupabaseId as jest.Mock).mockResolvedValue(undefined)
+      ;(userService.findUserByEmail as jest.Mock).mockResolvedValue(undefined)
+      ;(userService.register as jest.Mock).mockResolvedValue(undefined)
+
+      const result = await service.registerWithGoogleIdToken('google-id-token', 'raw-nonce')
+
+      expect(supabaseAuthService.signInWithGoogleIdToken).toHaveBeenCalledWith(
+        'google-id-token',
+        'raw-nonce',
+      )
+      expect(userService.register).toHaveBeenCalledWith(
+        expect.objectContaining({
+          username: 'new.user-12345678',
+          email: 'new.user@gmail.com',
+          lang: 'VI',
+          password: expect.stringMatching(/^A1[A-Za-z0-9_-]{14}$/),
+        }),
+        '12345678-1234-1234-1234-123456789abc',
+      )
+      expect(tokenService.generateAccessToken).not.toHaveBeenCalled()
+      expect(result).toEqual({
+        message: 'Đăng ký Google thành công. Hãy đăng nhập bằng Google.',
+      })
+    })
+
+    it('links an existing local account with the same verified email', async () => {
+      const existingUser = { id: 7, email: 'legacy@gmail.com', supabaseUserId: null } as UserEntity
+      ;(supabaseAuthService.signInWithGoogleIdToken as jest.Mock).mockResolvedValue({
+        id: 'new-google-uuid',
+        email: 'legacy@gmail.com',
+        emailConfirmed: true,
+      })
+      ;(userService.findUserBySupabaseId as jest.Mock).mockResolvedValue(undefined)
+      ;(userService.findUserByEmail as jest.Mock).mockResolvedValue(existingUser)
+
+      const result = await service.registerWithGoogleIdToken('google-id-token')
+
+      expect(userService.linkSupabaseUser).toHaveBeenCalledWith(7, 'new-google-uuid')
+      expect(userService.register).not.toHaveBeenCalled()
+      expect(result.message).toContain('đã được liên kết với Google')
+    })
+
+    it('rejects Google registration when the Supabase identity is already registered locally', async () => {
+      ;(supabaseAuthService.signInWithGoogleIdToken as jest.Mock).mockResolvedValue({
+        id: 'supabase-uuid',
+        email: 'u@gmail.com',
+        emailConfirmed: true,
+      })
+      ;(userService.findUserBySupabaseId as jest.Mock).mockResolvedValue(baseUser)
+
+      try {
+        await service.registerWithGoogleIdToken('google-id-token')
+        fail('expected BusinessException')
+      }
+      catch (error) {
+        expect(error).toBeInstanceOf(BusinessException)
+        expect((error as BusinessException).getErrorCode()).toBe(1216)
+      }
+
+      expect(userService.register).not.toHaveBeenCalled()
+    })
   })
 
   describe('exchangeSupabaseSession', () => {
