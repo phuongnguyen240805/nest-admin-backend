@@ -46,12 +46,6 @@ app.register(FastifyCookie as any, {
 app
   .getInstance()
   .addHook('onRequest', async (request, reply): Promise<void> => {
-    // set undefined origin
-    const { origin } = request.headers;
-    if (!origin) {
-      request.headers.origin = request.headers.host as string;
-    }
-
     // forbidden php
     const { url } = request;
     if (url.endsWith('.php')) {

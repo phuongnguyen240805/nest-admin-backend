@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common'
-import { JwtService } from '@nestjs/jwt'
+import { TokenService } from '@liora/nest-core'
 import {
   ConnectedSocket,
   MessageBody,
@@ -11,29 +11,53 @@ import {
 } from '@nestjs/websockets'
 import { Server, Socket } from 'socket.io'
 
+import { ladipageCorsOrigin } from '../../config/cors.config'
+
 @WebSocketGateway({
   namespace: '/customer-care',
-  cors: { origin: true, credentials: true },
+  cors: { origin: ladipageCorsOrigin, credentials: true },
   transports: ['websocket', 'polling'],
 })
 export class CustomerCareGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server!: Server
   private readonly logger = new Logger(CustomerCareGateway.name)
+  private readonly allowLegacySessionJwt =
+    process.env.CUSTOMER_CARE_LEGACY_SOCKET_JWT_ENABLED === 'true'
 
-  constructor(private readonly jwt: JwtService) {}
+  constructor(private readonly tokenService: TokenService) {}
+
+  private async verifySocketCredential(value: string) {
+    try {
+      return await this.tokenService.verifyCustomerCareRealtimeTicket(value)
+    }
+    catch (ticketError) {
+      if (!this.allowLegacySessionJwt)
+        throw ticketError
+
+      // Deployment-only compatibility window. Keep this behind an explicit
+      // production flag, accept it only from Socket.IO auth (never headers),
+      // and disable it immediately after the hardened frontend is deployed.
+      if (!await this.tokenService.checkAccessToken(value))
+        throw ticketError
+
+      this.logger.warn('Accepted legacy Customer Care session JWT; disable CUSTOMER_CARE_LEGACY_SOCKET_JWT_ENABLED after frontend cutover')
+      return this.tokenService.verifyAccessToken(value)
+    }
+  }
 
   async handleConnection(client: Socket) {
     try {
-      const raw = String(client.handshake.auth?.token || client.handshake.headers.authorization || '')
-      const token = raw.replace(/^Bearer\s+/i, '')
-      const payload = await this.jwt.verifyAsync(token)
+      const raw = String(client.handshake.auth?.token || '')
+      const ticket = raw.replace(/^Bearer\s+/i, '')
+      const payload = await this.verifySocketCredential(ticket)
       const tenantId = Number(payload.tenantId ?? payload.activeTenantId)
       if (!tenantId || !payload.uid) throw new Error('Missing tenant context')
       client.data.auth = { tenantId, userId: Number(payload.uid) }
       await client.join(`tenant:${tenantId}`)
       await client.join(`user:${tenantId}:${payload.uid}`)
       client.emit('ready', { tenantId, userId: Number(payload.uid) })
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn(`Rejected socket ${client.id}: ${error instanceof Error ? error.message : String(error)}`)
       client.disconnect(true)
     }

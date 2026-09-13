@@ -19,6 +19,7 @@ import { AccountMenus, AccountUpdateDto } from '../dto/account.dto'
 import { JwtAuthGuard } from '../guards/jwt-auth.guard'
 import { IAuthUser } from '../interfaces/auth.interface'
 import { LoginToken } from '../models/auth.model'
+import { TokenService } from '../services/token.service'
 
 @ApiTags('Account - 账户模块')
 @ApiSecurityAuth()
@@ -29,6 +30,7 @@ export class AccountController {
   constructor(
     private userService: UserService,
     private authService: AuthService,
+    private tokenService: TokenService,
   ) {}
 
   @Post('reissue-token')
@@ -41,6 +43,15 @@ export class AccountController {
     @Headers('user-agent') ua: string,
   ): Promise<LoginToken> {
     return this.authService.reissueAccessToken(user.uid, ip, ua)
+  }
+
+  @Post('realtime-ticket')
+  @ApiOperation({ summary: 'Issue a short-lived Customer Care realtime ticket' })
+  @AllowAnon()
+  async realtimeTicket(
+    @AuthUser() user: IAuthUser,
+  ): Promise<{ ticket: string; expiresIn: number }> {
+    return this.tokenService.issueCustomerCareRealtimeTicket(user)
   }
 
   @Get('profile')

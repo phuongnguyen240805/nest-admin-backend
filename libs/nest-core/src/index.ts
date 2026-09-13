@@ -39,6 +39,7 @@ export * from './shared/shared.module';
 export * from './socket/socket.module';
 
 export * from './modules/auth/auth.module';
+export { TokenService } from './modules/auth/services/token.service';
 export { Public } from './modules/auth/decorators/public.decorator';
 export * from './modules/auth/guards/jwt-auth.guard';
 export * from './modules/auth/guards/rbac.guard';

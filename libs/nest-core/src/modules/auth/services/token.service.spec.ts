@@ -162,4 +162,53 @@ describe('TokenService refresh rotation', () => {
     await expect(service.rotateRefreshToken('refresh-token')).resolves.toBeNull()
     expect(consume).not.toHaveBeenCalled()
   })
+
+  it('issues Customer Care realtime tickets with a dedicated scope and signing secret', async () => {
+    ;(jwtService.signAsync as jest.Mock).mockResolvedValueOnce('realtime-ticket')
+
+    await expect(service.issueCustomerCareRealtimeTicket({
+      uid: 42,
+      pv: 1,
+      roles: ['admin'],
+      organizationId: 'org-uuid',
+      tenantId: 7,
+      activeTenantId: 7,
+      appCode: 'ladipage',
+    })).resolves.toEqual({
+      ticket: 'realtime-ticket',
+      expiresIn: 60,
+    })
+
+    expect(jwtService.signAsync).toHaveBeenCalledWith(
+      {
+        uid: 42,
+        organizationId: 'org-uuid',
+        tenantId: 7,
+        activeTenantId: 7,
+        appCode: 'ladipage',
+        purpose: 'customer-care-realtime',
+      },
+      {
+        secret: 'refresh-secret',
+        audience: 'customer-care-realtime',
+        expiresIn: '60s',
+      },
+    )
+  })
+
+  it('rejects a realtime ticket with the wrong purpose even if its signature is valid', async () => {
+    ;(jwtService.verifyAsync as jest.Mock).mockResolvedValueOnce({
+      uid: 42,
+      tenantId: 7,
+      purpose: 'not-customer-care',
+    })
+
+    await expect(service.verifyCustomerCareRealtimeTicket('wrong-scope-ticket'))
+      .rejects.toThrow('Invalid realtime ticket scope')
+
+    expect(jwtService.verifyAsync).toHaveBeenCalledWith('wrong-scope-ticket', {
+      secret: 'refresh-secret',
+      audience: 'customer-care-realtime',
+    })
+  })
 })

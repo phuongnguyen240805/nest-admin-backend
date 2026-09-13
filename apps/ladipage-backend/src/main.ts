@@ -17,6 +17,7 @@ import {
   AllExceptionsFilter, // Global exception filter from foundation
 } from "@liora/nest-core";
 import { CommonEntity } from "@liora/database";
+import { ladipageCorsOrigin } from "./config/cors.config";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -35,7 +36,7 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors({
-    origin: "*",
+    origin: ladipageCorsOrigin,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept", "Idempotency-Key", "X-Customer-Care-Timestamp", "X-Customer-Care-Signature"],

@@ -30,6 +30,18 @@ export interface RotatedTokenPair {
   refreshToken: string
 }
 
+export interface RealtimeTicketPayload {
+  uid: number
+  tenantId?: number
+  activeTenantId?: number
+  organizationId?: string
+  appCode?: string
+  purpose: 'customer-care-realtime'
+}
+
+const CUSTOMER_CARE_REALTIME_AUDIENCE = 'customer-care-realtime'
+const CUSTOMER_CARE_REALTIME_TTL_SEC = 60
+
 /**
  * 令牌服务
  */
@@ -131,6 +143,35 @@ export class TokenService {
       accessToken: token.accessToken,
       refreshToken: token.refreshToken,
     }
+  }
+
+  async issueCustomerCareRealtimeTicket(user: IAuthUser): Promise<{ ticket: string; expiresIn: number }> {
+    const payload: RealtimeTicketPayload = {
+      uid: user.uid,
+      ...(user.tenantId != null && { tenantId: user.tenantId }),
+      ...(user.activeTenantId != null && { activeTenantId: user.activeTenantId }),
+      ...(user.organizationId && { organizationId: user.organizationId }),
+      ...(user.appCode && { appCode: user.appCode }),
+      purpose: 'customer-care-realtime',
+    }
+
+    const ticket = await this.jwtService.signAsync(payload, {
+      secret: this.securityConfig.refreshSecret,
+      audience: CUSTOMER_CARE_REALTIME_AUDIENCE,
+      expiresIn: `${CUSTOMER_CARE_REALTIME_TTL_SEC}s`,
+    })
+    return { ticket, expiresIn: CUSTOMER_CARE_REALTIME_TTL_SEC }
+  }
+
+  async verifyCustomerCareRealtimeTicket(ticket: string): Promise<RealtimeTicketPayload> {
+    const payload = await this.jwtService.verifyAsync<RealtimeTicketPayload>(ticket, {
+      secret: this.securityConfig.refreshSecret,
+      audience: CUSTOMER_CARE_REALTIME_AUDIENCE,
+    })
+    if (payload.purpose !== 'customer-care-realtime' || !payload.uid) {
+      throw new Error('Invalid realtime ticket scope')
+    }
+    return payload
   }
 
   generateJwtSign(payload: any) {

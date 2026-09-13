@@ -50,7 +50,8 @@
     "migration:validate": "node scripts/migration/validate-cutover.js",
     "migration:backfill": "node scripts/migration/backfill-supabase-users.js --dry-run",
     "migration:backfill:apply": "node scripts/migration/backfill-supabase-users.js --apply",
-    "migration:phase7": "node scripts/migration/run-phase7.js"
+    "migration:phase7": "node scripts/migration/run-phase7.js",
+    "security:phase-0-3": "node scripts/security/phase-0-3-guard.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.8.0",
