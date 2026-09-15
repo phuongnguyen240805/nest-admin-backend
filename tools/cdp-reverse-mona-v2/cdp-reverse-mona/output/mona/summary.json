@@ -1,0 +1,41 @@
+{
+  "summary": {
+    "startedAt": "2026-09-12T09:41:37.240Z",
+    "finishedAt": "2026-09-12T09:52:16.976Z",
+    "startUrl": "https://mona.media/blog/",
+    "discoveredFromArchive": 2303,
+    "discoveredFromSitemap": 2177,
+    "uniqueCandidates": 2306,
+    "alreadyCompleted": 0,
+    "attempted": 10,
+    "articles": 0,
+    "skippedNonArticles": 0,
+    "errors": 10,
+    "durationMs": 639737
+  },
+  "config": {
+    "startUrl": "https://mona.media/blog/",
+    "baseUrl": "https://mona.media",
+    "sitemapUrl": "https://mona.media/sitemap_index.xml",
+    "outputDir": "output/mona",
+    "headless": false,
+    "concurrency": 2,
+    "maxArchivePages": 0,
+    "maxArticles": 10,
+    "navigationTimeoutMs": 45000,
+    "archiveSettleMs": 600,
+    "articleSettleMs": 900,
+    "delayMs": 350,
+    "retries": 2,
+    "resume": true,
+    "discoverFromSitemap": true,
+    "discoverFromArchive": true,
+    "saveHtml": true,
+    "captureNetwork": true,
+    "captureAllNetworkMetadata": true,
+    "networkBodyBytes": 1048576,
+    "blockHeavyResources": true,
+    "scrollArticle": true,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 MonaResearchCDP/2.0"
+  }
+}

@@ -1,0 +1,21 @@
+const fs = require('fs')
+const path = require('path')
+const root = process.cwd()
+const read = p => fs.readFileSync(path.join(root, p), 'utf8')
+const checks = []
+const requireText = (file, text, why) => checks.push([read(file).includes(text), `${file}: ${why}`])
+const forbidText = (file, text, why) => checks.push([!read(file).includes(text), `${file}: ${why}`])
+
+requireText('apps/ladipage-backend/src/modules/ai-seo/utils/unlighthouse-url-policy.ts', 'lookup(url.hostname', 'DNS resolution must be validated')
+requireText('apps/ladipage-backend/src/modules/ai-seo/utils/unlighthouse-url-policy.ts', 'URL userinfo is not allowed', 'userinfo parser confusion blocked')
+requireText('apps/ladipage-backend/src/modules/ai-seo/services/unlighthouse.runner.ts', "redirect: 'manual'", 'redirects must be revalidated')
+requireText('apps/ladipage-backend/src/modules/ai-seo/services/unlighthouse.runner.ts', 'validateRuntimeUrl(nextUrl)', 'every redirect target must pass URL policy')
+forbidText('apps/ladipage-backend/src/modules/ai-seo/controllers/ai-seo-lab-scans.controller.ts', '@SkipThrottle()', 'lab scans must not bypass throttling')
+requireText('apps/ladipage-backend/src/modules/ai-seo/services/ai-seo-quota.service.ts', 'ON CONFLICT (tenant_id, usage_day)', 'quota must be database-atomic')
+requireText('apps/ladipage-backend/src/modules/ai-seo/services/ai-seo-keywords.service.ts', 'cache hits are free', 'quota is charged only on provider use')
+requireText('apps/ladipage-backend/src/common/interceptors/request-observability.interceptor.ts', 'traceparent', 'W3C trace correlation required')
+requireText('libs/database/src/migrations/1765200000000-ai-security-quota.ts', 'CHECK ("used_units" >= 0)', 'quota cannot go negative')
+
+const failed = checks.filter(([ok]) => !ok)
+for (const [ok, msg] of checks) console.log(`${ok ? 'PASS' : 'FAIL'} ${msg}`)
+if (failed.length) process.exit(1)

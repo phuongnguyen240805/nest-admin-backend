@@ -1,0 +1,484 @@
+{
+  "cookies": [
+    {
+      "name": "LADI_CLIENT_ID",
+      "value": "3ddab288-5388-45e8-95fb-d4f8d50d66f3",
+      "domain": "app.ladipage.com",
+      "path": "/auth/login",
+      "expires": 1813670187,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "LADIX_PAGE_VIEW",
+      "value": "1",
+      "domain": "app.ladipage.com",
+      "path": "/auth/login",
+      "expires": 1813670187,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "NEXT_LOCALE",
+      "value": "vi",
+      "domain": "app.ladipage.com",
+      "path": "/",
+      "expires": 1813670183.945717,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_hjSessionUser_6732910",
+      "value": "eyJpZCI6ImUwMTczZjViLWYyZDUtNWE0ZC1hZDM2LTFmYWEzNzgyNDc2NSIsImNyZWF0ZWQiOjE3ODIxMzQxODU3MzEsImV4aXN0aW5nIjpmYWxzZX0=",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1813670185,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_hjSession_6732910",
+      "value": "eyJpZCI6IjBmZTVkMmIzLWYzM2YtNGU3OC04ZGZlLTE1ZjBiN2UwZWRiYyIsImMiOjE3ODIxMzQxODU3MzIsInMiOjAsInIiOjAsInNiIjowLCJzciI6MCwic2UiOjAsImZzIjoxLCJzcCI6MH0=",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1782136046,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "IDE",
+      "value": "AHWqTUlzbjU8qxx7o5xh2X0MzAlDOm5hyxQLYBN0uFD87QUu0FLT5TPXUDkWV9xl",
+      "domain": ".doubleclick.net",
+      "path": "/",
+      "expires": 1816694185.869537,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_gid",
+      "value": "GA1.2.1680437560.1782134186",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1782220586,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ga",
+      "value": "GA1.1.2121422328.1782134186",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1816694187.254617,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ga_S276BNH4GQ",
+      "value": "GS2.1.s1782134186$o1$g0$t1782134186$j60$l0$h0",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1816694186.266004,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_fbp",
+      "value": "fb.1.1782134186386.89221258313105066",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1789910273,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ym_uid",
+      "value": "1782134188419012849",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1813670188,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_ym_d",
+      "value": "1782134188",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1813670188,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "yabs-sid",
+      "value": "2282859641782134188",
+      "domain": "mc.yandex.ru",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "i",
+      "value": "uPU/EGO6vLXHB6HepXaCc0+URyIAV7a5UPzk5zuIVQy+IWuUfU56NLVlv/XD5qRXXGXhWf9uR8dHJdaiaWejFkcfjFA=",
+      "domain": ".yandex.ru",
+      "path": "/",
+      "expires": 1816694188.44446,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "yandexuid",
+      "value": "2523628511782134188",
+      "domain": ".yandex.ru",
+      "path": "/",
+      "expires": 1816694188.444555,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "yuidss",
+      "value": "2523628511782134188",
+      "domain": ".yandex.ru",
+      "path": "/",
+      "expires": 1816694188.444613,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "ymex",
+      "value": "2097494188.yrts.1782134188#2097494188.yrtsi.1782134188",
+      "domain": ".yandex.ru",
+      "path": "/",
+      "expires": 1813670188,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "receive-cookie-deprecation",
+      "value": "1",
+      "domain": ".yandex.ru",
+      "path": "/",
+      "expires": 1813670203,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None",
+      "partitionKey": "https://ladipage.com",
+      "_crHasCrossSiteAncestor": true
+    },
+    {
+      "name": "_ym_isad",
+      "value": "2",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1782206188,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "bh",
+      "value": "EigiQ2hyb21pdW0iO3Y9IjE0OSIsICJOb3QpQTtCcmFuZCI7dj0iMjQiGgN4ODYiDTE0OS4wLjc4MjcuNTUqAj8wOgkiV2luZG93cyJCBDEwLjBKAjY0UjciQ2hyb21pdW0iO3Y9IjE0OS4wLjc4MjcuNTUiLCJOb3QpQTtCcmFuZCI7dj0iMjQuMC4wLjAiYKzr5NEGaiHcyuH/CJLYobEDn8/h6gP7+vDnDev//fYPpJjNhwi9ywE=",
+      "domain": ".yandex.ru",
+      "path": "/",
+      "expires": 1816694188,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "hook_pop_load",
+      "value": "1",
+      "domain": ".app.ladipage.com",
+      "path": "/",
+      "expires": 1813670189,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "show_onboarding",
+      "value": "1",
+      "domain": ".app.ladipage.com",
+      "path": "/",
+      "expires": 1813670190,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "a",
+      "value": "1",
+      "domain": ".app.ladipage.com",
+      "path": "/",
+      "expires": 1813670192,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_ga_0XKT03SH56",
+      "value": "GS2.1.s1782134185$o1$g1$t1782134197$j48$l0$h0",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1816694197.883263,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ga_MJQM8YJWKH",
+      "value": "GS2.1.s1782134186$o1$g1$t1782134197$j49$l0$h0",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1816694197.892527,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ga_2YY7CPJFCH",
+      "value": "GS2.1.s1782134186$o1$g1$t1782134197$j49$l0$h0",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1816694197.901531,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ga_LXXWV75KWX",
+      "value": "GS2.1.s1782134187$o1$g1$t1782134197$j50$l0$h0",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1816694197.911358,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ga_HFGM1XBHFE",
+      "value": "GS2.1.s1782134187$o1$g1$t1782134197$j50$l0$h0",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1816694197.916994,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_gcl_au",
+      "value": "1.1.556772545.1782134186.670541389.1782134198.1782134272",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1789910186,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "SSID",
+      "value": "c588de441f49361e9d88ec98cd4fdb9fa54690d1f05542b5a56f838ad558e5f218b17b07e8392dc5e342ae73784ef985729e75ea72e53c0f39091e216bdf353b1128a5060c690b0d50cedf379770bcc2ec81bf87c4c7f1cd5d103d81d1a16a033413473606bcdeb600af92be385b77832c67a69ad7573d986bc2983feb1f722223e3509e0e03391a51180eca76a4bc8f7b9cb189c60bcfc8b181ccfb9a0128704a06a8e64cbadfb97f7dfd79c31e39024e68db40b342515f85f4e945e7457420fc491dfee74c452797ec680b69cb300132556cdf33c26f6a4d4e0509dc8bd611e0f1ab2cec87167e8b6117ea7b85aa15d2d10a11d949806d74c77b2583af6e2e4317910780f4d102c3081667f93970ffd4e66d156582c5266e6930b0332a6080",
+      "domain": "app.ladipage.com",
+      "path": "/",
+      "expires": 1784726273.06917,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "STORE_ID",
+      "value": "6a2c26caef58950011646639",
+      "domain": "app.ladipage.com",
+      "path": "/",
+      "expires": 1784726273.070063,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "NEXT_LOCALE",
+      "value": "vi",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1813670183.945717,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "NEXT_LOCALE",
+      "value": "vi",
+      "domain": "appv6.ladipage.com",
+      "path": "/",
+      "expires": 1813670183.945717,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "SSID",
+      "value": "c588de441f49361e9d88ec98cd4fdb9fa54690d1f05542b5a56f838ad558e5f218b17b07e8392dc5e342ae73784ef985729e75ea72e53c0f39091e216bdf353b1128a5060c690b0d50cedf379770bcc2ec81bf87c4c7f1cd5d103d81d1a16a033413473606bcdeb600af92be385b77832c67a69ad7573d986bc2983feb1f722223e3509e0e03391a51180eca76a4bc8f7b9cb189c60bcfc8b181ccfb9a0128704a06a8e64cbadfb97f7dfd79c31e39024e68db40b342515f85f4e945e7457420fc491dfee74c452797ec680b69cb300132556cdf33c26f6a4d4e0509dc8bd611e0f1ab2cec87167e8b6117ea7b85aa15d2d10a11d949806d74c77b2583af6e2e4317910780f4d102c3081667f93970ffd4e66d156582c5266e6930b0332a6080",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1784726273.06917,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "SSID",
+      "value": "c588de441f49361e9d88ec98cd4fdb9fa54690d1f05542b5a56f838ad558e5f218b17b07e8392dc5e342ae73784ef985729e75ea72e53c0f39091e216bdf353b1128a5060c690b0d50cedf379770bcc2ec81bf87c4c7f1cd5d103d81d1a16a033413473606bcdeb600af92be385b77832c67a69ad7573d986bc2983feb1f722223e3509e0e03391a51180eca76a4bc8f7b9cb189c60bcfc8b181ccfb9a0128704a06a8e64cbadfb97f7dfd79c31e39024e68db40b342515f85f4e945e7457420fc491dfee74c452797ec680b69cb300132556cdf33c26f6a4d4e0509dc8bd611e0f1ab2cec87167e8b6117ea7b85aa15d2d10a11d949806d74c77b2583af6e2e4317910780f4d102c3081667f93970ffd4e66d156582c5266e6930b0332a6080",
+      "domain": "appv6.ladipage.com",
+      "path": "/",
+      "expires": 1784726273.06917,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "STORE_ID",
+      "value": "6a2c26caef58950011646639",
+      "domain": ".ladipage.com",
+      "path": "/",
+      "expires": 1784726273.070063,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "STORE_ID",
+      "value": "6a2c26caef58950011646639",
+      "domain": "appv6.ladipage.com",
+      "path": "/",
+      "expires": 1784726273.070063,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://app.ladipage.com",
+      "localStorage": [
+        {
+          "name": "_ym_synced",
+          "value": "{}"
+        },
+        {
+          "name": "lastExternalReferrerTime",
+          "value": "1782134186303"
+        },
+        {
+          "name": "_ym_retryReqs",
+          "value": "{}"
+        },
+        {
+          "name": "ladipage_ladi_uid",
+          "value": "6a2c26c92d543800211b5157"
+        },
+        {
+          "name": "_ym98700285_lsid",
+          "value": "207156642449"
+        },
+        {
+          "name": "_ym98700285_lastHit",
+          "value": "1782134203190"
+        },
+        {
+          "name": "lastExternalReferrer",
+          "value": "empty"
+        },
+        {
+          "name": "_ym_uid",
+          "value": "\"1782134188419012849\""
+        },
+        {
+          "name": "ladipage_credit_state_v2",
+          "value": "{\"balance\":2450,\"tier\":\"pro\",\"monthlyUsage\":{\"generate_image\":0,\"image_transform\":0,\"image_analyze\":0,\"copywriting\":0,\"copywriting_cro\":0,\"generate_section\":0,\"generate_slide\":0,\"generate_landing\":0,\"style_suggestions\":0,\"chat_modify\":0},\"usagePeriod\":\"2026-06\",\"history\":[]}"
+        },
+        {
+          "name": "_gcl_ls",
+          "value": "{\"schema\":\"gcl\",\"version\":1,\"gsid_dc\":{\"value\":{\"joinId\":\"LWpm2q5h4PFS6K9JhYQtaRT4dZcMWgbFRA\",\"lastJoinedTimeMs\":1782134253942},\"expires\":1782134553942},\"gcl_ctr\":{\"value\":{\"value\":0,\"timeouts\":0,\"errors\":0,\"eopCount\":0,\"creationTimeMs\":1782134185605},\"expires\":1789910185605}}"
+        },
+        {
+          "name": "_ym98700285:0_reqNum",
+          "value": "22"
+        },
+        {
+          "name": "ladipage_owner_id",
+          "value": "6a2c26c92d543800211b5157"
+        }
+      ]
+    },
+    {
+      "origin": "https://appv6.ladipage.com",
+      "localStorage": [
+        {
+          "name": "_ym_synced",
+          "value": "{}"
+        },
+        {
+          "name": "lastExternalReferrerTime",
+          "value": "1782134186303"
+        },
+        {
+          "name": "_ym_retryReqs",
+          "value": "{}"
+        },
+        {
+          "name": "ladipage_ladi_uid",
+          "value": "6a2c26c92d543800211b5157"
+        },
+        {
+          "name": "_ym98700285_lsid",
+          "value": "207156642449"
+        },
+        {
+          "name": "_ym98700285_lastHit",
+          "value": "1782134203190"
+        },
+        {
+          "name": "lastExternalReferrer",
+          "value": "empty"
+        },
+        {
+          "name": "_ym_uid",
+          "value": "\"1782134188419012849\""
+        },
+        {
+          "name": "ladipage_credit_state_v2",
+          "value": "{\"balance\":2450,\"tier\":\"pro\",\"monthlyUsage\":{\"generate_image\":0,\"image_transform\":0,\"image_analyze\":0,\"copywriting\":0,\"copywriting_cro\":0,\"generate_section\":0,\"generate_slide\":0,\"generate_landing\":0,\"style_suggestions\":0,\"chat_modify\":0},\"usagePeriod\":\"2026-06\",\"history\":[]}"
+        },
+        {
+          "name": "_gcl_ls",
+          "value": "{\"schema\":\"gcl\",\"version\":1,\"gsid_dc\":{\"value\":{\"joinId\":\"LWpm2q5h4PFS6K9JhYQtaRT4dZcMWgbFRA\",\"lastJoinedTimeMs\":1782134253942},\"expires\":1782134553942},\"gcl_ctr\":{\"value\":{\"value\":0,\"timeouts\":0,\"errors\":0,\"eopCount\":0,\"creationTimeMs\":1782134185605},\"expires\":1789910185605}}"
+        },
+        {
+          "name": "_ym98700285:0_reqNum",
+          "value": "22"
+        },
+        {
+          "name": "ladipage_owner_id",
+          "value": "6a2c26c92d543800211b5157"
+        }
+      ]
+    }
+  ]
+}

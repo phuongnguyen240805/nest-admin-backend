@@ -53,7 +53,8 @@
     "migration:phase7": "node scripts/migration/run-phase7.js",
     "security:phase-0-3": "node scripts/security/phase-0-3-guard.js",
     "security:phase-4-6": "node scripts/security/phase-4-6-guard.js",
-    "security:phase-7-8": "node scripts/security/phase-7-8-guard.js"
+    "security:phase-7-8": "node scripts/security/phase-7-8-guard.js",
+    "quality:phase-9-11": "node scripts/security/phase-9-11-guard.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.8.0",
