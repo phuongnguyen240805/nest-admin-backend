@@ -1,31 +1,27 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { resolveWorkspaceEnvPaths } from '@liora/shared'
+
 import { LibrefangConfig } from '@liora/librefang-client'
-import { SupabaseConfig } from '@liora/supabase'
-import config from '@liora/nest-core/config'
 import { BullMqModule } from '@liora/nest-core'
+import config from '@liora/nest-core/config'
+import { resolveWorkspaceEnvPaths } from '@liora/shared'
+import { SupabaseConfig } from '@liora/supabase'
 
 import {
   buildLadipageBullMqOptions,
   isBullMqEnabled,
 } from '../config/bullmq.app.config'
-import { LandingAiWorkerModule } from '../modules/landing-ai/landing-ai-worker.module'
-import { AdsPlatformWorkerModule } from '../modules/ads-platform/ads-platform-worker.module'
-import { AutomationWorkerModule } from '../modules/automation/automation-worker.module'
-import { PublishWorkerModule } from '../modules/publish/publish-worker.module'
-
 import { WorkerDatabaseModule } from '../database/worker-database.module'
+import { AiSeoLighthouseWorkerModule } from '../modules/ai-seo/ai-seo-lighthouse-worker.module'
 
-const bullMqImports = isBullMqEnabled()
+const workerImports = isBullMqEnabled()
   ? [
       BullMqModule.forWorker(buildLadipageBullMqOptions()),
-      LandingAiWorkerModule,
-      AdsPlatformWorkerModule,
-      AutomationWorkerModule,
-      PublishWorkerModule,
+      AiSeoLighthouseWorkerModule,
     ]
   : []
+
+/** Chromium/Unlighthouse processors only. Keep this runtime isolated from API/general workers. */
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -36,7 +32,7 @@ const bullMqImports = isBullMqEnabled()
       load: [...Object.values(config), LibrefangConfig, SupabaseConfig],
     }),
     WorkerDatabaseModule,
-    ...bullMqImports,
+    ...workerImports,
   ],
 })
-export class WorkerAppModule {}
+export class BrowserWorkerAppModule {}

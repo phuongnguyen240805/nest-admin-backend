@@ -1,8 +1,20 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common'
 import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger'
 
-import { API_SECURITY_AUTH, TenantGuard } from '@liora/nest-core'
+import { API_SECURITY_AUTH, AuthUser, TenantGuard } from '@liora/nest-core'
 
+import { CreatePublishJobDto } from './dto/create-publish-job.dto'
+import { PublishJobService } from './services/publish-job.service'
 import { PublishService } from './publish.service'
 
 type AiSeoSyncBody = {
@@ -20,7 +32,10 @@ type AiSeoSyncBody = {
 @UseGuards(TenantGuard)
 @Controller('publish')
 export class PublishController {
-  constructor(private readonly publishService: PublishService) {}
+  constructor(
+    private readonly publishService: PublishService,
+    private readonly publishJobService: PublishJobService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Danh sách publish jobs (demo)' })
@@ -35,6 +50,34 @@ export class PublishController {
       message: 'Publish job started (demo)',
       usage: 'See CreditModule + PublishModule + SseModule from nest-core',
     }
+  }
+
+  @Post('landing-pages/:pageId/jobs')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Queue an idempotent landing-page publish job' })
+  async createLandingPublishJob(
+    @Param('pageId') pageId: string,
+    @Body() dto: CreatePublishJobDto,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @AuthUser('uid') userId: number,
+  ) {
+    const job = await this.publishJobService.createOrReplay({
+      pageId,
+      userId,
+      idempotencyKey: idempotencyKey ?? '',
+      dto,
+    })
+    return this.publishJobService.toPublic(job)
+  }
+
+  @Get('jobs/:jobId')
+  @ApiOperation({ summary: 'Get the current user publish job status' })
+  async getLandingPublishJob(
+    @Param('jobId') jobId: string,
+    @AuthUser('uid') userId: number,
+  ) {
+    const job = await this.publishJobService.getForUser(jobId, userId)
+    return this.publishJobService.toPublic(job)
   }
 
   /**

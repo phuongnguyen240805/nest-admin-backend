@@ -5,21 +5,9 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
-# Chromium is required by Unlighthouse/Puppeteer in development/build flows.
-RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    font-noto \
-  && rm -rf /var/cache/apk/*
-
-ENV PUPPETEER_SKIP_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
-    CHROME_PATH=/usr/bin/chromium-browser \
-    CHROMIUM_PATH=/usr/bin/chromium-browser
+# Never download a bundled browser during pnpm install. Chromium is installed
+# only in development and the dedicated production browser-worker runtime.
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 RUN pnpm install --frozen-lockfile
@@ -28,9 +16,23 @@ RUN pnpm install --frozen-lockfile
 FROM base AS development
 WORKDIR /app
 
-RUN if [ ! -e /usr/bin/chromium-browser ] && [ -e /usr/bin/chromium ]; then \
-      ln -sf /usr/bin/chromium /usr/bin/chromium-browser; \
-    fi
+# Dev keeps Chromium available because UNLIGHTHOUSE_INLINE can be useful locally.
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    font-noto \
+  && rm -rf /var/cache/apk/* \
+  && if [ ! -e /usr/bin/chromium-browser ] && [ -e /usr/bin/chromium ]; then \
+       ln -sf /usr/bin/chromium /usr/bin/chromium-browser; \
+     fi
+
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    CHROME_PATH=/usr/bin/chromium-browser \
+    CHROMIUM_PATH=/usr/bin/chromium-browser
 
 COPY . .
 RUN pnpm install --frozen-lockfile
@@ -55,12 +57,11 @@ COPY . .
 
 # IMPORTANT ORDER:
 # 1) API build runs first (clean=true) and generates dist/package.json.
-# 2) Worker build runs with clean=false and adds worker.main.js.
-# 3) Generate a pruned pnpm lockfile from the generated runtime package.json.
-#    Unlighthouse/Puppeteer are dynamic runtime dependencies, so keep them
-#    explicit before creating the frozen deployment lockfile.
+# 2) General worker + browser worker use clean=false and add their entrypoints.
+# 3) Generate a pruned frozen deployment lockfile from runtime package.json.
 RUN pnpm nx build ladipage-backend --prod \
   && pnpm nx build-worker ladipage-backend --prod \
+  && pnpm nx build-browser-worker ladipage-backend --prod \
   && node tools/generate-deploy-lockfile.cjs \
        ladipage-backend dist/apps/ladipage-backend \
        @unlighthouse/cli=0.18.0 puppeteer=25.3.0
@@ -80,17 +81,20 @@ COPY --from=builder /app/dist/apps/ladipage-backend ./
 # JSON files at runtime. Preserve those files without copying the whole source tree.
 COPY --from=builder /app/apps/ladipage-backend/test/contract/fixtures ./test/contract/fixtures
 
-# Install only the frozen dependency set generated from the runtime package.json.
 RUN pnpm install --prod --frozen-lockfile
 
-# =============== SHARED PRODUCTION RUNTIME ===============
+# =============== SHARED PRODUCTION RUNTIME (NO BROWSER) ===============
 FROM node:22-alpine AS production-runtime
-
-# Use the pruned deploy folder as cwd so runtime CLI lookup finds
-# /app/dist/node_modules/.bin/unlighthouse-ci without npx/network fallback.
 WORKDIR /app/dist
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    PUPPETEER_SKIP_DOWNLOAD=true
 
+COPY --from=production-deps --chown=node:node /app/dist ./
+USER node
+
+# =============== PRODUCTION BROWSER RUNTIME ===============
+FROM production-runtime AS production-browser-runtime
+USER root
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -103,15 +107,10 @@ RUN apk add --no-cache \
   && if [ ! -e /usr/bin/chromium-browser ] && [ -e /usr/bin/chromium ]; then \
        ln -sf /usr/bin/chromium /usr/bin/chromium-browser; \
      fi
-
-ENV PUPPETEER_SKIP_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
     CHROME_PATH=/usr/bin/chromium-browser \
     CHROMIUM_PATH=/usr/bin/chromium-browser \
     UNLIGHTHOUSE_BIN=/app/dist/node_modules/.bin/unlighthouse-ci
-
-COPY --from=production-deps --chown=node:node /app/dist ./
-
 USER node
 
 # =============== PRODUCTION API TARGET ===============
@@ -123,15 +122,21 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
 
 CMD ["node", "main.js"]
 
-# =============== PRODUCTION WORKER TARGET ===============
+# =============== PRODUCTION GENERAL WORKER TARGET ===============
 FROM production-runtime AS production-worker
 
-# Worker has no HTTP port. Scan /proc so the check also works when Docker
-# Compose inserts an init/tini process as PID 1.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
   CMD node -e "const f=require('fs');const ok=f.readdirSync('/proc').filter(x=>/^\\d+$/.test(x)).some(x=>{try{return f.readFileSync('/proc/'+x+'/cmdline','utf8').includes('worker.main')}catch{return false}});process.exit(ok?0:1)"
 
 CMD ["node", "worker.main.js"]
+
+# =============== PRODUCTION BROWSER WORKER TARGET ===============
+FROM production-browser-runtime AS production-browser-worker
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+  CMD node -e "const f=require('fs');const ok=f.readdirSync('/proc').filter(x=>/^\\d+$/.test(x)).some(x=>{try{return f.readFileSync('/proc/'+x+'/cmdline','utf8').includes('browser-worker.main')}catch{return false}});process.exit(ok?0:1)"
+
+CMD ["node", "browser-worker.main.js"]
 
 # =============== BACKWARD-COMPATIBLE DEFAULT ===============
 FROM production-api AS production

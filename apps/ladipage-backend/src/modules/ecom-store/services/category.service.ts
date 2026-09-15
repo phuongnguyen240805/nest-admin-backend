@@ -60,6 +60,13 @@ export class CategoryService extends TenantScopedService {
   }
 
   async create(dto: CreateCategoryDto) {
+    if (dto.parentId != null) {
+      await this.assertTenantOwnedIds(
+        this.categoryRepository,
+        [dto.parentId],
+        'Parent category not found',
+      )
+    }
     const category = await this.categoryRepository.save({
       tenantId: this.requireTenantId(),
       name: dto.name,
@@ -72,6 +79,13 @@ export class CategoryService extends TenantScopedService {
 
   async update(id: number, dto: UpdateCategoryDto) {
     const category = await this.detail(id)
+    if (dto.parentId != null) {
+      await this.assertTenantOwnedIds(
+        this.categoryRepository,
+        [dto.parentId],
+        'Parent category not found',
+      )
+    }
     Object.assign(category, dto)
     return this.categoryRepository.save(category)
   }

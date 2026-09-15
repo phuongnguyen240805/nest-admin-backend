@@ -40,6 +40,19 @@ export class PersonRelationService extends TenantScopedService {
     manager?: EntityManager,
   ): Promise<void> {
     const run = async (em: EntityManager) => {
+      await Promise.all([
+        this.assertTenantOwnedIds(
+          em.getRepository(CustomerTagEntity),
+          dto.tagIds,
+          'Tag not found',
+        ),
+        this.assertTenantOwnedIds(
+          em.getRepository(SegmentEntity),
+          dto.segmentIds,
+          'Segment not found',
+        ),
+      ])
+
       if (dto.tagIds) {
         await em.getRepository(CrmPersonTagMapEntity).delete({ personId })
         if (dto.tagIds.length) {

@@ -104,7 +104,6 @@ export class EcomTagService extends TenantScopedService {
 
   async remove(entity: EcomEntityType, id: number) {
     const mapRepo = this.getTagMapRepository(entity)
-    await mapRepo.delete({ tagId: id })
 
     if (entity === EcomEntityType.ORDER) {
       const tag = await this.findOneForTenantOrFail(
@@ -112,6 +111,7 @@ export class EcomTagService extends TenantScopedService {
         { id },
         'Tag not found',
       )
+      await mapRepo.delete({ tagId: id })
       await this.orderTagRepository.remove(tag)
       return
     }
@@ -121,6 +121,7 @@ export class EcomTagService extends TenantScopedService {
       { id },
       'Tag not found',
     )
+    await mapRepo.delete({ tagId: id })
     await this.productTagRepository.remove(tag)
   }
 

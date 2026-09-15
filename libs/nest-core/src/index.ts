@@ -40,6 +40,7 @@ export * from './socket/socket.module';
 
 export * from './modules/auth/auth.module';
 export { TokenService } from './modules/auth/services/token.service';
+export { AuthUser } from './modules/auth/decorators/auth-user.decorator';
 export { Public } from './modules/auth/decorators/public.decorator';
 export * from './modules/auth/guards/jwt-auth.guard';
 export * from './modules/auth/guards/rbac.guard';

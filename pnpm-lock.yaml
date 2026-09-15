@@ -497,6 +497,22 @@ importers:
         specifier: ~5.9.2
         version: 5.9.3
 
+  tools/cdp-reverse-mona:
+    dependencies:
+      playwright:
+        specifier: ^1.52.0
+        version: 1.61.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20.19.9
+        version: 20.19.9
+      tsx:
+        specifier: ^4.19.4
+        version: 4.22.4
+      typescript:
+        specifier: ~5.9.2
+        version: 5.9.3
+
 packages:
 
   '@alloc/quick-lru@5.2.0':

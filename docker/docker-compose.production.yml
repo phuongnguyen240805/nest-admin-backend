@@ -93,6 +93,7 @@ services:
       REDIS_PORT: "6379"
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       RUNNING_IN_DOCKER: "true"
+      UNLIGHTHOUSE_INLINE: "false"
       UMAMI_ENABLED: ${UMAMI_ENABLED:-false}
       OPENSEO_BASE_URL: ${OPENSEO_BASE_URL_DOCKER:-http://openseo:7003}
       OPENSEO_MCP_URL: ${OPENSEO_MCP_URL_DOCKER:-http://openseo:7003/mcp}
@@ -103,11 +104,6 @@ services:
       CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL: ${CUSTOMER_CARE_FACEBOOK_CONNECTOR_DOCKER_URL:-http://facebook-connector:3200}
       AI_GATEWAY_BASE_URL: ${AI_GATEWAY_DOCKER_BASE_URL:-http://9router:20128/v1}
       AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
-      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
-      CHROME_PATH: /usr/bin/chromium-browser
-      CHROMIUM_PATH: /usr/bin/chromium-browser
-      PUPPETEER_SKIP_DOWNLOAD: "true"
-      UNLIGHTHOUSE_BIN: /app/dist/node_modules/.bin/unlighthouse-ci
     expose:
       - "7002"
     depends_on:
@@ -165,11 +161,6 @@ services:
       CUSTOMER_CARE_FACEBOOK_CONNECTOR_URL: ${CUSTOMER_CARE_FACEBOOK_CONNECTOR_DOCKER_URL:-http://facebook-connector:3200}
       AI_GATEWAY_BASE_URL: ${AI_GATEWAY_DOCKER_BASE_URL:-http://9router:20128/v1}
       AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
-      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
-      CHROME_PATH: /usr/bin/chromium-browser
-      CHROMIUM_PATH: /usr/bin/chromium-browser
-      PUPPETEER_SKIP_DOWNLOAD: "true"
-      UNLIGHTHOUSE_BIN: /app/dist/node_modules/.bin/unlighthouse-ci
     depends_on:
       redis:
         condition: service_healthy
@@ -196,6 +187,64 @@ services:
       liora-platform:
         aliases:
           - liora-ladipage-worker
+
+  ladipage-browser-worker:
+    build:
+      context: ..
+      dockerfile: apps/ladipage-backend/Dockerfile
+      target: production-browser-worker
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 60s
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      APP_CODE: ladipage
+      APP_SCOPED_AUTH: "false"
+      DB_TYPE: postgres
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in production}
+      BULLMQ_ENABLED: "true"
+      BULLMQ_RUN_WORKERS: "true"
+      BULLMQ_PREFIX: ${BULLMQ_PREFIX:-liora:ladipage}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      RUNNING_IN_DOCKER: "true"
+      UNLIGHTHOUSE_INLINE: "false"
+      UNLIGHTHOUSE_MODE: ${UNLIGHTHOUSE_MODE:-cli}
+      UNLIGHTHOUSE_ALLOW_LOCAL: ${UNLIGHTHOUSE_ALLOW_LOCAL:-false}
+      UNLIGHTHOUSE_DEBUG_KEEP_REPORT: ${UNLIGHTHOUSE_DEBUG_KEEP_REPORT:-false}
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+      CHROME_PATH: /usr/bin/chromium-browser
+      CHROMIUM_PATH: /usr/bin/chromium-browser
+      UNLIGHTHOUSE_BIN: /app/dist/node_modules/.bin/unlighthouse-ci
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"const f=require('fs');const ok=f.readdirSync('/proc').filter(x=>/^\\d+$/.test(x)).some(x=>{try{return f.readFileSync('/proc/'+x+'/cmdline','utf8').includes('browser-worker.main')}catch{return false}});process.exit(ok?0:1)\"",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      liora-core:
+        aliases:
+          - ladipage-browser-worker
+      liora-platform:
+        aliases:
+          - liora-ladipage-browser-worker
 
 networks:
   liora-core:

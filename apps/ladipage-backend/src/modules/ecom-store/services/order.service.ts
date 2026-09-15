@@ -22,6 +22,7 @@ import {
   OrderItemEntity,
   OrderTagEntity,
   OrderTagMapEntity,
+  ProductEntity,
   ShipmentEntity,
 } from '../entities'
 
@@ -43,6 +44,8 @@ export class OrderService extends TenantScopedService {
     private readonly orderTagMapRepository: Repository<OrderTagMapEntity>,
     @InjectRepository(OrderTagEntity)
     private readonly orderTagRepository: Repository<OrderTagEntity>,
+    @InjectRepository(ProductEntity)
+    private readonly productRepository: Repository<ProductEntity>,
     @InjectRepository(ShipmentEntity)
     private readonly shipmentRepository: Repository<ShipmentEntity>,
     private readonly orderCustomerResolver: OrderCustomerResolver,
@@ -124,6 +127,28 @@ export class OrderService extends TenantScopedService {
 
   async create(dto: CreateOrderDto, manager?: EntityManager) {
     const tenantId = this.requireTenantId()
+    const relationOrderTagRepository = manager
+      ? manager.getRepository(OrderTagEntity)
+      : this.orderTagRepository
+    const relationProductRepository = manager
+      ? manager.getRepository(ProductEntity)
+      : this.productRepository
+
+    await Promise.all([
+      this.assertTenantOwnedIds(
+        relationOrderTagRepository,
+        dto.tagIds,
+        'Order tag not found',
+      ),
+      this.assertTenantOwnedIds(
+        relationProductRepository,
+        dto.items
+          .map((item) => item.productId)
+          .filter((id): id is number => id != null),
+        'Product not found',
+      ),
+    ])
+
     const customer = await this.orderCustomerResolver.resolve({
       name: dto.customerName,
       phone: dto.customerPhone,

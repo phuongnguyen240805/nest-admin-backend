@@ -66,6 +66,14 @@ export class DeliveryNoteService extends TenantScopedService {
 
   async update(id: number, dto: UpdateDeliveryNoteDto) {
     const note = await this.detail(id)
+    if (dto.orderId != null && dto.orderId !== note.orderId) {
+      await this.assertTenantOwnedIds(
+        this.orderRepository,
+        [dto.orderId],
+        'Order not found',
+      )
+    }
+
     Object.assign(note, {
       orderId: dto.orderId ?? note.orderId,
       content: dto.content !== undefined ? dto.content : note.content,

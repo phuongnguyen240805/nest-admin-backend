@@ -15,11 +15,13 @@ import {
   UpdateCustomerDto,
 } from '../dto/customer.dto'
 import {
+  CompanyEntity,
   CustomerCompanyEntity,
   CustomerEntity,
   CustomerSegmentEntity,
   CustomerTagEntity,
   CustomerTagMapEntity,
+  SegmentEntity,
 } from '../entities'
 
 export interface FindOrCreateCustomerInput {
@@ -202,6 +204,26 @@ export class CustomerService extends TenantScopedService {
     customerId: number,
     dto: Pick<CreateCustomerDto, 'tagIds' | 'segmentIds' | 'companyIds'>,
   ) {
+    // Validate every referenced tenant-owned resource before deleting current
+    // mappings. Invalid/cross-tenant ids must not have destructive side effects.
+    await Promise.all([
+      this.assertTenantOwnedIds(
+        manager.getRepository(CustomerTagEntity),
+        dto.tagIds,
+        'Tag not found',
+      ),
+      this.assertTenantOwnedIds(
+        manager.getRepository(SegmentEntity),
+        dto.segmentIds,
+        'Segment not found',
+      ),
+      this.assertTenantOwnedIds(
+        manager.getRepository(CompanyEntity),
+        dto.companyIds,
+        'Company not found',
+      ),
+    ])
+
     if (dto.tagIds) {
       await manager.getRepository(CustomerTagMapEntity).delete({ customerId })
       if (dto.tagIds.length) {

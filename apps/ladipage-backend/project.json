@@ -132,6 +132,49 @@
           "buildTarget": "ladipage-backend:build-worker:production"
         }
       }
+    },
+    "build-browser-worker": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{workspaceRoot}/dist/apps/ladipage-backend"
+      ],
+      "options": {
+        "command": "webpack-cli build --config webpack.browser-worker.config.js",
+        "args": [
+          "--node-env=production",
+          "--externals-presets-node"
+        ],
+        "cwd": "apps/ladipage-backend"
+      },
+      "configurations": {
+        "development": {
+          "args": [
+            "--node-env=development",
+            "--externals-presets-node"
+          ]
+        }
+      }
+    },
+    "serve-browser-worker": {
+      "continuous": true,
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "ladipage-backend:build-browser-worker",
+        "runBuildTargetDependencies": false,
+        "buildTargetOptions": {
+          "outputPath": "dist/apps/ladipage-backend",
+          "outputFileName": "browser-worker.main.js"
+        }
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "ladipage-backend:build-browser-worker:development"
+        },
+        "production": {
+          "buildTarget": "ladipage-backend:build-browser-worker:production"
+        }
+      }
     }
   }
 }

@@ -456,6 +456,88 @@ services:
         aliases:
           - liora-ladipage-worker
 
+
+  # ================== LADIPAGE BROWSER WORKER (Chromium / Unlighthouse only) ==================
+  liora-ladipage-browser-worker:
+    build:
+      context: ..
+      dockerfile: apps/ladipage-backend/Dockerfile
+      target: development
+    container_name: liora-ladipage-browser-worker-dev
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    entrypoint: []
+    env_file:
+      - ../.env
+    environment:
+      APP_CODE: ladipage
+      APP_SCOPED_AUTH: "false"
+      BULLMQ_ENABLED: "true"
+      BULLMQ_RUN_WORKERS: "true"
+      BULLMQ_PREFIX: ${BULLMQ_PREFIX:-liora:ladipage}
+      DB_TYPE: postgres
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_SSL: "false"
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/liora_db}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_URL: redis://redis:6379/0
+      RUNNING_IN_DOCKER: "true"
+      UNLIGHTHOUSE_MODE: ${UNLIGHTHOUSE_MODE:-cli}
+      UNLIGHTHOUSE_INLINE: "false"
+      UNLIGHTHOUSE_ALLOW_LOCAL: "true"
+      UNLIGHTHOUSE_FALLBACK_MOCK: ${UNLIGHTHOUSE_FALLBACK_MOCK:-false}
+      UNLIGHTHOUSE_HOST_BRIDGE: host.docker.internal
+      UNLIGHTHOUSE_DEBUG_KEEP_REPORT: ${UNLIGHTHOUSE_DEBUG_KEEP_REPORT:-false}
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+      CHROME_PATH: /usr/bin/chromium-browser
+      CHROMIUM_PATH: /usr/bin/chromium-browser
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+    command: ["pnpm", "nx", "serve-browser-worker", "ladipage-backend", "--skip-nx-cache"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ../apps:/app/apps
+      - ../libs:/app/libs
+      - ../scripts:/app/scripts
+      - ../package.json:/app/package.json:ro
+      - ../pnpm-lock.yaml:/app/pnpm-lock.yaml:ro
+      - ../pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro
+      - ../nx.json:/app/nx.json
+      - ../tsconfig.base.json:/app/tsconfig.base.json
+      - ../tsconfig.json:/app/tsconfig.json
+      - /app/node_modules
+      - ../.env:/app/.env:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"const f=require('fs');const ok=f.readdirSync('/proc').filter(x=>/^\\d+$/.test(x)).some(x=>{try{const c=f.readFileSync('/proc/'+x+'/cmdline','utf8');return c.includes('serve-browser-worker')||c.includes('browser-worker.main')}catch{return false}});process.exit(ok?0:1)\"",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
+    networks:
+      liora-network:
+        aliases:
+          - ladipage-browser-worker
+      liora-platform:
+        aliases:
+          - liora-ladipage-browser-worker
+
   # ================== DONUT-SYNC BACKEND ==================
   # Optional: --profile donut. This also enables MinIO to preserve the current Donut runtime.
   donut-sync:

@@ -13,6 +13,7 @@ import {
   UpdateProductDto,
 } from '../dto/product.dto'
 import {
+  ProductCategoryEntity,
   ProductEntity,
   ProductTagEntity,
   ProductTagMapEntity,
@@ -76,6 +77,19 @@ export class ProductService extends TenantScopedService {
     const tenantId = this.requireTenantId()
 
     const productId = await this.dataSource.transaction(async (manager) => {
+      if (dto.categoryId != null) {
+        await this.assertTenantOwnedIds(
+          manager.getRepository(ProductCategoryEntity),
+          [dto.categoryId],
+          'Category not found',
+        )
+      }
+      await this.assertTenantOwnedIds(
+        manager.getRepository(ProductTagEntity),
+        dto.tagIds,
+        'Tag not found',
+      )
+
       const product = await manager.getRepository(ProductEntity).save({
         tenantId,
         name: dto.name,
@@ -110,6 +124,21 @@ export class ProductService extends TenantScopedService {
     )
 
     await this.dataSource.transaction(async (manager) => {
+      if (dto.categoryId != null) {
+        await this.assertTenantOwnedIds(
+          manager.getRepository(ProductCategoryEntity),
+          [dto.categoryId],
+          'Category not found',
+        )
+      }
+      if (dto.tagIds) {
+        await this.assertTenantOwnedIds(
+          manager.getRepository(ProductTagEntity),
+          dto.tagIds,
+          'Tag not found',
+        )
+      }
+
       await manager.getRepository(ProductEntity).update(id, {
         name: dto.name,
         sku: dto.sku,
