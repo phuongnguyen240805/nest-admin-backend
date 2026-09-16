@@ -15,7 +15,7 @@ import { genAuthPermKey, genAuthPVKey, genAuthTokenKey, genTokenBlacklistKey } f
 import { UserEntity } from '~/modules/user/user.entity'
 import { UserService } from '~/modules/user/user.service'
 
-import { md5 } from '~/utils'
+import { PasswordHasherService } from '~/modules/user/services/password-hasher.service'
 
 import { LoginLogService } from '../system/log/services/login-log.service'
 import { MenuService } from '../system/menu/menu.service'
@@ -40,16 +40,16 @@ export class AuthService {
     private supabaseAuthService: SupabaseAuthService,
     @Inject(SecurityConfig.KEY) private securityConfig: ISecurityConfig,
     @Inject(AppConfig.KEY) private appConfig: IAppConfig,
+    private passwordHasher: PasswordHasherService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
-    const user = await this.userService.findUserByEmail(this.normalizeEmail(email))
+    const user = await this.userService.findUserByEmailForAuth(this.normalizeEmail(email))
 
     if (isEmpty(user))
-      throw new BusinessException(ErrorEnum.USER_NOT_FOUND)
+      throw new BusinessException(ErrorEnum.INVALID_USERNAME_PASSWORD)
 
-    const comparePassword = md5(`${password}${user.psalt}`)
-    if (user.password !== comparePassword)
+    if (!await this.verifyLocalPassword(user, password))
       throw new BusinessException(ErrorEnum.INVALID_USERNAME_PASSWORD)
 
     if (user) {
@@ -70,12 +70,11 @@ export class AuthService {
     ip: string,
     ua: string,
   ): Promise<LoginToken> {
-    const user = await this.userService.findUserByEmail(this.normalizeEmail(email))
+    const user = await this.userService.findUserByEmailForAuth(this.normalizeEmail(email))
     if (isEmpty(user))
       throw new BusinessException(ErrorEnum.INVALID_USERNAME_PASSWORD)
 
-    const comparePassword = md5(`${password}${user.psalt}`)
-    if (user.password !== comparePassword)
+    if (!await this.verifyLocalPassword(user, password))
       throw new BusinessException(ErrorEnum.INVALID_USERNAME_PASSWORD)
 
     return this.issueLoginToken(user, ip, ua)
@@ -307,11 +306,22 @@ export class AuthService {
    * 效验账号密码
    */
   async checkPassword(username: string, password: string) {
-    const user = await this.userService.findUserByUserName(username)
-
-    const comparePassword = md5(`${password}${user.psalt}`)
-    if (user.password !== comparePassword)
+    const user = await this.userService.findUserByUserNameForAuth(username)
+    if (isEmpty(user))
       throw new BusinessException(ErrorEnum.INVALID_USERNAME_PASSWORD)
+
+    if (!await this.verifyLocalPassword(user, password))
+      throw new BusinessException(ErrorEnum.INVALID_USERNAME_PASSWORD)
+  }
+
+  private async verifyLocalPassword(user: UserEntity, password: string): Promise<boolean> {
+    const result = await this.passwordHasher.verifyPassword(password, user.password, user.psalt)
+    if (result.valid && result.upgradedHash) {
+      // Do not bump password-version here: the secret did not change; only its
+      // storage format was upgraded after a successful legacy verification.
+      await this.userService.upgradeLegacyPasswordHash(user.id, result.upgradedHash)
+    }
+    return result.valid
   }
 
   async loginLog(uid: number, ip: string, ua: string) {

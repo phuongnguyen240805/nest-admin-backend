@@ -11,6 +11,33 @@ import { AppConfig, IAppConfig } from '~/config'
 import { ErrorEnum } from '~/constants/error-code.constant'
 import { randomValue } from '~/utils'
 
+const EMAIL_CODE_LIMIT_SCRIPT = `
+local ipBurst = KEYS[1]
+local emailBurst = KEYS[2]
+local emailDaily = KEYS[3]
+local ipDaily = KEYS[4]
+local dailyLimit = tonumber(ARGV[1])
+local dailyTtl = tonumber(ARGV[2])
+
+if redis.call('EXISTS', ipBurst) == 1 or redis.call('EXISTS', emailBurst) == 1 then
+  return 0
+end
+
+local emailCount = tonumber(redis.call('GET', emailDaily) or '0')
+local ipCount = tonumber(redis.call('GET', ipDaily) or '0')
+if emailCount >= dailyLimit or ipCount >= dailyLimit then
+  return -1
+end
+
+redis.call('SET', ipBurst, '1', 'EX', 60)
+redis.call('SET', emailBurst, '1', 'EX', 60)
+local nextEmail = redis.call('INCR', emailDaily)
+if nextEmail == 1 then redis.call('EXPIRE', emailDaily, dailyTtl) end
+local nextIp = redis.call('INCR', ipDaily)
+if nextIp == 1 then redis.call('EXPIRE', ipDaily, dailyTtl) end
+return 1
+`
+
 @Injectable()
 export class MailerService {
   constructor(
@@ -20,30 +47,7 @@ export class MailerService {
   ) {}
 
   async log(to: string, code: string, ip: string) {
-    const getRemainTime = () => {
-      const now = dayjs()
-      return now.endOf('day').diff(now, 'second')
-    }
-
     await this.redis.set(`captcha:${to}`, code, 'EX', 60 * 5)
-
-    const limitCountOfDay = await this.redis.get(`captcha:${to}:limit-day`)
-    const ipLimitCountOfDay = await this.redis.get(`ip:${ip}:send:limit-day`)
-
-    await this.redis.set(`ip:${ip}:send:limit`, 1, 'EX', 60)
-    await this.redis.set(`captcha:${to}:limit`, 1, 'EX', 60)
-    await this.redis.set(
-      `captcha:${to}:send:limit-count-day`,
-      limitCountOfDay,
-      'EX',
-      getRemainTime(),
-    )
-    await this.redis.set(
-      `ip:${ip}:send:limit-count-day`,
-      ipLimitCountOfDay,
-      'EX',
-      getRemainTime(),
-    )
   }
 
   async checkCode(to, code) {
@@ -56,37 +60,32 @@ export class MailerService {
 
   async checkLimit(to, ip) {
     const LIMIT_TIME = 5
-
-    // ip限制
-    const ipLimit = await this.redis.get(`ip:${ip}:send:limit`)
-    if (ipLimit)
-      throw new BusinessException(ErrorEnum.TOO_MANY_REQUESTS)
-
-    // 1分钟最多接收1条
-    const limit = await this.redis.get(`captcha:${to}:limit`)
-    if (limit)
-      throw new BusinessException(ErrorEnum.TOO_MANY_REQUESTS)
-
-    // 1天一个邮箱最多接收5条
-    let limitCountOfDay: string | number = await this.redis.get(
+    const now = dayjs()
+    const dailyTtl = Math.max(60, now.endOf('day').diff(now, 'second'))
+    const result = Number(await this.redis.eval(
+      EMAIL_CODE_LIMIT_SCRIPT,
+      4,
+      `ip:${ip}:send:limit`,
+      `captcha:${to}:limit`,
       `captcha:${to}:limit-day`,
-    )
-    limitCountOfDay = limitCountOfDay ? Number(limitCountOfDay) : 0
-    if (limitCountOfDay > LIMIT_TIME) {
+      `ip:${ip}:send:limit-day`,
+      String(LIMIT_TIME),
+      String(dailyTtl),
+    ))
+
+    if (result === 0) {
+      throw new BusinessException(ErrorEnum.TOO_MANY_REQUESTS)
+    }
+
+    if (result === -1) {
       throw new BusinessException(
         ErrorEnum.MAXIMUM_FIVE_VERIFICATION_CODES_PER_DAY,
       )
     }
 
-    // 1天一个ip最多发送5条
-    let ipLimitCountOfDay: string | number = await this.redis.get(
-      `ip:${ip}:send:limit-day`,
-    )
-    ipLimitCountOfDay = ipLimitCountOfDay ? Number(ipLimitCountOfDay) : 0
-    if (ipLimitCountOfDay > LIMIT_TIME) {
-      throw new BusinessException(
-        ErrorEnum.MAXIMUM_FIVE_VERIFICATION_CODES_PER_DAY,
-      )
+    if (result !== 1) {
+      // Fail closed if Redis returns an unexpected script result.
+      throw new BusinessException(ErrorEnum.TOO_MANY_REQUESTS)
     }
   }
 

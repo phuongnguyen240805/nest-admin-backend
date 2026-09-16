@@ -18,6 +18,7 @@ import { AntiSpamRegisterGuard } from './guards/anti-spam-register.guard'
 import { LocalGuard } from './guards/local.guard'
 import { LoginToken } from './models/auth.model'
 import { CaptchaService } from './services/captcha.service'
+import { AuthRateLimitService } from './services/auth-rate-limit.service'
 
 @ApiTags('Auth - 认证模块')
 @UseGuards(LocalGuard)
@@ -30,6 +31,7 @@ export class AuthController {
     private captchaService: CaptchaService,
     private configService: ConfigService,
     private supabaseAuthService: SupabaseAuthService,
+    private authRateLimit: AuthRateLimitService,
   ) {}
 
   @Post('login')
@@ -38,7 +40,9 @@ export class AuthController {
   })
   @ApiResult({ type: LoginToken })
   async login(@Body() dto: LoginDto, @Ip()ip: string, @Headers('user-agent')ua: string): Promise<LoginToken> {
+    await this.authRateLimit.assertLoginIpAllowed(ip)
     await this.captchaService.checkImgCaptcha(dto.captchaId, dto.verifyCode)
+    await this.authRateLimit.assertLoginIdentityAllowed(dto.email)
 
     const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
 
@@ -67,6 +71,7 @@ export class AuthController {
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
   ): Promise<LoginToken> {
+    await this.authRateLimit.assertExchangeAllowed(ip)
     const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
     if (!useSupabase) {
       throw new BusinessException(ErrorEnum.SUPABASE_AUTH_DISABLED)
@@ -87,6 +92,7 @@ export class AuthController {
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
   ): Promise<LoginToken> {
+    await this.authRateLimit.assertGoogleAllowed(ip)
     const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
     if (!useSupabase) {
       throw new BusinessException(ErrorEnum.SUPABASE_AUTH_DISABLED)
@@ -99,7 +105,9 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a local account from a verified Google identity' })
   async googleRegister(
     @Body() dto: GoogleLoginDto,
+    @Ip() ip: string,
   ): Promise<{ message: string }> {
+    await this.authRateLimit.assertGoogleAllowed(ip)
     const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
     if (!useSupabase) {
       throw new BusinessException(ErrorEnum.SUPABASE_AUTH_DISABLED)
@@ -111,14 +119,16 @@ export class AuthController {
   @Post('refresh')
   @ApiOperation({ summary: 'Rotate Nest access and refresh tokens' })
   @ApiResult({ type: LoginToken })
-  async refresh(@Body() dto: RefreshTokenDto): Promise<LoginToken> {
+  async refresh(@Body() dto: RefreshTokenDto, @Ip() ip: string): Promise<LoginToken> {
+    await this.authRateLimit.assertRefreshAllowed(ip)
     return this.authService.refreshSession(dto.refreshToken)
   }
 
   @Post('register')
   @UseGuards(AntiSpamRegisterGuard)
   @ApiOperation({ summary: '注册' })
-  async register(@Body() dto: RegisterDto): Promise<{ message?: string } | void> {
+  async register(@Body() dto: RegisterDto, @Ip() ip: string): Promise<{ message?: string } | void> {
+    await this.authRateLimit.assertRegisterAllowed(ip, dto.email)
     const useSupabase = this.configService.get<boolean>('supabase.useSupabaseAuth') ?? false
 
     if (useSupabase) {
