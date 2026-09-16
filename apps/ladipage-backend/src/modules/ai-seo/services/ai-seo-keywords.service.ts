@@ -27,8 +27,6 @@ export class AiSeoKeywordsService extends TenantScopedService {
 
   async research(dto: KeywordResearchDto) {
     const tenantId = this.requireTenantId()
-    this.quotaService.assertAvailable(tenantId)
-
     const seedHash = this.cacheService.buildSeedHash(dto)
     const memoryKey = `seo:kw:${tenantId}:${seedHash}`
     const cached = this.cacheService.get<Record<string, unknown>>(memoryKey)
@@ -41,6 +39,9 @@ export class AiSeoKeywordsService extends TenantScopedService {
       this.cacheService.set(memoryKey, dbCached.response, 3600)
       return dbCached.response
     }
+
+    // Charge only when a provider call is actually required; cache hits are free.
+    await this.quotaService.assertAvailable(tenantId, 10)
 
     const result = await this.openSeoClient.researchKeywords(dto)
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)

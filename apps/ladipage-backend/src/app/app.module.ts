@@ -80,6 +80,7 @@ import { DomainEventsModule } from '../modules/domain-events/domain-events.modul
 import { CustomerCareContextModule } from '../modules/customer-care-context/customer-care-context.module';
 import { CustomerCareAiModule } from '../modules/customer-care-ai/customer-care-ai.module';
 import { AdsPlatformModule } from '../modules/ads-platform/ads-platform.module';
+import { RequestObservabilityInterceptor } from '../common/interceptors/request-observability.interceptor';
 
 const bullMqImports = isBullMqEnabled()
   ? [
@@ -170,6 +171,7 @@ const bullMqImports = isBullMqEnabled()
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: ClassSerializerInterceptor },
     { provide: APP_INTERCEPTOR, useExisting: TenantInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: RequestObservabilityInterceptor },
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
     {
       provide: APP_INTERCEPTOR,

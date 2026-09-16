@@ -8,6 +8,7 @@ import { join } from 'path'
 import { promisify } from 'util'
 
 import type { UnlighthouseJobPayload } from '../types/unlighthouse-job.payload'
+import { assertResolvedScanableUrl } from '../utils/unlighthouse-url-policy'
 import {
   buildMockUnlighthouseRaw,
   normalizeUnlighthouseOutput,
@@ -298,7 +299,12 @@ export class UnlighthouseRunner {
     const effectiveTimeout = Math.min(Math.max(timeoutMs, 15_000), 300_000)
 
     try {
-      const scanUrl = this.rewriteTargetUrlForRuntime(payload.targetUrl)
+      const runtimeUrl = this.rewriteTargetUrlForRuntime(payload.targetUrl)
+      const checked = await this.validateRuntimeUrl(runtimeUrl)
+      if (checked.ok === false) {
+        throw new Error(`Target URL blocked by scan policy: ${checked.reason}`)
+      }
+      const scanUrl = checked.url
       const target = new URL(scanUrl)
       await this.assertTargetReachable(scanUrl, payload.targetUrl)
       const site = `${target.protocol}//${target.host}`
@@ -402,27 +408,63 @@ export class UnlighthouseRunner {
     }
   }
 
+  private validateRuntimeUrl(rawUrl: string) {
+    const allowLocal =
+      process.env.NODE_ENV !== 'production' &&
+      this.configService.get<string>('UNLIGHTHOUSE_ALLOW_LOCAL') === 'true'
+    const previewHostSuffixes = (
+      this.configService.get<string>('UNLIGHTHOUSE_PREVIEW_HOST_SUFFIXES') ?? ''
+    )
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+    return assertResolvedScanableUrl(rawUrl, { allowLocal, previewHostSuffixes })
+  }
+
   private async assertTargetReachable(scanUrl: string, originalUrl: string): Promise<void> {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 15_000)
     try {
-      const response = await fetch(scanUrl, {
-        method: 'GET',
-        redirect: 'follow',
-        signal: controller.signal,
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (compatible; LioraLabScan/1.0; +https://liora.local)',
-          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        },
-      })
-      if (!response.ok) {
-        throw new Error(
-          `Target URL unreachable before Unlighthouse: HTTP ${response.status} ${response.statusText} for ${scanUrl} (original ${originalUrl})`,
-        )
+      let currentUrl = scanUrl
+      for (let redirectCount = 0; redirectCount <= 5; redirectCount += 1) {
+        const response = await fetch(currentUrl, {
+          method: 'GET',
+          redirect: 'manual',
+          signal: controller.signal,
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (compatible; LioraLabScan/1.0; +https://liora.local)',
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          },
+        })
+
+        if (response.status >= 300 && response.status < 400) {
+          const location = response.headers.get('location')
+          await response.body?.cancel().catch(() => undefined)
+          if (!location) {
+            throw new Error(`Target URL redirect missing Location header for ${currentUrl}`)
+          }
+          if (redirectCount >= 5) {
+            throw new Error(`Target URL exceeded redirect limit for ${scanUrl}`)
+          }
+          const nextUrl = new URL(location, currentUrl).toString()
+          const nextCheck = await this.validateRuntimeUrl(nextUrl)
+          if (nextCheck.ok === false) {
+            throw new Error(`Target URL redirect blocked by scan policy: ${nextCheck.reason}`)
+          }
+          currentUrl = nextCheck.url
+          continue
+        }
+
+        if (!response.ok) {
+          await response.body?.cancel().catch(() => undefined)
+          throw new Error(
+            `Target URL unreachable before Unlighthouse: HTTP ${response.status} ${response.statusText} for ${currentUrl} (original ${originalUrl})`,
+          )
+        }
+        await response.body?.cancel().catch(() => undefined)
+        return
       }
-      const body = response.body as { cancel?: () => Promise<unknown> } | null
-      await body?.cancel?.().catch(() => undefined)
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('Target URL unreachable')) {
         throw error
