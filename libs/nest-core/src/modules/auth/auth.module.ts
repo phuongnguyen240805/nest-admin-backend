@@ -25,6 +25,7 @@ import { AccessTokenEntity } from './entities/access-token.entity'
 import { RefreshTokenEntity } from './entities/refresh-token.entity'
 import { CaptchaService } from './services/captcha.service'
 import { TokenService } from './services/token.service'
+import { AuthRateLimitService } from './services/auth-rate-limit.service'
 import { JwtStrategy } from './strategies/jwt.strategy'
 import { LocalStrategy } from './strategies/local.strategy'
 
@@ -34,7 +35,7 @@ const controllers = [
   CaptchaController,
   EmailController,
 ]
-const providers = [AuthService, TokenService, CaptchaService]
+const providers = [AuthService, TokenService, CaptchaService, AuthRateLimitService]
 const strategies = [LocalStrategy, JwtStrategy]
 
 @Module({

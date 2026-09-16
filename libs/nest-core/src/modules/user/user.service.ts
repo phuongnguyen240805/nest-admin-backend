@@ -17,7 +17,7 @@ import { AccountUpdateDto } from '~/modules/auth/dto/account.dto'
 import { RegisterDto } from '~/modules/auth/dto/auth.dto'
 import { QQService } from '~/shared/helper/qq.service'
 
-import { md5, randomValue } from '~/utils'
+import { randomValue } from '~/utils'
 
 import { AccessTokenEntity } from '../auth/entities/access-token.entity'
 import { DeptEntity } from '../system/dept/dept.entity'
@@ -31,6 +31,7 @@ import { OrganizationProvisioningService } from '../tenant/organization-provisio
 
 import { UserEntity } from './user.entity'
 import { AccountInfo } from './user.model'
+import { PasswordHasherService } from './services/password-hasher.service'
 
 @Injectable()
 export class UserService {
@@ -45,6 +46,7 @@ export class UserService {
     private readonly paramConfigService: ParamConfigService,
     private readonly qqService: QQService,
     private readonly organizationProvisioningService: OrganizationProvisioningService,
+    private readonly passwordHasher: PasswordHasherService,
   ) {}
 
   async findUserById(id: number): Promise<UserEntity | undefined> {
@@ -83,6 +85,40 @@ export class UserService {
 
   async linkSupabaseUser(userId: number, supabaseUserId: string): Promise<void> {
     await this.userRepository.update({ id: userId }, { supabaseUserId })
+  }
+
+  /** Authentication-only lookup. Password is select:false everywhere else. */
+  async findUserByIdForAuth(id: number): Promise<UserEntity | undefined> {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.id = :id', { id })
+      .andWhere('user.status = :status', { status: UserStatus.Enabled })
+      .getOne()
+  }
+
+  /** Authentication-only lookup. Password is never exposed by normal queries. */
+  async findUserByEmailForAuth(email: string): Promise<UserEntity | undefined> {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.email = :email', { email })
+      .andWhere('user.status = :status', { status: UserStatus.Enabled })
+      .getOne()
+  }
+
+  /** Authentication-only lookup. Password is never exposed by normal queries. */
+  async findUserByUserNameForAuth(username: string): Promise<UserEntity | undefined> {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.username = :username', { username })
+      .andWhere('user.status = :status', { status: UserStatus.Enabled })
+      .getOne()
+  }
+
+  async upgradeLegacyPasswordHash(id: number, passwordHash: string): Promise<void> {
+    await this.userRepository.update({ id }, { password: passwordHash })
   }
 
   /**
@@ -143,16 +179,15 @@ export class UserService {
    * 更改密码
    */
   async updatePassword(uid: number, dto: PasswordUpdateDto): Promise<void> {
-    const user = await this.userRepository.findOneBy({ id: uid })
+    const user = await this.findUserByIdForAuth(uid)
     if (isEmpty(user))
       throw new BusinessException(ErrorEnum.USER_NOT_FOUND)
 
-    const comparePassword = md5(`${dto.oldPassword}${user.psalt}`)
-    // 原密码不一致，不允许更改
-    if (user.password !== comparePassword)
+    const verification = await this.passwordHasher.verifyPassword(dto.oldPassword, user.password, user.psalt)
+    if (!verification.valid)
       throw new BusinessException(ErrorEnum.PASSWORD_MISMATCH)
 
-    const password = md5(`${dto.newPassword}${user.psalt}`)
+    const password = await this.passwordHasher.hashPassword(dto.newPassword)
     await this.userRepository.update({ id: uid }, { password })
     await this.upgradePasswordV(user.id)
   }
@@ -163,7 +198,7 @@ export class UserService {
   async forceUpdatePassword(uid: number, password: string): Promise<void> {
     const user = await this.userRepository.findOneBy({ id: uid })
 
-    const newPassword = md5(`${password}${user.psalt}`)
+    const newPassword = await this.passwordHasher.hashPassword(password)
     await this.userRepository.update({ id: uid }, { password: newPassword })
     await this.upgradePasswordV(user.id)
   }
@@ -187,18 +222,16 @@ export class UserService {
     await this.entityManager.transaction(async (manager) => {
       const salt = randomValue(32)
 
+      let plainPassword = password
       if (!password) {
-        const initPassword = await this.paramConfigService.findValueByKey(
+        plainPassword = await this.paramConfigService.findValueByKey(
           SYS_USER_INITPASSWORD,
         )
-        password = md5(`${initPassword ?? '123456'}${salt}`)
       }
-      else {
-        password = md5(`${password ?? '123456'}${salt}`)
-      }
+      const passwordHash = await this.passwordHasher.hashPassword(plainPassword ?? '123456')
       const u = manager.create(UserEntity, {
         username,
-        password,
+        password: passwordHash,
         ...data,
         psalt: salt,
         roles: await this.roleRepository.findBy({ id: In(roleIds) }),
@@ -415,7 +448,7 @@ export class UserService {
     const savedUser = await this.entityManager.transaction(async (manager) => {
       const salt = randomValue(32)
 
-      const password = md5(`${data.password ?? 'a123456'}${salt}`)
+      const password = await this.passwordHasher.hashPassword(data.password ?? 'a123456')
 
       const u = manager.create(UserEntity, {
         username: normalizedUsername,

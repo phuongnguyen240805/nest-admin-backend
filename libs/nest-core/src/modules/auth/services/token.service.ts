@@ -1,7 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
+import { createHmac } from 'node:crypto'
 import dayjs from 'dayjs'
 import Redis from 'ioredis'
+import { In } from 'typeorm'
 
 import { InjectRedis } from '~/common/decorators/inject-redis.decorator'
 
@@ -56,14 +58,23 @@ export class TokenService {
   ) {}
 
   /**
-   * 根据accessToken刷新AccessToken与RefreshToken
-   * @param accessToken
+   * Rotate from a server-loaded access-token relation. This path never needs
+   * the raw refresh token, so it remains compatible after refresh tokens are
+   * stored as one-way digests.
    */
   async refreshToken(accessToken: AccessTokenEntity) {
-    if (!accessToken.refreshToken?.value)
+    const refreshTokenId = accessToken.refreshToken?.id
+    if (!refreshTokenId)
       return null
 
-    const rotated = await this.rotateRefreshToken(accessToken.refreshToken.value)
+    const refreshToken = await RefreshTokenEntity.findOne({
+      where: { id: refreshTokenId },
+      relations: ['accessToken', 'accessToken.user'],
+    })
+    if (!refreshToken)
+      return null
+
+    const rotated = await this.rotateStoredRefreshToken(refreshToken)
     if (!rotated)
       return null
 
@@ -83,12 +94,23 @@ export class TokenService {
       return null
     }
 
+    const storedValue = this.refreshTokenStorageValue(value)
     const refreshToken = await RefreshTokenEntity.findOne({
-      where: { value },
+      // During rolling deployment, accept both Phase-12 digests and legacy
+      // plaintext rows. Every newly issued token is digest-only.
+      where: { value: In([storedValue, value]) },
       relations: ['accessToken', 'accessToken.user'],
     })
+    if (!refreshToken)
+      return null
 
-    if (!refreshToken?.accessToken?.user)
+    return this.rotateStoredRefreshToken(refreshToken)
+  }
+
+  private async rotateStoredRefreshToken(
+    refreshToken: RefreshTokenEntity,
+  ): Promise<RotatedTokenPair | null> {
+    if (!refreshToken.accessToken?.user)
       return null
 
     if (!dayjs().isBefore(refreshToken.expired_at))
@@ -118,6 +140,8 @@ export class TokenService {
     if (!Number.isInteger(passwordVersion) || passwordVersion !== accessPayload.pv)
       return null
 
+    // Refresh rows are single-use. A concurrent/replayed request loses the
+    // delete race and is rejected before a new token pair is issued.
     const consumed = await RefreshTokenEntity.delete({ id: refreshToken.id })
     if (consumed.affected !== 1)
       return null
@@ -236,7 +260,7 @@ export class TokenService {
     })
 
     const refreshToken = new RefreshTokenEntity()
-    refreshToken.value = refreshTokenSign
+    refreshToken.value = this.refreshTokenStorageValue(refreshTokenSign)
     refreshToken.expired_at = now
       .add(this.securityConfig.refreshExpire, 'second')
       .toDate()
@@ -289,8 +313,9 @@ export class TokenService {
    * @param value
    */
   async removeRefreshToken(value: string) {
+    const storedValue = this.refreshTokenStorageValue(value)
     const refreshToken = await RefreshTokenEntity.findOne({
-      where: { value },
+      where: { value: In([storedValue, value]) },
       relations: ['accessToken'],
     })
     if (refreshToken) {
@@ -309,6 +334,13 @@ export class TokenService {
    */
   async verifyAccessToken(token: string): Promise<IAuthUser> {
     return this.jwtService.verifyAsync(token)
+  }
+
+  private refreshTokenStorageValue(value: string): string {
+    const digest = createHmac('sha256', this.securityConfig.refreshSecret)
+      .update(value)
+      .digest('hex')
+    return `rt:v1:${digest}`
   }
 
   private async resolveTenantContextForUser(

@@ -63,7 +63,7 @@ export class AccountController {
     return this.userService.getAccountInfo(user.uid)
   }
 
-  @Get('logout')
+  @Post('logout')
   @ApiOperation({ summary: '账户登出' })
   @AllowAnon()
   async logout(@AuthUser() user: IAuthUser, @Req() req: FastifyRequest): Promise<void> {
