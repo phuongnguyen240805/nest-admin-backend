@@ -4,7 +4,7 @@ import { resolveWorkspaceEnvPaths } from '@liora/shared'
 import { LibrefangConfig } from '@liora/librefang-client'
 import { SupabaseConfig } from '@liora/supabase'
 import config from '@liora/nest-core/config'
-import { BullMqModule } from '@liora/nest-core'
+import { BullMqModule, SharedModule } from '@liora/nest-core'
 
 import {
   buildLadipageBullMqOptions,
@@ -19,6 +19,11 @@ import { WorkerDatabaseModule } from '../database/worker-database.module'
 
 const bullMqImports = isBullMqEnabled()
   ? [
+      // Worker modules transitively pull Auth/User/Menu providers. These rely on
+      // global infrastructure exported by SharedModule (Redis, Helper/QQ, Mailer,
+      // Http, Logger, Scheduler, ...). A worker is a separate Nest app context, so
+      // the HTTP app's global SharedModule does not exist here.
+      SharedModule,
       BullMqModule.forWorker(buildLadipageBullMqOptions()),
       LandingAiWorkerModule,
       AdsPlatformWorkerModule,
