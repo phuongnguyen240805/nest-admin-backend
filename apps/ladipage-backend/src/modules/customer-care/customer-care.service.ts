@@ -281,11 +281,12 @@ export class CustomerCareService {
     );
     try {
       await this.ensureLibreDeskInbox(row);
-      return this.mapChannel(row, { phase: 'disconnected' });
     } catch (error) {
-      await this.channels.remove(row).catch(() => undefined);
-      throw error;
+      this.logger.warn(
+        `Created channel ${row.id} without LibreDesk inbox: ${String(error)}`,
+      );
     }
+    return this.mapChannel(row, { phase: 'disconnected' });
   }
 
   async deleteChannel(id: number) {
@@ -671,9 +672,20 @@ export class CustomerCareService {
       duplicate: boolean;
     }> = [];
     for (let index = 0; index < activeRows.length; index += 1) {
-      probed.push(
-        await this.reconcileChannelIdentity(activeRows[index], statuses[index]),
-      );
+      try {
+        probed.push(
+          await this.reconcileChannelIdentity(activeRows[index], statuses[index]),
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Channel reconcile failed for ${activeRows[index].id}: ${String(error)}`,
+        );
+        probed.push({
+          row: activeRows[index],
+          status: statuses[index],
+          duplicate: false,
+        });
+      }
     }
 
     const seenRows = new Set<number>();
