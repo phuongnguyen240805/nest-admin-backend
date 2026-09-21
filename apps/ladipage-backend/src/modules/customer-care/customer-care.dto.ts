@@ -75,6 +75,7 @@ export class ZaloInboundDto {
   /** @deprecated Ignored. Tenant is resolved server-side from connectionKey. */
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) tenant_id?: number
   @IsString() event_id!: string
+  @IsOptional() @IsString() event_type?: string
   @IsString() provider!: string
   @IsString() account_id!: string
   @IsIn(['incoming', 'outgoing']) direction: 'incoming' | 'outgoing' = 'incoming'
@@ -90,6 +91,7 @@ export class ZaloInboundDto {
 
 export class CustomerCareDeliveryStatusDto {
   @IsString() event_id!: string
+  @IsOptional() @IsIn(['delivery_status']) event_type?: 'delivery_status'
   @IsIn(['zalo_personal', 'facebook_personal']) provider!: 'zalo_personal' | 'facebook_personal'
   @IsString() account_id!: string
   @IsString() external_thread_id!: string

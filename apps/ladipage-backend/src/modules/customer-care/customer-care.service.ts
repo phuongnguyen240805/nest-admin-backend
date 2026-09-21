@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   Logger,
   NotFoundException,
@@ -134,6 +135,24 @@ interface InboundResult {
   message_uuid?: string;
   conversation_uuid: string;
   duplicate?: boolean;
+}
+
+type CustomerCareOutboxErrorKind = 'terminal' | 'pool' | 'retryable';
+
+function classifyCustomerCareOutboxError(error: unknown): CustomerCareOutboxErrorKind {
+  const status = error instanceof HttpException ? error.getStatus() : undefined;
+  const message = error instanceof Error ? error.message : String(error);
+  if (
+    status === 404 ||
+    status === 422 ||
+    /session not found|should not exist|unprocessable/i.test(message)
+  ) {
+    return 'terminal';
+  }
+  if (/EMAXCONNSESSION|max clients reached|too many clients/i.test(message)) {
+    return 'pool';
+  }
+  return 'retryable';
 }
 
 @Injectable()
@@ -2628,12 +2647,56 @@ export class CustomerCareService {
       throw new BadRequestException('Invalid webhook signature');
   }
 
-  async deliveryStatus(connectionKey: string, dto: CustomerCareDeliveryStatusDto) {
-    const channel = await this.channels.findOne({
+  /**
+   * Presence/delivery/inbound for a retired connectionKey must ACK, not 404.
+   * Connector outboxes treat 404 as retryable and will fill the DB pool.
+   */
+  private async findLiveWebhookChannel(connectionKey: string) {
+    return this.channels.findOne({
       where: { connectionKey, enabled: true },
     });
+  }
+
+  private async resolveWebhookChannel(
+    connectionKey: string,
+    hints?: { provider?: string; accountId?: string },
+  ) {
+    const live = await this.findLiveWebhookChannel(connectionKey);
+    if (live) return live;
+
+    const retired = await this.channels.findOne({ where: { connectionKey } });
+    if (!retired) return null;
+
+    const duplicateOfId = Number(retired.metadata?.duplicateOfChannelId);
+    if (Number.isFinite(duplicateOfId) && duplicateOfId > 0) {
+      const canonical = await this.channels.findOne({
+        where: { id: duplicateOfId, enabled: true },
+      });
+      if (canonical) return canonical;
+    }
+
+    const provider = hints?.provider || retired.provider;
+    const accountId = hints?.accountId;
+    if (accountId && !accountId.startsWith('pending:')) {
+      return this.channels.findOne({
+        where: {
+          tenantId: retired.tenantId,
+          provider,
+          externalAccountId: accountId,
+          enabled: true,
+        },
+      });
+    }
+    return null;
+  }
+
+  async deliveryStatus(connectionKey: string, dto: CustomerCareDeliveryStatusDto) {
+    const channel = await this.resolveWebhookChannel(connectionKey, {
+      provider: dto.provider,
+      accountId: dto.account_id,
+    });
     if (!channel)
-      throw new NotFoundException('Customer Care channel session not found');
+      return { updated: 0, ignored: 1, stale: true };
     if (channel.provider !== dto.provider)
       throw new BadRequestException('Webhook provider does not match channel session');
     if (
@@ -2756,11 +2819,12 @@ export class CustomerCareService {
   }
 
   async presenceStatus(connectionKey: string, dto: CustomerCarePresenceDto) {
-    const channel = await this.channels.findOne({
-      where: { connectionKey, enabled: true },
+    const channel = await this.resolveWebhookChannel(connectionKey, {
+      provider: dto.provider,
+      accountId: dto.account_id,
     });
     if (!channel)
-      throw new NotFoundException('Customer Care channel session not found');
+      return { updated: 0, ignored: 1, stale: true };
     if (channel.provider !== dto.provider)
       throw new BadRequestException('Webhook provider does not match channel session');
     if (
@@ -2894,11 +2958,13 @@ export class CustomerCareService {
   }
 
   async inbound(connectionKey: string, dto: ZaloInboundDto) {
-    let channel = await this.channels.findOne({
-      where: { connectionKey, enabled: true },
+    let channel = await this.resolveWebhookChannel(connectionKey, {
+      provider: dto.provider,
+      accountId: dto.account_id,
     });
-    if (!channel)
-      throw new NotFoundException('Customer Care channel session not found');
+    if (!channel) {
+      return { ignored: 1, stale: true, duplicate: false };
+    }
     if (channel.provider !== dto.provider)
       throw new BadRequestException(
         'Webhook provider does not match channel session',
@@ -3648,11 +3714,19 @@ export class CustomerCareService {
         row.status = 'completed';
         row.lastError = null;
       } catch (error) {
-        row.status = row.attemptCount >= 10 ? 'dead' : 'pending';
+        const kind = classifyCustomerCareOutboxError(error);
         row.lastError = error instanceof Error ? error.message : String(error);
-        row.nextRetryAt = new Date(
-          Date.now() + Math.min(300_000, 2 ** row.attemptCount * 1000),
-        );
+        if (kind === 'terminal') {
+          row.status = 'dead';
+        } else if (kind === 'pool') {
+          row.status = 'pending';
+          row.nextRetryAt = new Date(Date.now() + 60_000);
+        } else {
+          row.status = row.attemptCount >= 10 ? 'dead' : 'pending';
+          row.nextRetryAt = new Date(
+            Date.now() + Math.min(300_000, 2 ** row.attemptCount * 1000),
+          );
+        }
       }
       await this.outbox.save(row);
     }

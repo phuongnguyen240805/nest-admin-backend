@@ -273,6 +273,8 @@ services:
       DB_PORT: "5432"
       DB_SSL: "false"
       DATABASE_URL: ${DATABASE_URL}
+      DB_POOLER_MODE: ${DB_POOLER_MODE:-transaction}
+      DB_POOL_MAX: ${LADIPAGE_DB_POOL_MAX:-5}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
@@ -378,6 +380,8 @@ services:
       DB_PORT: "5432"
       DB_SSL: "false"
       DATABASE_URL: ${DATABASE_URL}
+      DB_POOLER_MODE: ${DB_POOLER_MODE:-transaction}
+      DB_POOL_MAX: ${LADIPAGE_DB_POOL_MAX:-5}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0
@@ -457,6 +461,8 @@ services:
       DB_PORT: "5432"
       DB_SSL: "false"
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/liora_db}
+      DB_POOLER_MODE: ${DB_POOLER_MODE:-transaction}
+      DB_POOL_MAX: ${LADIPAGE_DB_POOL_MAX:-5}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://redis:6379/0

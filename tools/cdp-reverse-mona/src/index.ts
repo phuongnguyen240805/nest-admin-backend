@@ -9,7 +9,7 @@ async function main(): Promise<void> {
   }
 
   const config = await loadMonaConfig(process.argv.slice(2));
-  console.log('[mona] CDP blog crawler v3');
+  console.log('[mona] CDP blog crawler v4-strapi');
   console.log(`  start:              ${config.startUrl}`);
   console.log(`  output:             ${config.outputDir}`);
   console.log(`  headless:           ${config.headless}`);
@@ -21,6 +21,7 @@ async function main(): Promise<void> {
   console.log(`  network:            ${config.captureNetwork}`);
   console.log(`  all network meta:   ${config.captureAllNetworkMetadata}`);
   console.log(`  save html:          ${config.saveHtml}`);
+  console.log(`  candidate mode:     ${config.candidateMode}`);
 
   const summary = await runMonaCrawl(config);
   console.log('\n[mona] finished');
@@ -55,6 +56,8 @@ Options:
   --no-resume              remove existing output and start clean
   --no-sitemap             disable sitemap discovery
   --no-archive             disable /blog pagination discovery
+  --strict-blog            require archive + post-sitemap intersection (default)
+  --union-candidates       crawl union of archive/sitemap candidates
   --no-network             disable CDP network capture
   --api-network-only       keep only Document/XHR/Fetch metadata
   --all-network-metadata   keep metadata for every resource type

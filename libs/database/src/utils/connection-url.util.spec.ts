@@ -4,6 +4,7 @@ import {
   buildPostgresDataSourceOptions,
   parseMysqlDatabaseUrl,
   parsePostgresDatabaseUrl,
+  resolvePostgresPoolerPort,
 } from './connection-url.util'
 
 const ORIGINAL_ENV = process.env
@@ -103,6 +104,36 @@ describe('connection-url.util', () => {
 
       const options = buildPostgresDataSourceOptions() as { ssl?: { rejectUnauthorized: boolean } }
       expect(options.ssl).toEqual({ rejectUnauthorized: false })
+    })
+
+    it('maps Supabase session pooler to transaction port when requested', () => {
+      process.env.DB_POOLER_MODE = 'transaction'
+      process.env.DATABASE_URL =
+        'postgresql://postgres.ref:pw@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres'
+      delete process.env.DB_POOL_MAX
+
+      const options = buildPostgresDataSourceOptions() as {
+        port: number
+        extra: { max: number; idleTimeoutMillis: number }
+      }
+      expect(options.port).toBe(6543)
+      expect(options.extra.max).toBe(5)
+      expect(options.extra.idleTimeoutMillis).toBe(20_000)
+    })
+
+    it('keeps explicit transaction-pooler port unchanged', () => {
+      process.env.DB_POOLER_MODE = 'transaction'
+      process.env.DATABASE_URL = 'postgresql://postgres:pw@pooler.supabase.com:6543/postgres'
+
+      const options = buildPostgresDataSourceOptions() as { port: number }
+      expect(options.port).toBe(6543)
+    })
+  })
+
+  describe('resolvePostgresPoolerPort', () => {
+    it('does not remap when DB_POOLER_MODE is unset', () => {
+      delete process.env.DB_POOLER_MODE
+      expect(resolvePostgresPoolerPort('aws-1-ap-northeast-2.pooler.supabase.com', 5432)).toBe(5432)
     })
   })
 

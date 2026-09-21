@@ -6,9 +6,18 @@ interface ExtractArgs {
   baseUrl: string;
 }
 
+/*
+ * IMPORTANT: this script is created with new Function so tsx/esbuild cannot
+ * inject helpers such as __name into code serialized by Playwright.
+ */
 const EXTRACT_BROWSER_SCRIPT = String.raw`
 ({ requestedUrl, baseUrl }) => {
-  const cleanText = (value) => (value || '').replace(/\s+/g, ' ').trim();
+  const entityDecoder = document.createElement('textarea');
+  const decodeText = (value) => {
+    entityDecoder.innerHTML = String(value || '');
+    return entityDecoder.value;
+  };
+  const cleanText = (value) => decodeText(value).replace(/\s+/g, ' ').trim();
   const uniq = (values) => Array.from(new Set(values));
   const absolute = (value) => {
     if (!value) return '';
@@ -16,6 +25,14 @@ const EXTRACT_BROWSER_SCRIPT = String.raw`
       return new URL(value, location.href).toString();
     } catch {
       return String(value);
+    }
+  };
+  const slugFromUrl = (value) => {
+    try {
+      const parts = new URL(value, location.href).pathname.split('/').filter(Boolean);
+      return parts[parts.length - 1] || 'article';
+    } catch {
+      return 'article';
     }
   };
 
@@ -67,39 +84,53 @@ const EXTRACT_BROWSER_SCRIPT = String.raw`
   const articleLd = ldNodes.find((node) => typeNames(node).some((type) => /^(Article|BlogPosting|NewsArticle)$/i.test(type)));
   const breadcrumbLd = ldNodes.find((node) => typeNames(node).some((type) => type === 'BreadcrumbList'));
 
-  const candidates = [];
-  const selectors = [
-    'main article',
-    'article',
-    '[class*="post-content" i]',
-    '[class*="entry-content" i]',
+  const canonicalUrl = absolute((document.querySelector('link[rel="canonical"]') || {}).href || location.href);
+  const pageH1 = cleanText((document.querySelector('h1') || {}).textContent);
+  const ldHeadline = articleLd && typeof articleLd.headline === 'string' ? articleLd.headline : undefined;
+  const title = cleanText(ldHeadline || pageH1 || metaFirst('og:title') || document.title);
+
+  // Prefer the actual WordPress/MONA article body. Scoring the entire page used
+  // to select a much larger wrapper and leaked related-post headings into content.
+  const bodySelectors = [
+    '.mona-content.blogContent',
+    '.blog-large-content .mona-content',
+    '.blogContent',
+    'article .entry-content',
+    'article .post-content',
+    '.entry-content',
+    '.post-content',
     '[class*="article-content" i]',
     '[class*="single-content" i]',
     '[class*="content-post" i]',
-    '.mona-content',
-    'main',
+    'main article',
+    'article',
   ];
 
-  for (const selector of selectors) {
-    for (const el of document.querySelectorAll(selector)) {
-      if (!candidates.includes(el)) candidates.push(el);
+  let contentRoot = null;
+  let bodySelector = '';
+  for (const selector of bodySelectors) {
+    const matches = Array.from(document.querySelectorAll(selector));
+    for (const el of matches) {
+      const textLength = cleanText(el.textContent).length;
+      const paragraphs = el.querySelectorAll('p').length;
+      if (textLength >= 300 && paragraphs >= 2) {
+        contentRoot = el;
+        bodySelector = selector;
+        break;
+      }
     }
+    if (contentRoot) break;
   }
 
-  const scoreElement = (el) => {
-    const textLength = cleanText(el.textContent).length;
-    const paragraphs = el.querySelectorAll('p').length;
-    const headings = el.querySelectorAll('h2,h3,h4').length;
-    const images = el.querySelectorAll('img').length;
-    const links = el.querySelectorAll('a').length;
-    const tag = el.tagName.toLowerCase();
-    const tagBonus = tag === 'article' ? 5000 : tag === 'main' ? 400 : 0;
-    const linkPenalty = Math.max(0, links - paragraphs * 3) * 15;
-    return textLength + paragraphs * 180 + headings * 120 + images * 25 + tagBonus - linkPenalty;
-  };
+  // Last-resort fallback keeps the crawl from crashing but is deliberately
+  // marked so validation can reject it before Strapi import.
+  if (!contentRoot) {
+    contentRoot = document.querySelector('main') || document.body;
+    bodySelector = contentRoot.tagName.toLowerCase();
+  }
 
-  const contentRoot = candidates.sort((a, b) => scoreElement(b) - scoreElement(a))[0] || document.body;
   const contentClone = contentRoot.cloneNode(true);
+
   const noiseSelectors = [
     'script',
     'style',
@@ -113,17 +144,38 @@ const EXTRACT_BROWSER_SCRIPT = String.raw`
     '[class*="social-share" i]',
     '[class*="related-post" i]',
     '[class*="related-article" i]',
-    '[class*="sidebar" i]',
     '[class*="newsletter" i]',
+    '.mona-entity-anchor',
+    '.mona-pod-inbody',
+    '.mona-pod-cta',
+    '.js-cta-card',
   ];
   contentClone.querySelectorAll(noiseSelectors.join(',')).forEach((el) => el.remove());
 
+  // Strip executable/event-handler attributes while preserving semantic HTML.
+  for (const el of contentClone.querySelectorAll('*')) {
+    for (const attr of Array.from(el.attributes)) {
+      if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
+    }
+    for (const attrName of ['href', 'src', 'poster']) {
+      const value = el.getAttribute(attrName);
+      if (value) el.setAttribute(attrName, absolute(value));
+    }
+  }
+
+  // The Strapi/front-end title should own the only H1. If a source body has an
+  // H1, normalize it to H2 rather than importing multiple page-level H1s.
+  let normalizedBodyH1s = 0;
+  for (const h1 of Array.from(contentClone.querySelectorAll('h1'))) {
+    const h2 = document.createElement('h2');
+    for (const attr of Array.from(h1.attributes)) h2.setAttribute(attr.name, attr.value);
+    h2.innerHTML = h1.innerHTML;
+    h1.replaceWith(h2);
+    normalizedBodyH1s += 1;
+  }
+
   const contentText = cleanText(contentClone.textContent);
-  const contentHtml = contentClone.innerHTML;
-  const canonicalUrl = absolute((document.querySelector('link[rel="canonical"]') || {}).href || location.href);
-  const h1 = cleanText((document.querySelector('h1') || {}).textContent);
-  const ldHeadline = articleLd && typeof articleLd.headline === 'string' ? articleLd.headline : undefined;
-  const title = cleanText(ldHeadline || h1 || metaFirst('og:title') || document.title);
+  const contentHtml = contentClone.innerHTML.trim();
 
   const authors = [];
   const addAuthor = (value) => {
@@ -180,7 +232,7 @@ const EXTRACT_BROWSER_SCRIPT = String.raw`
     }
   }
 
-  const headings = Array.from(contentRoot.querySelectorAll('h1,h2,h3,h4,h5,h6'))
+  const headings = Array.from(contentClone.querySelectorAll('h1,h2,h3,h4,h5,h6'))
     .map((el) => ({
       level: Number(el.tagName.slice(1)),
       text: cleanText(el.textContent),
@@ -188,7 +240,13 @@ const EXTRACT_BROWSER_SCRIPT = String.raw`
     }))
     .filter((item) => item.text);
 
-  const images = Array.from(contentRoot.querySelectorAll('img'))
+  const headingCounts = { h1: 0, h2: 0, h3: 0, h4: 0, h5: 0, h6: 0 };
+  for (const heading of headings) {
+    const key = 'h' + heading.level;
+    if (Object.prototype.hasOwnProperty.call(headingCounts, key)) headingCounts[key] += 1;
+  }
+
+  const images = Array.from(contentClone.querySelectorAll('img'))
     .map((img) => {
       const figure = img.closest('figure');
       const src = absolute(img.currentSrc || img.src || img.dataset.src || img.getAttribute('data-lazy-src'));
@@ -196,8 +254,8 @@ const EXTRACT_BROWSER_SCRIPT = String.raw`
         src,
         srcset: img.srcset || img.getAttribute('data-srcset') || undefined,
         sizes: img.sizes || undefined,
-        alt: img.alt || undefined,
-        title: img.title || undefined,
+        alt: cleanText(img.alt) || undefined,
+        title: cleanText(img.title) || undefined,
         caption: cleanText(figure && figure.querySelector('figcaption') && figure.querySelector('figcaption').textContent) || undefined,
         width: img.naturalWidth || img.width || undefined,
         height: img.naturalHeight || img.height || undefined,
@@ -207,7 +265,7 @@ const EXTRACT_BROWSER_SCRIPT = String.raw`
     .filter((img) => img.src);
 
   const baseHost = new URL(baseUrl).hostname;
-  const links = Array.from(contentRoot.querySelectorAll('a[href]'))
+  const links = Array.from(contentClone.querySelectorAll('a[href]'))
     .map((anchor) => {
       const url = absolute(anchor.href);
       let internal = false;
@@ -226,15 +284,15 @@ const EXTRACT_BROWSER_SCRIPT = String.raw`
     })
     .filter((link) => link.url && /^https?:/i.test(link.url));
 
-  const media = Array.from(contentRoot.querySelectorAll('video[src], audio[src], iframe[src], source[src]'))
+  const media = Array.from(contentClone.querySelectorAll('video[src], audio[src], iframe[src], source[src]'))
     .map((el) => ({
       type: el.tagName.toLowerCase(),
       src: absolute(el.getAttribute('src')),
-      title: el.getAttribute('title') || undefined,
+      title: cleanText(el.getAttribute('title')) || undefined,
     }))
     .filter((item) => item.src);
 
-  const tables = Array.from(contentRoot.querySelectorAll('table')).map((table) => ({
+  const tables = Array.from(contentClone.querySelectorAll('table')).map((table) => ({
     headers: Array.from(table.querySelectorAll('thead th')).map((th) => cleanText(th.textContent)),
     rows: Array.from(table.querySelectorAll('tbody tr, tr'))
       .map((tr) => Array.from(tr.querySelectorAll('th,td')).map((cell) => cleanText(cell.textContent)))
@@ -265,11 +323,11 @@ const EXTRACT_BROWSER_SCRIPT = String.raw`
     articleSignals.push('body:single-post');
     articleScore += 3;
   }
-  if (document.querySelector('article')) {
-    articleSignals.push('dom:article');
-    articleScore += 1;
+  if (/mona-content|blogContent|entry-content|post-content/i.test(bodySelector)) {
+    articleSignals.push('dom:article-body');
+    articleScore += 3;
   }
-  if (h1) {
+  if (pageH1) {
     articleSignals.push('dom:h1');
     articleScore += 1;
   }
@@ -277,7 +335,7 @@ const EXTRACT_BROWSER_SCRIPT = String.raw`
     articleSignals.push('content>=800');
     articleScore += 2;
   }
-  if (contentRoot.querySelectorAll('p').length >= 5) {
+  if (contentClone.querySelectorAll('p').length >= 5) {
     articleSignals.push('paragraphs>=5');
     articleScore += 1;
   }
@@ -289,14 +347,15 @@ const EXTRACT_BROWSER_SCRIPT = String.raw`
     requestedUrl,
     finalUrl: location.href,
     canonicalUrl,
-    isArticle: articleScore >= 5 && contentText.length >= 300,
+    isArticle: articleScore >= 6 && contentText.length >= 300 && bodySelector !== 'body',
     articleSignals,
     lang: document.documentElement.lang || undefined,
-    documentTitle: document.title,
+    documentTitle: cleanText(document.title),
     title,
-    description: metaFirst('description', 'og:description'),
+    slug: slugFromUrl(canonicalUrl || location.href),
+    description: cleanText(metaFirst('description', 'og:description')) || undefined,
     keywords,
-    robots: metaFirst('robots'),
+    robots: cleanText(metaFirst('robots')) || undefined,
     publishedAt,
     modifiedAt,
     authors: uniq(authors.filter(Boolean)),
@@ -311,6 +370,9 @@ const EXTRACT_BROWSER_SCRIPT = String.raw`
     contentText,
     wordCount,
     headings,
+    headingCounts,
+    bodySelector,
+    normalizedBodyH1s,
     images,
     links,
     media,

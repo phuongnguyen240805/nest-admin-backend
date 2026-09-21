@@ -64,7 +64,16 @@ export async function runMonaCrawl(config: MonaCrawlConfig): Promise<CrawlSummar
     const archiveOnly = archive.urls.filter((url) => !sitemapSet.has(url));
     const sitemapOnly = sitemap.urls.filter((url) => !archiveSet.has(url));
 
-    const allCandidates = uniqueOrdered([...archiveVerified, ...archiveOnly, ...sitemapOnly])
+    // strict-blog is the safe default for CMS migration: a URL must appear
+    // both as a rendered /blog archive candidate and in the WordPress post
+    // sitemap. This drops promo/service/navigation URLs that can look article-like.
+    // union remains available when completeness is more important than purity.
+    const candidateSource =
+      config.candidateMode === 'strict-blog' && archive.urls.length > 0 && sitemap.urls.length > 0
+        ? archiveVerified
+        : [...archiveVerified, ...archiveOnly, ...sitemapOnly];
+
+    const allCandidates = uniqueOrdered(candidateSource)
       .map((url) => normalizeMonaUrl(url, config.baseUrl))
       .filter((url): url is string => Boolean(url));
 
@@ -77,6 +86,7 @@ export async function runMonaCrawl(config: MonaCrawlConfig): Promise<CrawlSummar
       archiveVerifiedBySitemap: archiveVerified.length,
       archiveOnly: archiveOnly.length,
       sitemapOnly: sitemapOnly.length,
+      candidateMode: config.candidateMode,
       sitemapCandidates: sitemap.urls.length,
       fetchedSitemaps: sitemap.fetchedSitemaps,
     });

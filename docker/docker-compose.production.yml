@@ -44,6 +44,8 @@ services:
       APP_SCOPED_AUTH: "false"
       DB_TYPE: postgres
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in production}
+      DB_POOLER_MODE: ${DB_POOLER_MODE:-transaction}
+      DB_POOL_MAX: ${DB_POOL_MAX:-5}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
@@ -86,6 +88,8 @@ services:
       APP_SCOPED_AUTH: "false"
       DB_TYPE: postgres
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in production}
+      DB_POOLER_MODE: ${DB_POOLER_MODE:-transaction}
+      DB_POOL_MAX: ${LADIPAGE_DB_POOL_MAX:-5}
       BULLMQ_ENABLED: "true"
       BULLMQ_RUN_WORKERS: "false"
       BULLMQ_PREFIX: ${BULLMQ_PREFIX:-liora:ladipage}
@@ -144,6 +148,8 @@ services:
       APP_SCOPED_AUTH: "false"
       DB_TYPE: postgres
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in production}
+      DB_POOLER_MODE: ${DB_POOLER_MODE:-transaction}
+      DB_POOL_MAX: ${LADIPAGE_DB_POOL_MAX:-5}
       BULLMQ_ENABLED: "true"
       BULLMQ_RUN_WORKERS: "true"
       BULLMQ_PREFIX: ${BULLMQ_PREFIX:-liora:ladipage}
@@ -204,6 +210,8 @@ services:
       APP_SCOPED_AUTH: "false"
       DB_TYPE: postgres
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in production}
+      DB_POOLER_MODE: ${DB_POOLER_MODE:-transaction}
+      DB_POOL_MAX: ${LADIPAGE_DB_POOL_MAX:-5}
       BULLMQ_ENABLED: "true"
       BULLMQ_RUN_WORKERS: "true"
       BULLMQ_PREFIX: ${BULLMQ_PREFIX:-liora:ladipage}

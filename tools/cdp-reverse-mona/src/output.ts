@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { appendFile, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
+import { toStrapiReady } from './strapi.js';
 import type {
   ArchiveRecord,
   CrawlErrorRecord,
@@ -10,8 +11,8 @@ import type {
   NetworkCaptureEntry,
 } from './types.js';
 
-const OUTPUT_SCHEMA_VERSION = 3;
-const CRAWLER_VERSION = '3.0.0';
+const OUTPUT_SCHEMA_VERSION = 4;
+const CRAWLER_VERSION = '4.0.0-strapi';
 
 interface CompletedLine {
   url: string;
@@ -45,7 +46,7 @@ export class MonaOutput {
     if (this.config.resume && existing.length > 0) {
       if (!meta) {
         throw new Error(
-          `Existing output at ${this.dir} was not created by crawler v3. Run once with --no-resume or use a new --output directory.`,
+          `Existing output at ${this.dir} was not created by this crawler. Run once with --no-resume or use a new --output directory.`,
         );
       }
       if (meta.schemaVersion !== OUTPUT_SCHEMA_VERSION) {
@@ -102,6 +103,7 @@ export class MonaOutput {
   appendArticle(record: MonaArticleRecord): Promise<void> {
     return this.enqueue(async () => {
       await appendFile(join(this.dir, 'articles.jsonl'), JSON.stringify(record) + '\n', 'utf8');
+      await appendFile(join(this.dir, 'strapi-ready.jsonl'), JSON.stringify(toStrapiReady(record)) + '\n', 'utf8');
       const completed: CompletedLine = { url: record.requestedUrl, status: 'article', at: new Date().toISOString() };
       await appendFile(join(this.dir, 'completed.jsonl'), JSON.stringify(completed) + '\n', 'utf8');
     });

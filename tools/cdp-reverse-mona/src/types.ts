@@ -1,3 +1,5 @@
+export type CandidateMode = 'strict-blog' | 'union';
+
 export interface MonaCrawlConfig {
   startUrl: string;
   baseUrl: string;
@@ -17,6 +19,7 @@ export interface MonaCrawlConfig {
   resume: boolean;
   discoverFromSitemap: boolean;
   discoverFromArchive: boolean;
+  candidateMode: CandidateMode;
   saveHtml: boolean;
   captureNetwork: boolean;
   captureAllNetworkMetadata: boolean;
@@ -98,6 +101,15 @@ export interface BreadcrumbItem {
   url?: string;
 }
 
+export interface HeadingCounts {
+  h1: number;
+  h2: number;
+  h3: number;
+  h4: number;
+  h5: number;
+  h6: number;
+}
+
 export interface NetworkCaptureEntry {
   requestId: string;
   pageUrl: string;
@@ -124,6 +136,7 @@ export interface MonaPageExtraction {
   lang?: string;
   documentTitle: string;
   title: string;
+  slug: string;
   description?: string;
   keywords: string[];
   robots?: string;
@@ -137,10 +150,14 @@ export interface MonaPageExtraction {
   twitter: Record<string, string[]>;
   jsonLd: unknown[];
   breadcrumbs: BreadcrumbItem[];
+  /** Clean article body only, safe source for the Strapi content field. */
   contentHtml: string;
   contentText: string;
   wordCount: number;
   headings: ArticleHeading[];
+  headingCounts: HeadingCounts;
+  bodySelector: string;
+  normalizedBodyH1s: number;
   images: ArticleImage[];
   links: ArticleLink[];
   media: ArticleMedia[];
@@ -155,6 +172,39 @@ export interface MonaArticleRecord extends MonaPageExtraction {
     durationMs: number;
     rawHtmlPath?: string;
     networkEntries: number;
+  };
+}
+
+/**
+ * CMS-neutral import record. The exact Strapi collection field names can be
+ * mapped in the importer without re-crawling the source site.
+ */
+export interface StrapiReadyRecord {
+  source: {
+    requestedUrl: string;
+    canonicalUrl: string;
+    crawledAt: string;
+  };
+  data: {
+    title: string;
+    slug: string;
+    excerpt?: string;
+    contentHtml: string;
+    publishedAt?: string;
+    sourceModifiedAt?: string;
+    authors: string[];
+    categories: string[];
+    tags: string[];
+    headings: ArticleHeading[];
+    headingCounts: HeadingCounts;
+    images: ArticleImage[];
+    seo: {
+      metaTitle: string;
+      metaDescription?: string;
+      canonicalUrl: string;
+      robots?: string;
+      keywords: string[];
+    };
   };
 }
 

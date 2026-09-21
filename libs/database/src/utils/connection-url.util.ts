@@ -144,37 +144,69 @@ function resolvePostgresSsl(): boolean | { rejectUnauthorized: boolean } | undef
   }
 }
 
+const SUPABASE_SESSION_POOLER_PORT = 5432
+const SUPABASE_TRANSACTION_POOLER_PORT = 6543
+
+function isSupabasePoolerHost(host: string): boolean {
+  return host === 'pooler.supabase.com' || host.endsWith('.pooler.supabase.com')
+}
+
+/** Session-mode pooler (5432) holds one Postgres backend per client TCP. */
+export function resolvePostgresPoolerPort(host: string, port: number): number {
+  const mode = (process.env['DB_POOLER_MODE'] ?? '').toLowerCase()
+  if (mode !== 'transaction')
+    return port
+  if (!isSupabasePoolerHost(host) || port !== SUPABASE_SESSION_POOLER_PORT)
+    return port
+  return SUPABASE_TRANSACTION_POOLER_PORT
+}
+
+function resolvePostgresPoolExtra(host: string): Record<string, unknown> {
+  const pooler = isSupabasePoolerHost(host)
+  const defaultMax = pooler ? 5 : 10
+  return {
+    max: envNumber('DB_POOL_MAX', defaultMax),
+    idleTimeoutMillis: envNumber('DB_POOL_IDLE_MS', pooler ? 20_000 : 30_000),
+    connectionTimeoutMillis: envNumber('DB_POOL_CONNECT_MS', 10_000),
+    allowExitOnIdle: true,
+  }
+}
+
 export function buildPostgresDataSourceOptions(): DataSourceOptions {
   const databaseUrl = process.env.DATABASE_URL
-  const base: DataSourceOptions = {
-    type: 'postgres',
-    synchronize: envBoolean('DB_SYNCHRONIZE', false),
-    ...sharedOrmPaths(),
-    ssl: resolvePostgresSsl(),
-    extra: {
-      max: envNumber('DB_POOL_MAX', 10),
-    },
-  }
+  const ssl = resolvePostgresSsl()
+  const paths = sharedOrmPaths()
+  const synchronize = envBoolean('DB_SYNCHRONIZE', false)
 
   if (databaseUrl) {
     const parsed = parsePostgresDatabaseUrl(databaseUrl)
+    const port = resolvePostgresPoolerPort(parsed.host, parsed.port)
     return {
-      ...base,
+      type: 'postgres',
+      synchronize,
+      ...paths,
+      ssl,
       host: parsed.host,
-      port: parsed.port,
+      port,
       username: parsed.username,
       password: parsed.password,
       database: parsed.database,
+      extra: resolvePostgresPoolExtra(parsed.host),
     }
   }
 
+  const host = resolveDbHost()
   return {
-    ...base,
-    host: resolveDbHost(),
+    type: 'postgres',
+    synchronize,
+    ...paths,
+    ssl,
+    host,
     port: envNumber('DB_PORT', 5432),
     username: env('DB_USERNAME'),
     password: env('DB_PASSWORD'),
     database: env('DB_DATABASE'),
+    extra: resolvePostgresPoolExtra(host),
   }
 }
 

@@ -1,18 +1,20 @@
 {
-  "name": "@mona/cdp-blog-crawler",
-  "version": "3.0.0",
+  "name": "@mona/cdp-blog-crawler-strapi",
+  "version": "4.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "crawl:mona": "tsx src/index.ts --config config.mona.json",
     "crawl:mona:headed": "tsx src/index.ts --config config.mona.json --headed",
-    "crawl:mona:test": "tsx src/index.ts --config config.mona.json --output output/mona-test --no-resume --limit 10 --max-attempts 20 --concurrency 1 --archive-pages 5 --archive-concurrency 2 --headed",
+    "crawl:mona:test": "tsx src/index.ts --config config.mona.json --output output/mona-strapi-test --no-resume --limit 10 --max-attempts 20 --concurrency 1 --archive-pages 5 --archive-concurrency 2 --headed",
     "install:browsers": "playwright install chromium",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "crawl:mona:fresh": "tsx src/index.ts --config config.mona.json --no-resume"
+    "crawl:mona:fresh": "tsx src/index.ts --config config.mona.json --no-resume",
+    "repair:v3": "tsx src/repair-v3.ts"
   },
   "dependencies": {
-    "playwright": "^1.52.0"
+    "playwright": "^1.52.0",
+    "cheerio": "^1.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.9",

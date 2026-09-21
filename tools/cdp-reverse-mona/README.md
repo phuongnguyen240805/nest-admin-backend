@@ -1,88 +1,102 @@
-# MONA Media CDP Blog Crawler
+# MONA Blog CDP Crawler v4 — Strapi migration build
 
-A small crawler dedicated to `https://mona.media/blog/`.
+This build is dedicated to `https://mona.media/blog/` and fixes the main v3 migration issue: v3 could choose a page-level wrapper as `contentHtml`, which leaked title/author/sidebar/related-post UI into article content.
 
-This package contains only the code required to discover and crawl the MONA blog with Chromium + CDP.
+## What v4 changes
 
-## What changed in v3
+- Deep crawls every article URL with Chromium + CDP/Playwright.
+- Default `candidateMode=strict-blog`: URL must occur in both rendered blog archives and WordPress `post-sitemap*.xml`.
+- Uses `.mona-content.blogContent` as the first-choice body root.
+- Removes executable/UI-only elements (`script`, `form`, inputs, MONA entity/podcast/CTA boilerplate).
+- Removes inline `on*` event handlers and absolutizes body `href/src/poster` URLs.
+- Keeps semantic HTML: paragraphs, lists, tables, images, blockquotes, iframe/video, code, H2-H6.
+- Page title is separate; any H1 found inside the body is normalized to H2 so the destination page can render exactly one H1 from `title`.
+- Extracts headings from the cleaned body, not from the whole detail page.
+- Writes both rich crawl records and a smaller CMS-neutral Strapi import source.
+- Network capture is OFF by default for migration runs because it is not needed for Strapi content and adds runtime/file size.
 
-- Fixed the `page.evaluate: ReferenceError: __name is not defined` issue by running browser
-  extractors from raw browser-side JavaScript functions instead of tsx-transformed closures.
-- Archive discovery now removes links that repeat across many archive pages. Those are
-  normally header/footer/service navigation links, not blog articles.
-- Real archive article URLs are prioritized, then `post-sitemap*.xml` fills any gaps.
-- `crawl:mona:test` uses a clean separate output folder, one article worker, a target of
-  10 successful articles, and a safety cap of 20 attempts.
-- Archive discovery runs with a small worker pool so 126 archive pages do not have to be
-  loaded strictly one by one.
-- CDP network capture defaults to Document/XHR/Fetch metadata only. Response bodies are
-  read only for XHR/Fetch text or JSON.
-- Resume uses JSONL checkpoints and errors remain retryable on a later run.
+## Output
 
-## Install
+```text
+output/mona-strapi/
+  articles.jsonl       # rich crawl records + metadata
+  strapi-ready.jsonl   # use this as the source for a Strapi importer
+  completed.jsonl
+  skipped.jsonl
+  errors.jsonl
+  urls.json
+  summary.json
+  html/                # full rendered source snapshots (optional)
+  archive-html/
+  archives.jsonl       # discovery/debug only; NOT article content
+```
+
+### `strapi-ready.jsonl`
+
+Each line is shaped as:
+
+```json
+{
+  "source": {
+    "requestedUrl": "https://mona.media/example/",
+    "canonicalUrl": "https://mona.media/example/",
+    "crawledAt": "..."
+  },
+  "data": {
+    "title": "Article title",
+    "slug": "example",
+    "excerpt": "Meta description",
+    "contentHtml": "<p>...</p><h2>...</h2><h3>...</h3>",
+    "publishedAt": "...",
+    "sourceModifiedAt": "...",
+    "authors": ["..."],
+    "categories": ["..."],
+    "tags": [],
+    "headings": [{"level":2,"text":"..."}],
+    "headingCounts": {"h1":0,"h2":5,"h3":8,"h4":0,"h5":0,"h6":0},
+    "images": [],
+    "seo": {
+      "metaTitle": "...",
+      "metaDescription": "...",
+      "canonicalUrl": "...",
+      "robots": "index, follow",
+      "keywords": []
+    }
+  }
+}
+```
+
+The exact Strapi REST body still depends on your actual Strapi content-type schema. Map `data.contentHtml` into your HTML/Rich Text field. If your project uses Strapi Blocks, convert HTML to Blocks in the importer; do not recrawl.
+
+## Run
 
 ```bash
 npm install
 npm run install:browsers
-```
-
-## Smoke test before full crawl
-
-```bash
+npm run typecheck
 npm run crawl:mona:test
 ```
 
-The test writes to `output/mona-test`, starts clean every time, and scans only the first 5 archive pages for a fast smoke test.
-
-Recommended GO condition before a full crawl:
-
-- `articles` is 10.
-- `errors` is 0, or at most 1 after review.
-- `articles.jsonl` has plausible title, canonical URL, publish date, content text,
-  headings, images, links, JSON-LD, and crawl metadata.
-- `contentText` contains the article body rather than the whole site navigation.
-
-If you previously ran v2 into `output/mona`, start the first v3 full crawl clean:
+Validate `output/mona-strapi-test/strapi-ready.jsonl`, then run full:
 
 ```bash
 npm run crawl:mona:fresh
 ```
 
-After a v3 crawl has started, use `npm run crawl:mona` to resume it safely if interrupted.
-
-## Main output
-
-```text
-output/mona/
-  articles.jsonl
-  archives.jsonl
-  network.jsonl
-  urls.json
-  completed.jsonl
-  skipped.jsonl
-  errors.jsonl
-  progress.json
-  summary.json
-  archive-html/
-  html/
-```
-
-## Important config values
-
-- `maxArticles: 0`: no successful-article limit.
-- `maxAttempts: 0`: no candidate-attempt limit.
-- `maxArchivePages: 0`: discover all archive pages.
-- `concurrency: 2`: article CDP workers.
-- `archiveConcurrency: 3`: archive discovery workers.
-- `captureAllNetworkMetadata: false`: reduce `network.jsonl` size.
-- `blockHeavyResources: true`: do not download image/font/media bytes during crawl.
-
-## Useful commands
+Resume an interrupted v4 run with:
 
 ```bash
-npm run crawl:mona:test
-npm run crawl:mona:fresh
 npm run crawl:mona
-npm run crawl:mona:headed
-npx tsx src/index.ts --config config.mona.json --limit 5 --max-attempts 10 --headed
 ```
+
+Do not resume into v3 output; schema version is intentionally bumped to v4.
+
+## Reuse the existing v3 full crawl without crawling 2,000+ pages again
+
+If you already have the old v3 `articles.jsonl`, v4 includes an offline repair command:
+
+```bash
+npm run repair:v3 -- --input path/to/articles.jsonl --output output/strapi-repaired.jsonl
+```
+
+It extracts `.mona-content.blogContent` from each legacy record, removes the same MONA boilerplate, normalizes body H1 to H2, rebuilds H2-H6 metadata, decodes text entities, and produces a clean Strapi import source. This is the fastest migration path for the 2,232 records already crawled.

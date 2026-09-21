@@ -21,6 +21,7 @@ const DEFAULT_CONFIG: MonaCrawlConfig = {
   resume: true,
   discoverFromSitemap: true,
   discoverFromArchive: true,
+  candidateMode: 'strict-blog',
   saveHtml: true,
   captureNetwork: true,
   captureAllNetworkMetadata: false,
@@ -64,6 +65,8 @@ export async function loadMonaConfig(argv: string[]): Promise<MonaCrawlConfig> {
   if (has('--no-resume')) config.resume = false;
   if (has('--no-sitemap')) config.discoverFromSitemap = false;
   if (has('--no-archive')) config.discoverFromArchive = false;
+  if (has('--union-candidates')) config.candidateMode = 'union';
+  if (has('--strict-blog')) config.candidateMode = 'strict-blog';
   if (has('--no-network')) config.captureNetwork = false;
   if (has('--all-network-metadata')) config.captureAllNetworkMetadata = true;
   if (has('--api-network-only')) config.captureAllNetworkMetadata = false;

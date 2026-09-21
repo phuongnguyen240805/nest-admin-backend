@@ -1,0 +1,170 @@
+[
+  {
+    "fixture": "chinh-sua-anh-3f1b5b3e8d.html",
+    "title": "Chỉnh sửa ảnh toàn tập – tự thiết kế banner, logo, avatar, sửa hình chụp",
+    "bodySelector": ".mona-content.blogContent",
+    "isArticle": true,
+    "wordCount": 8633,
+    "headingCounts": {
+      "h1": 0,
+      "h2": 7,
+      "h3": 36,
+      "h4": 17,
+      "h5": 28,
+      "h6": 0
+    },
+    "normalizedBodyH1s": 0,
+    "lastHeadings": [
+      {
+        "level": 3,
+        "text": "Creative Commons CC0"
+      },
+      {
+        "level": 2,
+        "text": "THÂN THIỆN VỚI NGƯỜI DÙNG UX"
+      },
+      {
+        "level": 3,
+        "text": "Thiết kế nội dung hình ảnh"
+      },
+      {
+        "level": 3,
+        "text": "Kích thước hình ảnh"
+      },
+      {
+        "level": 3,
+        "text": "Định dạng hình ảnh"
+      }
+    ],
+    "hasRelatedHeading": false,
+    "hasMonaAboutHeading": false,
+    "contentHasScript": false,
+    "contentHasForm": false
+  },
+  {
+    "fixture": "ke-hoach-seo-4fa27dc14c.html",
+    "title": "Hướng Dẫn Lập Kế Hoạch SEO Tổng Thể Chi Tiết Cho Người Mới",
+    "bodySelector": ".mona-content.blogContent",
+    "isArticle": true,
+    "wordCount": 6491,
+    "headingCounts": {
+      "h1": 0,
+      "h2": 6,
+      "h3": 28,
+      "h4": 26,
+      "h5": 3,
+      "h6": 0
+    },
+    "normalizedBodyH1s": 0,
+    "lastHeadings": [
+      {
+        "level": 3,
+        "text": "Lập bản Plan SEO phải phù hợp với lĩnh vực kinh doanh của doanh nghiệp"
+      },
+      {
+        "level": 3,
+        "text": "So sánh trang web với đối thủ"
+      },
+      {
+        "level": 3,
+        "text": "Kiểm tra tên miền website"
+      },
+      {
+        "level": 3,
+        "text": "Xác định chính xác search intent người dùng"
+      },
+      {
+        "level": 2,
+        "text": "Câu hỏi thường gặp"
+      }
+    ],
+    "hasRelatedHeading": false,
+    "hasMonaAboutHeading": false,
+    "contentHasScript": false,
+    "contentHasForm": false
+  },
+  {
+    "fixture": "quy-trinh-tu-dong-hoa-doanh-nghiep-b58758d99d.html",
+    "title": "Quy trình tự động hoá doanh nghiệp: giảm 30% việc lặp",
+    "bodySelector": ".mona-content.blogContent",
+    "isArticle": true,
+    "wordCount": 6889,
+    "headingCounts": {
+      "h1": 0,
+      "h2": 8,
+      "h3": 26,
+      "h4": 0,
+      "h5": 0,
+      "h6": 0
+    },
+    "normalizedBodyH1s": 0,
+    "lastHeadings": [
+      {
+        "level": 3,
+        "text": "Thương mại điện tử cần giảm lỗi đơn và phản hồi"
+      },
+      {
+        "level": 2,
+        "text": "Tuần này anh chị chốt lại bản đồ việc lặp trước khi viết phần mềm"
+      },
+      {
+        "level": 3,
+        "text": "Liệt kê việc lặp đang ăn giờ quản lý"
+      },
+      {
+        "level": 3,
+        "text": "Gắn tiền vào từng lỗi và từng giờ công"
+      },
+      {
+        "level": 3,
+        "text": "Chọn một điểm nghẽn đủ lớn để làm trước"
+      }
+    ],
+    "hasRelatedHeading": false,
+    "hasMonaAboutHeading": false,
+    "contentHasScript": false,
+    "contentHasForm": false
+  },
+  {
+    "fixture": "zero-click-search-la-gi-46001a6b38.html",
+    "title": "Zero-Click Search Là Gì? Kỷ Nguyên AI & Cách SEO Zero-click search Google",
+    "bodySelector": ".mona-content.blogContent",
+    "isArticle": true,
+    "wordCount": 3356,
+    "headingCounts": {
+      "h1": 0,
+      "h2": 9,
+      "h3": 13,
+      "h4": 0,
+      "h5": 0,
+      "h6": 0
+    },
+    "normalizedBodyH1s": 0,
+    "lastHeadings": [
+      {
+        "level": 3,
+        "text": "Zero-click search có làm chết SEO không?"
+      },
+      {
+        "level": 3,
+        "text": "Làm sao để biết từ khóa nào bị ảnh hưởng bởi Zero-click?"
+      },
+      {
+        "level": 3,
+        "text": "Tôi có nên chặn Google lấy nội dung làm đoạn trích không?"
+      },
+      {
+        "level": 3,
+        "text": "Zero click search có làm website mất traffic hoàn toàn không?"
+      },
+      {
+        "level": 2,
+        "text": "Câu hỏi thường gặp"
+      }
+    ],
+    "hasRelatedHeading": false,
+    "hasMonaAboutHeading": false,
+    "contentHasScript": false,
+    "contentHasForm": false
+  }
+]

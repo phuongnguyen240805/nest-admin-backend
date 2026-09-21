@@ -2,7 +2,7 @@
   "startUrl": "https://mona.media/blog/",
   "baseUrl": "https://mona.media",
   "sitemapUrl": "https://mona.media/sitemap_index.xml",
-  "outputDir": "output/mona",
+  "outputDir": "output/mona-strapi",
   "headless": true,
   "concurrency": 2,
   "archiveConcurrency": 3,
@@ -17,11 +17,12 @@
   "resume": true,
   "discoverFromSitemap": true,
   "discoverFromArchive": true,
+  "candidateMode": "strict-blog",
   "saveHtml": true,
-  "captureNetwork": true,
+  "captureNetwork": false,
   "captureAllNetworkMetadata": false,
   "networkBodyBytes": 1048576,
   "blockHeavyResources": true,
   "scrollArticle": true,
-  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 MonaResearchCDP/3.0"
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 MonaStrapiMigration/4.0"
 }
