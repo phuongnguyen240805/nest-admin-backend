@@ -39,6 +39,11 @@ import {
   ZaloConnectorClient,
 } from './customer-care.clients';
 import {
+  isLibreDeskConnectorAuthError,
+  isLibreDeskInboxMissing,
+  isPostgresUniqueViolation,
+} from './customer-care-inbound.util';
+import {
   ContactPatchDto,
   CustomerCareDeliveryStatusDto,
   CustomerCarePresenceDto,
@@ -408,18 +413,81 @@ export class CustomerCareService {
       },
     };
     const existingInboxId = row.metadata?.libreDeskInboxId;
-    const inbox = await this.libreDesk.request<Record<string, unknown>>(
-      existingInboxId
-        ? `/inboxes/${encodeURIComponent(String(existingInboxId))}`
-        : '/inboxes',
-      {
-      method: existingInboxId ? 'PUT' : 'POST',
-      body: JSON.stringify(inboxPayload),
-      },
-    );
-    if (!existingInboxId) {
-      row.metadata = { ...row.metadata, libreDeskInboxId: inbox.id };
+    const writeInbox = (inboxId?: unknown) =>
+      this.libreDesk.request<Record<string, unknown>>(
+        inboxId
+          ? `/inboxes/${encodeURIComponent(String(inboxId))}`
+          : '/inboxes',
+        {
+          method: inboxId ? 'PUT' : 'POST',
+          body: JSON.stringify(inboxPayload),
+        },
+      );
+    let inbox: Record<string, unknown>;
+    try {
+      inbox = await writeInbox(existingInboxId);
+    } catch (error) {
+      if (!existingInboxId || !isLibreDeskInboxMissing(error)) throw error;
+      inbox = await writeInbox();
+    }
+    const inboxId = inbox?.id;
+    if (inboxId && String(inboxId) !== String(existingInboxId || '')) {
+      row.metadata = { ...row.metadata, libreDeskInboxId: inboxId };
       await this.channels.save(row);
+    }
+  }
+
+  private async forwardConnectorInbound(
+    dto: ZaloInboundDto,
+    tenantId: number,
+    channel: CustomerCareChannelAccountEntity,
+    conversationUuid?: string,
+  ): Promise<InboundResult> {
+    const payload = {
+      tenant_key: String(tenantId),
+      channel_connection_key: channel.connectionKey,
+      account_id: dto.account_id,
+      external_thread_id: dto.external_thread_id,
+      external_message_id: dto.external_message_id,
+      conversation_uuid: conversationUuid || '',
+      thread_type: dto.thread_type,
+      occurred_at: dto.occurred_at,
+      sender: dto.sender,
+      message: dto.message,
+    };
+    const fallbackUuid = () => conversationUuid || randomUUID();
+    try {
+      const result = await this.libreDesk.inbound<InboundResult>(
+        payload,
+        dto.provider,
+      );
+      return {
+        ...result,
+        conversation_uuid: String(result?.conversation_uuid || fallbackUuid()),
+      };
+    } catch (error) {
+      if (!isLibreDeskConnectorAuthError(error)) throw error;
+      this.logger.warn(
+        `LibreDesk inbound credentials failed for channel ${channel.id}; reconciling inbox`,
+      );
+      try {
+        await this.ensureLibreDeskInbox(channel);
+        const retried = await this.libreDesk.inbound<InboundResult>(
+          payload,
+          dto.provider,
+        );
+        return {
+          ...retried,
+          conversation_uuid: String(retried?.conversation_uuid || fallbackUuid()),
+        };
+      } catch (retryError) {
+        this.logger.warn(
+          `LibreDesk inbound fallback for channel ${channel.id}: ${
+            retryError instanceof Error ? retryError.message : String(retryError)
+          }`,
+        );
+        return { conversation_uuid: fallbackUuid() };
+      }
     }
   }
 
@@ -3017,21 +3085,42 @@ export class CustomerCareService {
     }
 
     if (!ingressEvent) {
-      ingressEvent = await this.inboundEvents.save(
-        this.inboundEvents.create({
-          tenantId,
-          channelAccountId: channel.id,
-          provider: dto.provider,
-          eventId: dto.event_id,
-          status: 'received',
-          payload: {
-            ...(dto as unknown as Record<string, unknown>),
-            debug_stage: 'webhook_received',
+      try {
+        ingressEvent = await this.inboundEvents.save(
+          this.inboundEvents.create({
+            tenantId,
+            channelAccountId: channel.id,
+            provider: dto.provider,
+            eventId: dto.event_id,
+            status: 'received',
+            payload: {
+              ...(dto as unknown as Record<string, unknown>),
+              debug_stage: 'webhook_received',
+            },
+            lastError: null,
+            processedAt: null,
+          }),
+        );
+      } catch (error) {
+        if (
+          !isPostgresUniqueViolation(error, 'uq_cc_inbound_channel_event')
+        ) {
+          throw error;
+        }
+        ingressEvent = await this.inboundEvents.findOne({
+          where: {
+            tenantId,
+            channelAccountId: channel.id,
+            provider: dto.provider,
+            eventId: dto.event_id,
           },
-          lastError: null,
-          processedAt: null,
-        }),
-      );
+        });
+        if (!ingressEvent) throw error;
+        if (ingressEvent.status === 'processed') {
+          const result = ingressEvent.payload?.result as unknown as InboundResult;
+          if (result?.conversation_uuid) return { ...result, duplicate: true };
+        }
+      }
     } else {
       ingressEvent.status = 'received';
       ingressEvent.lastError = null;
@@ -3041,6 +3130,10 @@ export class CustomerCareService {
         debug_stage: 'webhook_received',
       };
       ingressEvent = await this.inboundEvents.save(ingressEvent);
+    }
+
+    if (!ingressEvent) {
+      throw new Error('Failed to persist inbound event');
     }
 
     try {
@@ -3397,67 +3490,99 @@ export class CustomerCareService {
 
     // Persist through LibreDesk as well so its conversation list/preview is
     // updated. The local message link below overrides its direction to outgoing.
-    const result = await this.libreDesk.inbound<InboundResult>(
-      {
-      tenant_key: String(tenantId),
-      channel_connection_key: channel.connectionKey,
-      account_id: dto.account_id,
-      external_thread_id: dto.external_thread_id,
-      external_message_id: dto.external_message_id,
-      conversation_uuid: link?.libreDeskConversationUuid || '',
-      thread_type: dto.thread_type,
-      occurred_at: dto.occurred_at,
-      sender: dto.sender,
-      message: dto.message,
-      },
-      dto.provider,
+    // Auth failures must not drop the native self-echo: prod 502
+    // "Invalid Zalo connector credentials" previously aborted before cc_message_link.
+    let result = await this.forwardConnectorInbound(
+      dto,
+      tenantId,
+      channel,
+      link?.libreDeskConversationUuid,
     );
     const isNewConversation = !link || restoredConversation;
 
     if (!link) {
-      link = await this.conversations.save(
-        this.conversations.create({
-          tenantId,
-          channelAccountId: channel.id,
-          contactIdentityId: contact.id,
-          provider: dto.provider,
-          externalThreadId: dto.external_thread_id,
-          threadType: dto.thread_type,
-          libreDeskConversationUuid: result.conversation_uuid,
-          lastExternalMessageId: dto.external_message_id,
-          lastMessageAt: safeOccurredAt,
-          metadata: {},
-        }),
-      );
+      try {
+        link = await this.conversations.save(
+          this.conversations.create({
+            tenantId,
+            channelAccountId: channel.id,
+            contactIdentityId: contact.id,
+            provider: dto.provider,
+            externalThreadId: dto.external_thread_id,
+            threadType: dto.thread_type,
+            libreDeskConversationUuid: result.conversation_uuid,
+            lastExternalMessageId: dto.external_message_id,
+            lastMessageAt: safeOccurredAt,
+            metadata: {},
+          }),
+        );
+      } catch (error) {
+        if (
+          !isPostgresUniqueViolation(
+            error,
+            'uq_cc_conversation_channel_external',
+          )
+        ) {
+          throw error;
+        }
+        const raced = await this.conversations.findOne({
+          where: {
+            tenantId,
+            channelAccountId: channel.id,
+            provider: dto.provider,
+            externalThreadId: dto.external_thread_id,
+          },
+        });
+        if (!raced) throw error;
+        link = raced;
+      }
     } else {
       link.contactIdentityId ||= contact.id;
     }
 
-    await this.messages.save(
-      this.messages.create({
-        tenantId,
-        channelAccountId: channel.id,
-        conversationLinkId: link.id,
-        provider: dto.provider,
-        externalMessageId: dto.external_message_id,
-        clientMessageId: null,
-        libreDeskMessageUuid: result.message_uuid || null,
-        status: 'sent',
-        metadata: {
-          mirror: !result.message_uuid,
-          source:
-            dto.provider === 'facebook_personal'
-              ? 'facebook_native'
-              : 'zalo_native',
-          direction: 'outgoing',
-          content: dto.message.text,
-          type: dto.message.type || 'text',
-          createdAt: safeOccurredAt.toISOString(),
-          senderName: 'Bạn',
-          isSelf: true,
+    try {
+      await this.messages.save(
+        this.messages.create({
+          tenantId,
+          channelAccountId: channel.id,
+          conversationLinkId: link.id,
+          provider: dto.provider,
+          externalMessageId: dto.external_message_id,
+          clientMessageId: null,
+          libreDeskMessageUuid: result.message_uuid || null,
+          status: 'sent',
+          metadata: {
+            mirror: !result.message_uuid,
+            source:
+              dto.provider === 'facebook_personal'
+                ? 'facebook_native'
+                : 'zalo_native',
+            direction: 'outgoing',
+            content: dto.message.text,
+            type: dto.message.type || 'text',
+            createdAt: safeOccurredAt.toISOString(),
+            senderName: 'Bạn',
+            isSelf: true,
+          },
+        }),
+      );
+    } catch (error) {
+      if (
+        !isPostgresUniqueViolation(error, 'uq_cc_message_channel_external')
+      ) {
+        throw error;
+      }
+      const raced = await this.messages.findOne({
+        where: {
+          tenantId,
+          channelAccountId: channel.id,
+          provider: dto.provider,
+          externalMessageId: dto.external_message_id,
         },
-      }),
-    );
+      });
+      if (!raced) throw error;
+      result.message_uuid = raced.libreDeskMessageUuid || result.message_uuid;
+    }
 
     link.lastExternalMessageId = dto.external_message_id;
     link.lastMessageAt = safeOccurredAt;
@@ -3579,20 +3704,11 @@ export class CustomerCareService {
         ? await this.restoreDeletedConversationLink(link)
         : false;
       const isNewConversation = !link || restoredConversation;
-      const result = await this.libreDesk.inbound<InboundResult>(
-        {
-        tenant_key: String(tenantId),
-        channel_connection_key: channel.connectionKey,
-        account_id: dto.account_id,
-        external_thread_id: dto.external_thread_id,
-        external_message_id: dto.external_message_id,
-        conversation_uuid: link?.libreDeskConversationUuid || '',
-        thread_type: dto.thread_type,
-        occurred_at: dto.occurred_at,
-        sender: dto.sender,
-        message: dto.message,
-        },
-        dto.provider,
+      const result = await this.forwardConnectorInbound(
+        dto,
+        tenantId,
+        channel,
+        link?.libreDeskConversationUuid,
       );
       if (!link)
         link = this.conversations.create({
@@ -3612,7 +3728,28 @@ export class CustomerCareService {
         link.lastExternalMessageId = dto.external_message_id;
         link.lastMessageAt = new Date(dto.occurred_at);
       }
-      link = await this.conversations.save(link);
+      try {
+        link = await this.conversations.save(link);
+      } catch (error) {
+        if (
+          !isPostgresUniqueViolation(
+            error,
+            'uq_cc_conversation_channel_external',
+          )
+        ) {
+          throw error;
+        }
+        const raced = await this.conversations.findOne({
+          where: {
+            tenantId,
+            channelAccountId: channel.id,
+            provider: dto.provider,
+            externalThreadId: dto.external_thread_id,
+          },
+        });
+        if (!raced) throw error;
+        link = raced;
+      }
       const existingMessage = await this.messages.findOne({
         where: {
           tenantId,
@@ -3621,20 +3758,29 @@ export class CustomerCareService {
           externalMessageId: dto.external_message_id,
         },
       });
-      if (!existingMessage)
-        await this.messages.save(
-          this.messages.create({
-            tenantId,
-            channelAccountId: channel.id,
-            conversationLinkId: link.id,
-            provider: dto.provider,
-            externalMessageId: dto.external_message_id,
-            clientMessageId: null,
-            libreDeskMessageUuid: result.message_uuid || null,
-            status: 'delivered',
-            metadata: {},
-          }),
-        );
+      if (!existingMessage) {
+        try {
+          await this.messages.save(
+            this.messages.create({
+              tenantId,
+              channelAccountId: channel.id,
+              conversationLinkId: link.id,
+              provider: dto.provider,
+              externalMessageId: dto.external_message_id,
+              clientMessageId: null,
+              libreDeskMessageUuid: result.message_uuid || null,
+              status: 'delivered',
+              metadata: {},
+            }),
+          );
+        } catch (error) {
+          if (
+            !isPostgresUniqueViolation(error, 'uq_cc_message_channel_external')
+          ) {
+            throw error;
+          }
+        }
+      }
       event.status = 'processed';
       event.processedAt = new Date();
       event.payload = {
