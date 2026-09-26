@@ -26,6 +26,10 @@ export async function collectLinkedStylesheets(
   fetchImpl: typeof fetch = fetch,
 ): Promise<string> {
   const origin = normalizeOrigin(publicOrigin)
+  const chunks: string[] = []
+  const inlineCss = extractInlineStyleCss(html, origin)
+  if (inlineCss) chunks.push(inlineCss)
+
   const hrefs: string[] = []
   STYLESHEET_HREF_RE.lastIndex = 0
   let match: RegExpExecArray | null
@@ -33,9 +37,7 @@ export async function collectLinkedStylesheets(
     const href = (match[1] || match[2] || '').trim()
     if (href) hrefs.push(href)
   }
-  if (hrefs.length === 0) return ''
 
-  const chunks: string[] = []
   for (const href of hrefs.slice(0, MAX_STYLESHEETS)) {
     if (!isAllowedStylesheetUrl(href, origin)) continue
     try {
@@ -47,6 +49,21 @@ export async function collectLinkedStylesheets(
     } catch {
       /* skip unreachable stylesheets — layout may degrade */
     }
+  }
+  return chunks.join('\n\n')
+}
+
+const STYLE_TAG_RE = /<style\b[^>]*>([\s\S]*?)<\/style>/gi
+
+function extractInlineStyleCss(html: string, origin: string | null): string {
+  const base = origin ? inferRelativeAssetBase(html, origin) : ''
+  const chunks: string[] = []
+  STYLE_TAG_RE.lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = STYLE_TAG_RE.exec(html)) !== null) {
+    const css = match[1]?.trim() ?? ''
+    if (!css || css.length > MAX_STYLESHEET_BYTES) continue
+    chunks.push(origin ? rewriteCssAssetUrls(css, base.endsWith('/') ? base : `${base}/`) : css)
   }
   return chunks.join('\n\n')
 }

@@ -57,6 +57,15 @@ describe('imported-html', () => {
     expect(css).toContain('.bd-grid{display:grid}')
   })
 
+  it('harvests inline style tags including :root variables', async () => {
+    const html =
+      '<style>:root{--text-color:#707070;--body-color:#FBFEFD}body{color:var(--text-color)}.bd-grid{display:grid}</style><div class="bd-grid"></div>'
+    const css = await collectLinkedStylesheets(html, 'https://ladipage.example')
+    expect(css).toContain('--text-color:#707070')
+    expect(css).toContain('--body-color:#FBFEFD')
+    expect(css).toContain('.bd-grid{display:grid}')
+  })
+
   it('prefixes /templates root-relative URLs', () => {
     const html =
       '<img src="/templates/bedimcode/responsive-website-restaurant/assets/img/plate1.png" />'
