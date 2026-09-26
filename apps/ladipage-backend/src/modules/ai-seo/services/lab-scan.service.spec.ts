@@ -283,6 +283,29 @@ describe('LabScanService tenant isolation', () => {
     await expect(service.getLabScan(created.jobId)).rejects.toBeInstanceOf(NotFoundException)
   })
 
+  it('fails a queued lab job that no worker picked up', async () => {
+    tasks.push({
+      id: 'task-stale',
+      seoProjectId: projectA,
+      externalTaskId: 'lab-stale-job',
+      type: 'AUDIT',
+      status: 'pending',
+      payload: {
+        tenantId: tenantA,
+        targetUrl: 'https://a.example.com/lp',
+        trigger: 'list',
+        phase: 'post_publish',
+      },
+      result: {},
+      createdAt: new Date(Date.now() - 120_000),
+      updatedAt: new Date(Date.now() - 120_000),
+    } as SeoTaskEntity)
+
+    const job = await service.getLabScan('lab-stale-job')
+    expect(job.status).toBe('failed')
+    expect(job.errorCode).toBe('worker_idle')
+  })
+
   it('returns a compact lab job payload for the owning tenant', async () => {
     const created = await service.startLabScan({
       trigger: 'editor',

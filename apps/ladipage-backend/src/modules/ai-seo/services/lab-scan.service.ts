@@ -32,6 +32,10 @@ const LAB_JOB_PREFIX = 'lab-'
 /** Default 30s — shorter to avoid FE 30s axios timeout stacking with cooldown 429 UX */
 const COOLDOWN_MS_DEFAULT = 30_000
 const RESULT_CACHE_MS_DEFAULT = 10 * 60_000
+/** If the browser-worker never picks up the job, the API process steals it. */
+const QUEUE_STALE_MS_DEFAULT = 8_000
+/** Pending with no worker/API steal — fail instead of hanging the FE poll. */
+const QUEUE_DEAD_MS_DEFAULT = 90_000
 
 function slimLabScanResult(result: Record<string, unknown>): Record<string, unknown> {
   const lighthouse = result.lighthouse
@@ -300,6 +304,12 @@ export class LabScanService extends TenantScopedService {
         backoff: { type: 'exponential', delay: 10_000 },
       })
       this.logger.log(`Lab scan job=${jobId} enqueued (worker will process)`)
+      const staleMs = Number(
+        this.configService.get<string>('UNLIGHTHOUSE_QUEUE_STALE_MS') ?? QUEUE_STALE_MS_DEFAULT,
+      )
+      if (staleMs > 0) {
+        void this.recoverIfStillQueued(payload, staleMs)
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       this.logger.error(`Enqueue lab scan failed: ${message}`)
@@ -339,7 +349,7 @@ export class LabScanService extends TenantScopedService {
       throw new NotFoundException('Lab scan job not found')
     }
 
-    const task = await this.taskRepository
+    let task = await this.taskRepository
       .createQueryBuilder('task')
       .innerJoin('task.project', 'project')
       .where('task.externalTaskId = :jobId', { jobId })
@@ -348,6 +358,14 @@ export class LabScanService extends TenantScopedService {
 
     if (!task) {
       throw new NotFoundException('Lab scan job not found')
+    }
+
+    if (task.status === 'pending') {
+      await this.failStaleQueuedJob(task)
+      const refreshed = await this.taskRepository.findOne({
+        where: { externalTaskId: jobId, seoProjectId: task.seoProjectId },
+      })
+      if (refreshed) task = refreshed
     }
 
     const payloadTenant = Number((task.payload as { tenantId?: number })?.tenantId)
@@ -391,6 +409,15 @@ export class LabScanService extends TenantScopedService {
       this.logger.warn(`Lab task missing job=${payload.jobId}`)
       return
     }
+    if (task.status === 'approved' || task.status === 'deployed' || task.status === 'rejected') {
+      return
+    }
+
+    task.payload = {
+      ...(task.payload as Record<string, unknown>),
+      processingStartedAt: Date.now(),
+    }
+    await this.taskRepository.save(task)
 
     const project = await this.projectRepository.findOne({
       where: { id: payload.seoProjectId },
@@ -444,8 +471,83 @@ export class LabScanService extends TenantScopedService {
     }
   }
 
+  private async recoverIfStillQueued(
+    payload: UnlighthouseJobPayload,
+    staleMs: number,
+  ): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, staleMs))
+    try {
+      const task = await this.taskRepository.findOne({
+        where: { externalTaskId: payload.jobId, seoProjectId: payload.seoProjectId },
+      })
+      if (!task || task.status !== 'pending') return
+      if (Number((task.payload as { processingStartedAt?: number })?.processingStartedAt)) {
+        return
+      }
+      this.logger.warn(
+        `Lab scan job=${payload.jobId} still queued after ${staleMs}ms — processing in API`,
+      )
+      await this.processPayload(payload)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.error(`Lab scan recover failed job=${payload.jobId}: ${message}`)
+    }
+  }
+
+  private async failStaleQueuedJob(task: SeoTaskEntity): Promise<void> {
+    if (task.status !== 'pending') return
+    const deadMs = Number(
+      this.configService.get<string>('UNLIGHTHOUSE_QUEUE_DEAD_MS') ?? QUEUE_DEAD_MS_DEFAULT,
+    )
+    if (deadMs <= 0) return
+    const age = Date.now() - new Date(task.createdAt).getTime()
+    const processingStartedAt = Number(
+      (task.payload as { processingStartedAt?: number })?.processingStartedAt,
+    )
+    if (processingStartedAt) return
+    if (age < deadMs) return
+
+    const project = await this.projectRepository.findOne({
+      where: { id: task.seoProjectId },
+    })
+    if (!project) return
+
+    const body = task.payload as {
+      tenantId?: number
+      seoProjectPageId?: string | null
+      websitePageId?: string | null
+      targetUrl?: string
+      trigger?: UnlighthouseJobPayload['trigger']
+      phase?: UnlighthouseJobPayload['phase']
+      depth?: UnlighthouseJobPayload['depth']
+      mock?: boolean
+    }
+    await this.persistFailure(
+      project,
+      task,
+      {
+        jobId: task.externalTaskId || '',
+        tenantId: Number(body.tenantId) || project.tenantId,
+        seoProjectId: task.seoProjectId,
+        seoProjectPageId: body.seoProjectPageId ?? null,
+        websitePageId: body.websitePageId ?? null,
+        targetUrl: body.targetUrl || '',
+        trigger: body.trigger || 'list',
+        phase: body.phase || 'post_publish',
+        depth: body.depth || 'quick',
+        device: 'mobile',
+        samples: 1,
+        mock: body.mock === true,
+      },
+      'Lab scan worker did not pick up the job',
+      'worker_idle',
+      this.hintForLabError('worker_idle'),
+    )
+  }
+
   private classifyLabError(message: string): string {
     const m = message.toLowerCase()
+    if (m.includes('worker_idle') || m.includes('did not pick up')) return 'worker_idle'
     if (/fs\/promises|named 'glob'|node\.js v20|node >= 22|cần node >= 22/i.test(message)) {
       return 'node_too_old'
     }
@@ -468,6 +570,8 @@ export class LabScanService extends TenantScopedService {
         return 'Image cần apk chromium (đã thêm Dockerfile). Rebuild container.'
       case 'timeout':
         return 'URL chậm hoặc Chrome treo. Kiểm tra FE qua host.docker.internal:3000 từ container.'
+      case 'worker_idle':
+        return 'Hang doi ai-seo-lighthouse khong duoc xu ly. Chay ladipage-browser-worker (BULLMQ_RUN_WORKERS=true) hoac dat UNLIGHTHOUSE_INLINE=true tren API.'
       case 'url_unreachable':
         return 'URL scan khong tra HTML 2xx tu container. Kiem tra publish/slug va thu curl http://host.docker.internal:3000/p/{slug}; neu 404 thi can publish trang hoac truyen URL preview/public dung.'
       case 'no_lighthouse_scores':
