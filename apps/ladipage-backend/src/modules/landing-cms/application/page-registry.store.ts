@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common'
 import { SupabaseService } from '@liora/supabase'
 
+import { extractLandingHtml } from '../instatic/imported-html'
 import type { LandingEngine, PageRef } from '../ports/landing-page.port'
 
 export interface RegistryRecord {
@@ -128,6 +129,56 @@ export class PageRegistryStore {
       throw new ForbiddenException('Forbidden. You do not own this landing page mapping.')
     }
     return record
+  }
+
+  async getByExternalPageId(externalPageId: string): Promise<RegistryRecord | null> {
+    const wanted = externalPageId.trim()
+    if (!wanted) return null
+
+    for (const record of this.memory.values()) {
+      if (record.externalPageId === wanted) return record
+    }
+
+    if (!this.supabaseService.hasAdminClient() || this.externalColumnsAvailable === false) {
+      return null
+    }
+
+    try {
+      const client = this.supabaseService.getAdminClient()
+      const result = await client
+        .from('landing_pages')
+        .select(
+          'id, name, slug, render_engine, external_site_id, external_page_id, external_owner_user_id, external_workspace_id',
+        )
+        .eq('external_page_id', wanted)
+        .maybeSingle()
+
+      if (result.error) {
+        if (this.isOptionalMappingColumnError(result.error.message)) {
+          this.externalColumnsAvailable = false
+        }
+        return null
+      }
+
+      const data = result.data as unknown as RegistryPageRow | null
+      if (!data) return null
+
+      const record: RegistryRecord = {
+        pageId: data.id,
+        name: data.name ?? data.id,
+        slug: data.slug ?? data.id,
+        engine: data.render_engine === 'instatic' ? 'instatic' : 'legacy',
+        externalSiteId: data.external_site_id ?? null,
+        externalPageId: data.external_page_id ?? wanted,
+        ownerUserId: this.parseOwnerUserId(data.external_owner_user_id),
+        externalWorkspaceId: data.external_workspace_id ?? null,
+      }
+      this.memory.set(record.pageId, record)
+      return record
+    } catch (error) {
+      this.logger.debug(`Registry getByExternalPageId error: ${(error as Error).message}`)
+      return null
+    }
   }
 
   async upsert(record: RegistryRecord): Promise<RegistryRecord> {
@@ -281,6 +332,9 @@ export class PageRegistryStore {
             published_meta: input.meta,
             publish_version: currentVersion + 1,
             last_synced_at: now,
+            ...(input.externalPageId
+              ? { external_page_id: input.externalPageId }
+              : {}),
           }
 
       const { error } = await client
@@ -296,7 +350,7 @@ export class PageRegistryStore {
           .update(fallbackPayload)
           .eq('id', input.pageId)
         if (fallback.error) {
-          this.logger.warn(
+          throw new Error(
             `Persist published artifact fallback failed for ${input.pageId}: ${fallback.error.message}`,
           )
         }
@@ -304,10 +358,13 @@ export class PageRegistryStore {
       }
 
       if (error) {
-        this.logger.warn(`Persist published artifact failed for ${input.pageId}: ${error.message}`)
+        throw new Error(`Persist published artifact failed for ${input.pageId}: ${error.message}`)
       }
     } catch (error) {
-      this.logger.warn(`Persist published artifact error: ${(error as Error).message}`)
+      if (error instanceof Error && error.message.startsWith('Persist published artifact')) {
+        throw error
+      }
+      throw new Error(`Persist published artifact error: ${(error as Error).message}`)
     }
   }
 
@@ -358,7 +415,7 @@ export class PageRegistryStore {
           .update(base)
           .eq('id', input.pageId)
         if (fallback.error) {
-          this.logger.warn(
+          throw new Error(
             `Persist draft artifact fallback failed for ${input.pageId}: ${fallback.error.message}`,
           )
         }
@@ -366,10 +423,13 @@ export class PageRegistryStore {
       }
 
       if (error) {
-        this.logger.warn(`Persist draft artifact failed for ${input.pageId}: ${error.message}`)
+        throw new Error(`Persist draft artifact failed for ${input.pageId}: ${error.message}`)
       }
     } catch (error) {
-      this.logger.warn(`Persist draft artifact error: ${(error as Error).message}`)
+      if (error instanceof Error && error.message.startsWith('Persist draft artifact')) {
+        throw error
+      }
+      throw new Error(`Persist draft artifact error: ${(error as Error).message}`)
     }
   }
 
@@ -389,34 +449,11 @@ export class PageRegistryStore {
   }
 
   private extractHtml(row: RegistryPageRow): string | null {
-    const candidates = [
-      row.ai_source_html,
-      row.published_html,
-      this.extractEditorHtml(row.editor_data),
-    ]
-    for (const candidate of candidates) {
-      if (typeof candidate === 'string' && candidate.trim()) {
-        return candidate
-      }
-    }
-    return null
-  }
-
-  private extractEditorHtml(editorData: unknown): string | null {
-    if (typeof editorData === 'string') {
-      return editorData.trim() ? editorData : null
-    }
-    if (!editorData || typeof editorData !== 'object' || Array.isArray(editorData)) {
-      return null
-    }
-    const data = editorData as Record<string, unknown>
-    for (const key of ['html', 'publishedHtml', 'sourceHtml']) {
-      const value = data[key]
-      if (typeof value === 'string' && value.trim()) {
-        return value
-      }
-    }
-    return null
+    return extractLandingHtml({
+      publishedHtml: row.published_html,
+      editorData: row.editor_data,
+      aiSourceHtml: row.ai_source_html,
+    })
   }
 
   private parseOwnerUserId(value: unknown): number | null {

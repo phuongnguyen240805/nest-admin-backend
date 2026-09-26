@@ -109,6 +109,8 @@ export class InstaticClient {
     pageId: string
     html: string
     title?: string
+    replaceIfEmpty?: boolean
+    assetOrigin?: string
   }): Promise<InstaticCreatePageResult> {
     if (this.isMock) {
       return { siteId: input.siteId, pageId: input.pageId }

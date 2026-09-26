@@ -13,6 +13,8 @@ type ReservationBucket = {
 export class LandingPageQuotaService implements LandingPagesQuotaPort {
   private readonly logger = new Logger(LandingPageQuotaService.name)
   private readonly reservations = new Map<string, ReservationBucket>()
+  /** Prod Supabase used by Nest may not have the AI-SEO org-members table. */
+  private organizationMembersAvailable: boolean | null = null
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -47,15 +49,28 @@ export class LandingPageQuotaService implements LandingPagesQuotaPort {
       )
     }
 
+    if (this.organizationMembersAvailable === false) {
+      return 0
+    }
+
     const { data: members, error: membersError } = await client
       .from('organization_members')
       .select('user_id')
       .eq('organization_id', organizationId)
 
     if (membersError) {
+      if (this.isMissingRelation(membersError.message)) {
+        this.organizationMembersAvailable = false
+        this.logger.warn(
+          `organization_members is not in this Supabase schema — landing quota falls back to 0 used. ${membersError.message}`,
+        )
+        return 0
+      }
       this.logger.warn(`organization_members lookup failed: ${membersError.message}`)
       return 0
     }
+
+    this.organizationMembersAvailable = true
 
     const userIds = (members ?? [])
       .map((row) => row.user_id)
@@ -139,5 +154,14 @@ export class LandingPageQuotaService implements LandingPagesQuotaPort {
     }
 
     this.reserveSlot(organizationId, jobId)
+  }
+
+  private isMissingRelation(message: string): boolean {
+    const msg = message.toLowerCase()
+    return (
+      msg.includes('schema cache') ||
+      msg.includes('does not exist') ||
+      msg.includes('could not find the table')
+    )
   }
 }

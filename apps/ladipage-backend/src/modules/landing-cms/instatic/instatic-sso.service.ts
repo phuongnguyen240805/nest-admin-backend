@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 
 import { ILandingCmsConfig, LandingCmsConfig } from '../landing-cms.config'
 import { createSessionToken, verifySessionToken } from './instatic-hmac'
+import { buildEditorSsoUrls, buildPublicPageUrl } from './instatic-ids'
 
 export interface MintEditorSessionInput {
   pageId: string
@@ -10,6 +11,7 @@ export interface MintEditorSessionInput {
   externalSiteId: string
   externalPageId: string
   workspaceId?: string
+  slug?: string
 }
 
 export interface MintedEditorSession {
@@ -39,24 +41,24 @@ export class InstaticSsoService {
   mint(input: MintEditorSessionInput): MintedEditorSession {
     const exp = Math.floor(Date.now() / 1000) + SSO_TTL_SECONDS
     const jti = randomBytes(12).toString('hex')
+    const publicUrl = buildPublicPageUrl(this.config.publicPagesOrigin, input.slug)
     const sessionToken = createSessionToken(this.config.ssoSecret, {
       sub: String(input.actorUserId),
       pageId: input.pageId,
       siteId: input.externalSiteId,
       instaticPageId: input.externalPageId,
       workspaceId: input.workspaceId ?? null,
+      slug: input.slug ?? null,
+      publicUrl,
       exp,
       jti,
       purpose: SSO_PURPOSE,
     })
 
-    // Relative same-origin path: browser stays on Ladipage host:port (Next rewrites /admin → Instatic)
-    const ssoPath =
-      `/admin/api/cms/auth/ladipage-sso?token=${encodeURIComponent(sessionToken)}`
-
-    const cmsPath = ssoPath
-    // Always relative: FE stays on Ladipage host:port (Next rewrites /admin → Instatic)
-    const editorUrl = ssoPath
+    const { cmsPath, editorUrl } = buildEditorSsoUrls(
+      this.config.publicEditorOrigin,
+      sessionToken,
+    )
 
     return {
       sessionToken,

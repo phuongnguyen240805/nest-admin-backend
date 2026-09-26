@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 
+import { canonicalInstaticPageId } from './instatic-ids'
 import { InstaticClient } from './instatic.client'
 
 @Injectable()
@@ -11,10 +12,12 @@ export class InstaticImportService {
     workspaceKey: string
     title: string
     html: string
+    replaceIfEmpty?: boolean
+    assetOrigin?: string
   }): Promise<{ siteId: string; pageId: string }> {
     const ensured = await this.client.ensurePage({
       siteKey: input.workspaceKey,
-      pageKey: input.pageId,
+      pageKey: canonicalInstaticPageId(input.pageId),
       title: input.title,
       html: input.html,
     })
@@ -24,6 +27,8 @@ export class InstaticImportService {
       pageId: ensured.pageId,
       html: input.html,
       title: input.title,
+      replaceIfEmpty: input.replaceIfEmpty,
+      assetOrigin: input.assetOrigin,
     })
 
     return { siteId: ensured.siteId, pageId: ensured.pageId }

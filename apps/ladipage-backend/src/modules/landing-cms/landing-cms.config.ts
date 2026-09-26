@@ -33,17 +33,21 @@ export const LandingCmsConfig = registerAs(landingCmsRegToken, () => {
     /** Public path prefix on Ladipage origin that proxies to Instatic. */
     publicCmsPrefix: env('INSTATIC_PUBLIC_PREFIX', '/_cms'),
     /**
-     * Browser-facing Instatic origin (Vite dev or public CMS).
-     * SSO redirect target base. Dev default: http://127.0.0.1:5174
-     */
-    /**
-     * Browser origin customers open for the editor (MUST be Ladipage host in product).
-     * Same-origin: http://localhost:3000 → /admin/... rewritten by Next to Instatic.
-     * Never point this at :5174 in product UX (port change confuses customers).
+     * Browser origin of the Instatic editor (Dokploy / sslip.io in prod).
+     * SSO `editorUrl` is absolute against this host so Cloudflare FE never
+     * has to rewrite the Instatic SPA at `/admin`.
      */
     publicEditorOrigin: env(
       'INSTATIC_PUBLIC_EDITOR_ORIGIN',
-      env('NEXT_PUBLIC_APP_URL', env('NEXT_PUBLIC_INSTATIC_EDITOR_ORIGIN', 'http://localhost:3000')),
+      env('NEXT_PUBLIC_INSTATIC_EDITOR_ORIGIN', 'http://localhost:3000'),
+    ),
+    /**
+     * LadiPage public origin for `/p/{slug}` (Cloudflare FE).
+     * Embedded in SSO claims so Instatic "Open live" can deep-link correctly.
+     */
+    publicPagesOrigin: env(
+      'LADIPAGE_PUBLIC_ORIGIN',
+      env('NEXT_PUBLIC_APP_URL', ''),
     ),
     sessionTtlSeconds: Number(env('INSTATIC_SESSION_TTL_SECONDS', '3600')) || 3600,
     /** Publish source switch: instatic-artifact | legacy */

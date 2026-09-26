@@ -17,6 +17,8 @@ import { InstaticArtifactService } from '../instatic/instatic-artifact.service'
 import { verifyBridgeSignature } from '../instatic/instatic-hmac'
 import { InstaticImportService } from '../instatic/instatic-import.service'
 import { InstaticSsoService } from '../instatic/instatic-sso.service'
+import { rewriteImportedLandingHtml } from '../instatic/imported-html'
+import { canonicalInstaticPageId, ladipagePageIdFromInstatic } from '../instatic/instatic-ids'
 import { InstaticClient } from '../instatic/instatic.client'
 import type {
   EditorSessionResult,
@@ -51,8 +53,8 @@ export class LandingPageService implements LandingPagePort {
   ) {}
 
   /**
-   * Mint SSO ticket only — never call Instatic ensure-page (that route does not exist).
-   * Mapping is provisional until workspace provision (GĐ2b).
+   * Ensure a canonical Instatic page, optionally import stored HTML, then mint SSO.
+   * `editorUrl` is absolute against INSTATIC_PUBLIC_EDITOR_ORIGIN.
    */
   async openEditorSession(pageId: string, actorUserId: number): Promise<EditorSessionResult> {
     if (!pageId?.trim()) {
@@ -65,26 +67,37 @@ export class LandingPageService implements LandingPagePort {
     }
 
     const siteKey = `ws_${actorUserId}`
-    let siteId = existing?.externalSiteId ?? `site_${siteKey}`
-    let externalPageId = existing?.externalPageId ?? `page_${pageId}`
+    let siteId = existing?.externalSiteId ?? siteKey
+    let externalPageId = existing?.externalPageId ?? canonicalInstaticPageId(pageId)
 
     let recordName = existing?.name ?? pageId
     let recordSlug = existing?.slug ?? pageId
 
-    if (!existing?.externalPageId) {
-      const source = await this.registry.getImportSourceHtml(pageId)
-      if (source?.html) {
-        recordName = source.name || recordName
-        recordSlug = source.slug || recordSlug
-        const mapped = await this.importService.materialize({
-          pageId,
-          workspaceKey: siteKey,
-          title: recordName,
-          html: source.html,
-        })
-        siteId = mapped.siteId
-        externalPageId = mapped.pageId
-      }
+    const source = await this.registry.getImportSourceHtml(pageId)
+    if (source?.name) recordName = source.name || recordName
+    if (source?.slug) recordSlug = source.slug || recordSlug
+
+    if (source?.html) {
+      const html = rewriteImportedLandingHtml(source.html, this.config.publicPagesOrigin)
+      const mapped = await this.importService.materialize({
+        pageId,
+        workspaceKey: siteKey,
+        title: recordName,
+        html,
+        replaceIfEmpty: true,
+        assetOrigin: this.config.publicPagesOrigin,
+      })
+      siteId = mapped.siteId
+      externalPageId = mapped.pageId
+    }
+    else if (!existing?.externalPageId) {
+      const ensured = await this.client.ensurePage({
+        siteKey,
+        pageKey: canonicalInstaticPageId(pageId),
+        title: recordName,
+      })
+      siteId = ensured.siteId
+      externalPageId = ensured.pageId
     }
 
     // Best-effort registry write (columns may be missing until migration).
@@ -105,6 +118,7 @@ export class LandingPageService implements LandingPagePort {
       externalSiteId: siteId,
       externalPageId,
       workspaceId: siteKey,
+      slug: recordSlug,
     })
 
     return {
@@ -170,11 +184,9 @@ export class LandingPageService implements LandingPagePort {
   }
 
   async acceptPublishIntent(input: PublishIntentInput): Promise<PublishIntentResult> {
-    if (!input.pageId?.trim()) {
-      throw new BadRequestException('pageId is required')
-    }
-
-    const record = await this.registry.get(input.pageId)
+    const resolved = await this.resolvePublishTarget(input)
+    const pageId = resolved.pageId
+    const record = resolved.record
     let artifact: PublishedArtifact
     let artifactExternalPageId = input.externalPageId ?? null
 
@@ -187,9 +199,9 @@ export class LandingPageService implements LandingPagePort {
         throw new BadRequestException('externalPageId does not match page mapping')
       }
       artifactExternalPageId = input.externalPageId ?? record?.externalPageId ?? null
-      const title = input.seoTitle?.trim() || input.pageId
+      const title = input.seoTitle?.trim() || pageId
       artifact = {
-        pageId: input.pageId,
+        pageId,
         html: input.html,
         meta: {
           title,
@@ -201,7 +213,7 @@ export class LandingPageService implements LandingPagePort {
     }
     else {
       if (!record?.externalSiteId || !record.externalPageId) {
-        throw new NotFoundException(`No Instatic mapping for page ${input.pageId}`)
+        throw new NotFoundException(`No Instatic mapping for page ${pageId}`)
       }
       if (input.externalPageId && input.externalPageId !== record.externalPageId) {
         throw new BadRequestException('externalPageId does not match page mapping')
@@ -209,7 +221,7 @@ export class LandingPageService implements LandingPagePort {
       artifactExternalPageId = record.externalPageId
 
       artifact = await this.fetchArtifactForRecord(
-        input.pageId,
+        pageId,
         record.externalSiteId,
         record.externalPageId,
       )
@@ -218,7 +230,7 @@ export class LandingPageService implements LandingPagePort {
     }
 
     const aiSeo = await this.syncAiSeoAfterInstaticPublish({
-      pageId: input.pageId,
+      pageId,
       html: artifact.html,
       record,
     })
@@ -231,7 +243,7 @@ export class LandingPageService implements LandingPagePort {
     }
 
     await this.registry.persistPublishedArtifact({
-      pageId: input.pageId,
+      pageId,
       externalPageId: artifactExternalPageId,
       html: artifact.html,
       meta: artifact.meta,
@@ -240,7 +252,7 @@ export class LandingPageService implements LandingPagePort {
 
     return {
       accepted: true,
-      pageId: input.pageId,
+      pageId,
       artifact,
       aiSeo: {
         projectId: aiSeo.projectId,
@@ -345,14 +357,13 @@ export class LandingPageService implements LandingPagePort {
   }
 
   async acceptDraftSaved(input: PublishIntentInput): Promise<DraftSavedResult> {
-    if (!input.pageId?.trim()) {
-      throw new BadRequestException('pageId is required')
-    }
     if (!input.html?.trim()) {
       throw new BadRequestException('html is required')
     }
 
-    const record = await this.registry.get(input.pageId)
+    const resolved = await this.resolvePublishTarget(input)
+    const pageId = resolved.pageId
+    const record = resolved.record
     if (
       record?.externalPageId &&
       input.externalPageId &&
@@ -361,12 +372,12 @@ export class LandingPageService implements LandingPagePort {
       throw new BadRequestException('externalPageId does not match page mapping')
     }
 
-    const title = input.seoTitle?.trim() || record?.name || input.pageId
+    const title = input.seoTitle?.trim() || record?.name || pageId
     const etag =
       input.etag || createHash('sha256').update(input.html).digest('hex').slice(0, 16)
 
     await this.registry.persistDraftArtifact({
-      pageId: input.pageId,
+      pageId,
       externalPageId: input.externalPageId ?? record?.externalPageId ?? null,
       html: input.html,
       meta: {
@@ -378,8 +389,29 @@ export class LandingPageService implements LandingPagePort {
 
     return {
       accepted: true,
-      pageId: input.pageId,
+      pageId,
     }
+  }
+
+  private async resolvePublishTarget(input: PublishIntentInput): Promise<{
+    pageId: string
+    record: Awaited<ReturnType<PageRegistryStore['get']>>
+  }> {
+    let pageId = input.pageId?.trim() ?? ''
+    if (!pageId && input.externalPageId) {
+      pageId = ladipagePageIdFromInstatic(input.externalPageId) ?? ''
+    }
+    if (!pageId) {
+      throw new BadRequestException('pageId is required')
+    }
+
+    let record = await this.registry.get(pageId)
+    if (!record && input.externalPageId) {
+      record = await this.registry.getByExternalPageId(input.externalPageId)
+      if (record) pageId = record.pageId
+    }
+
+    return { pageId, record }
   }
 
   verifyBridgeRequest(rawBody: string, timestamp: string, signature: string): void {

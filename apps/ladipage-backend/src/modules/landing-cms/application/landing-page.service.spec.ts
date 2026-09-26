@@ -27,6 +27,7 @@ describe('LandingPageService', () => {
     publicCmsPrefix: '/_cms',
     sessionTtlSeconds: 3600,
     publicEditorOrigin: 'http://localhost:3000',
+    publicPagesOrigin: 'http://localhost:3000',
     publishSource: 'instatic-artifact',
   }
 
@@ -98,7 +99,8 @@ describe('LandingPageService', () => {
     return { service, registry, sso, importService, artifactService }
   }
 
-  it('opens editor session without calling ensurePage', async () => {
+  it('ensures a canonical Instatic page before minting SSO', async () => {
+    client.ensurePage.mockClear()
     const { service, sso } = createService()
     const session = await service.openEditorSession('p1', 7)
 
@@ -107,8 +109,19 @@ describe('LandingPageService', () => {
     expect(session.cmsPath).toContain('ladipage-sso')
     expect(session.editorUrl).toContain('ladipage-sso')
     expect(session.engine).toBe('instatic')
-    expect(sso.mint).toHaveBeenCalled()
-    expect(client.ensurePage).not.toHaveBeenCalled()
+    expect(client.ensurePage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        siteKey: 'ws_7',
+        pageKey: 'page_p1',
+      }),
+    )
+    expect(sso.mint).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pageId: 'p1',
+        externalPageId: 'page_p1',
+        slug: 'p1',
+      }),
+    )
   })
 
   it('imports stored html into Instatic before opening a new editor mapping', async () => {
@@ -128,6 +141,8 @@ describe('LandingPageService', () => {
       workspaceKey: 'ws_7',
       title: 'Stored',
       html: '<html><body><h1>Stored</h1></body></html>',
+      replaceIfEmpty: true,
+      assetOrigin: 'http://localhost:3000',
     })
   })
 

@@ -55,6 +55,52 @@ describe('LandingPageQuotaService', () => {
     await expect(service.assertCanCreatePage('org-1', 'job-1')).rejects.toBeInstanceOf(HttpException)
   })
 
+  it('does not retry organization_members after schema-cache miss', async () => {
+    let memberCalls = 0
+    const supabaseService = {
+      hasAdminClient: () => true,
+      getAdminClient: () => ({
+        from: (table: string) => {
+          if (table === 'website_pages') {
+            return {
+              select: () => ({
+                eq: () => ({
+                  eq: () => Promise.resolve({ count: null, error: { message: 'missing' } }),
+                }),
+              }),
+            }
+          }
+          if (table === 'organization_members') {
+            memberCalls += 1
+            return {
+              select: () => ({
+                eq: () =>
+                  Promise.resolve({
+                    data: null,
+                    error: { message: "Could not find the table 'public.organization_members' in the schema cache" },
+                  }),
+              }),
+            }
+          }
+          return {
+            select: () => ({
+              eq: () => Promise.resolve({ data: [], error: null }),
+            }),
+          }
+        },
+      }),
+    }
+    const service = new LandingPageQuotaService(
+      supabaseService as never,
+      subscriptionService as never,
+      planConfigService as never,
+      tenantContext as never,
+    )
+    await expect(service.countPagesForOrganization('org-1')).resolves.toBe(0)
+    await expect(service.countPagesForOrganization('org-1')).resolves.toBe(0)
+    expect(memberCalls).toBe(1)
+  })
+
   it('treats enterprise limit -1 as unlimited', async () => {
     planConfigService.getLimitsForTier.mockReturnValueOnce({
       pages: -1,
