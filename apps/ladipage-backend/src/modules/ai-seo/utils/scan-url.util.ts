@@ -14,6 +14,12 @@ export type ScanStartResolution = {
   canPageAudit: boolean
 }
 
+function isBareLabelHost(host: string): boolean {
+  if (!host) return true
+  if (host === 'localhost') return false
+  return !host.includes('.')
+}
+
 function toAbsoluteUrl(value: string): string | null {
   const trimmed = value.trim()
   if (!trimmed) return null
@@ -21,6 +27,7 @@ function toAbsoluteUrl(value: string): string | null {
     const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
     const url = new URL(withProtocol)
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+    if (isBareLabelHost(url.hostname)) return null
     return url.toString().replace(/\/$/, '') === `${url.protocol}//${url.host}`
       ? `${url.protocol}//${url.host}/`
       : url.toString()
@@ -44,11 +51,12 @@ export function resolveScanStartUrl(
 
   if (preferred) {
     const host = extractHostname(preferred)
+    const publicHost = isPublicRegistrableDomain(host)
     return {
       startUrl: preferred,
       host,
-      canDomainOverview: isPublicRegistrableDomain(host),
-      canPageAudit: true,
+      canDomainOverview: publicHost,
+      canPageAudit: publicHost || host.includes('.') || host === 'localhost',
     }
   }
 

@@ -64,4 +64,18 @@ describe('scan-url.util', () => {
     expect(r.startUrl).toBeNull()
     expect(scanBlockedMessage(r.host)).toContain('Cannot start SEO scan')
   })
+
+  it('does not treat a landing slug as a crawlable public URL', () => {
+    const r = resolveScanStartUrl(['restaurant', 'https://restaurant/', 'https://restaurant'])
+    expect(r.startUrl).toBeNull()
+    expect(r.canPageAudit).toBe(false)
+    expect(r.canDomainOverview).toBe(false)
+  })
+
+  it('keeps localhost page URLs for local page audit', () => {
+    const r = resolveScanStartUrl(['http://localhost:3000/p/x'])
+    expect(r.startUrl).toContain('localhost')
+    expect(r.canPageAudit).toBe(true)
+    expect(r.canDomainOverview).toBe(false)
+  })
 })

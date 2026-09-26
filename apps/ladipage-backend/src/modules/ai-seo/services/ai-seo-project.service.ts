@@ -32,7 +32,7 @@ import { SeoProjectEntity, SeoProjectPageEntity, SeoTaskEntity } from '../entiti
 import type { SeoTaskType } from '../entities/seo-task.entity'
 import { mapSeoProjectToDto } from '../mappers/seo-project.mapper'
 import { auditHtml, scoresFromPageIssues, type PageAuditIssue } from '../utils/page-audit.util'
-import { extractHostname, resolveSeoHostname } from '../utils/domain.util'
+import { extractHostname, isPublicRegistrableDomain, resolveSeoHostname } from '../utils/domain.util'
 import { resolveScanStartUrl, scanBlockedMessage } from '../utils/scan-url.util'
 import { AiSeoQuotaService } from './ai-seo-quota.service'
 import { AiSeoTrafficService } from './ai-seo-traffic.service'
@@ -236,16 +236,20 @@ export class AiSeoProjectService extends TenantScopedService {
     const slug = this.slugify(hostname)
     let openseoProjectId: string | null = null
 
-    try {
-      const openSeoProject = await this.openSeoClient.createProject({ name, domain: hostname })
-      openseoProjectId = openSeoProject.id?.trim() || null
-      if (!openseoProjectId) {
-        this.logger.warn(`OpenSEO createProject returned empty id for hostname=${hostname}`)
+    if (isPublicRegistrableDomain(hostname)) {
+      try {
+        const openSeoProject = await this.openSeoClient.createProject({ name, domain: hostname })
+        openseoProjectId = openSeoProject.id?.trim() || null
+        if (!openseoProjectId) {
+          this.logger.warn(`OpenSEO createProject returned empty id for hostname=${hostname}`)
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        this.logger.warn(`OpenSEO createProject failed for hostname=${hostname}: ${message}`)
+        openseoProjectId = null
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      this.logger.warn(`OpenSEO createProject failed for hostname=${hostname}: ${message}`)
-      openseoProjectId = null
+    } else {
+      this.logger.log(`Skip OpenSEO create for unpublished landing hostname=${hostname}`)
     }
 
     const project = await this.projectRepository.save(
@@ -685,6 +689,7 @@ export class AiSeoProjectService extends TenantScopedService {
    */
   async ensureOpenSeoLinked(project: SeoProjectEntity): Promise<SeoProjectEntity> {
     if (project.openseoProjectId?.trim()) return project
+    if (!isPublicRegistrableDomain(project.hostname)) return project
 
     try {
       const openSeoProject = await this.openSeoClient.createProject({
