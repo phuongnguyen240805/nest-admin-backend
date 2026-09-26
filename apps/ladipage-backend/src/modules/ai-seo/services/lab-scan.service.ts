@@ -33,6 +33,33 @@ const LAB_JOB_PREFIX = 'lab-'
 const COOLDOWN_MS_DEFAULT = 30_000
 const RESULT_CACHE_MS_DEFAULT = 10 * 60_000
 
+function slimLabScanResult(result: Record<string, unknown>): Record<string, unknown> {
+  const lighthouse = result.lighthouse
+  return {
+    source: result.source ?? 'unlighthouse',
+    scores: result.scores,
+    metrics: result.metrics,
+    error: result.error,
+    errorCode: result.errorCode,
+    hint: result.hint,
+    targetUrl: result.targetUrl,
+    trigger: result.trigger,
+    phase: result.phase,
+    mock: result.mock,
+    lighthouse:
+      lighthouse && typeof lighthouse === 'object' && !Array.isArray(lighthouse)
+        ? {
+            version: (lighthouse as { version?: unknown }).version,
+            source: (lighthouse as { source?: unknown }).source,
+            mock: (lighthouse as { mock?: unknown }).mock,
+            fetchedAt: (lighthouse as { fetchedAt?: unknown }).fetchedAt,
+            pages: (lighthouse as { pages?: unknown }).pages,
+            aggregate: (lighthouse as { aggregate?: unknown }).aggregate,
+          }
+        : lighthouse,
+  }
+}
+
 @Injectable()
 export class LabScanService extends TenantScopedService {
   private readonly logger = new Logger(LabScanService.name)
@@ -314,7 +341,7 @@ export class LabScanService extends TenantScopedService {
 
     const task = await this.taskRepository
       .createQueryBuilder('task')
-      .innerJoin(SeoProjectEntity, 'project', 'project.id = task.seoProjectId')
+      .innerJoin('task.project', 'project')
       .where('task.externalTaskId = :jobId', { jobId })
       .andWhere('project.tenantId = :tenantId', { tenantId })
       .getOne()
@@ -345,11 +372,13 @@ export class LabScanService extends TenantScopedService {
       error: typeof result.error === 'string' ? result.error : undefined,
       errorCode: typeof result.errorCode === 'string' ? result.errorCode : undefined,
       hint: typeof result.hint === 'string' ? result.hint : undefined,
-      result: {
-        source: 'unlighthouse',
-        ...(result as object),
+      result: slimLabScanResult(result),
+      payload: {
+        source: (task.payload as { source?: string })?.source,
+        targetUrl: (task.payload as { targetUrl?: string })?.targetUrl,
+        trigger: (task.payload as { trigger?: string })?.trigger,
+        phase: (task.payload as { phase?: string })?.phase,
       },
-      payload: task.payload,
     }
   }
 
@@ -1079,7 +1108,7 @@ export class LabScanService extends TenantScopedService {
     const since = new Date(Date.now() - maxAgeMs)
     const qb = this.taskRepository
       .createQueryBuilder('task')
-      .innerJoin(SeoProjectEntity, 'project', 'project.id = task.seoProjectId')
+      .innerJoin('task.project', 'project')
       .where('project.tenantId = :tenantId', { tenantId })
       .andWhere('task.seoProjectId = :seoProjectId', { seoProjectId })
       .andWhere("task.externalTaskId LIKE 'lab-%'")
@@ -1112,7 +1141,7 @@ export class LabScanService extends TenantScopedService {
     const since = new Date(Date.now() - cooldownMs)
     const qb = this.taskRepository
       .createQueryBuilder('task')
-      .innerJoin(SeoProjectEntity, 'project', 'project.id = task.seoProjectId')
+      .innerJoin('task.project', 'project')
       .where('project.tenantId = :tenantId', { tenantId })
       .andWhere('task.seoProjectId = :seoProjectId', { seoProjectId })
       .andWhere("task.externalTaskId LIKE 'lab-%'")

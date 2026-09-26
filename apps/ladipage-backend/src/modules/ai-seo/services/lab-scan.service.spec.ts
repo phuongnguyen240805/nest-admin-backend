@@ -100,7 +100,11 @@ describe('LabScanService tenant isolation', () => {
         let jobIdFilter: string | undefined
         let tenantFilter: number | undefined
         const qb = {
-          innerJoin: jest.fn().mockReturnThis(),
+          innerJoin: jest.fn((relation: string, alias: string) => {
+            expect(relation).toBe('task.project')
+            expect(alias).toBe('project')
+            return qb
+          }),
           where: jest.fn().mockImplementation((clause: string, params?: Record<string, unknown>) => {
             if (params?.jobId) jobIdFilter = String(params.jobId)
             if (params?.tenantId != null) tenantFilter = Number(params.tenantId)
@@ -277,6 +281,25 @@ describe('LabScanService tenant isolation', () => {
     })
     tenantId = tenantB
     await expect(service.getLabScan(created.jobId)).rejects.toBeInstanceOf(NotFoundException)
+  })
+
+  it('returns a compact lab job payload for the owning tenant', async () => {
+    const created = await service.startLabScan({
+      trigger: 'editor',
+      seoProjectId: projectA,
+      seoProjectPageId: pageA,
+      mock: true,
+    })
+    const job = await service.getLabScan(created.jobId)
+    expect(job.status).toBe('success')
+    expect(job.result?.scores).toEqual({
+      performance: 70,
+      accessibility: 90,
+      'best-practices': 85,
+      seo: 88,
+    })
+    expect(job.result).not.toHaveProperty('raw')
+    expect(job.result).not.toHaveProperty('lhr')
   })
 
   it('rejects missing target URL', async () => {
