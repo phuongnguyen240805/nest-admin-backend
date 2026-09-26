@@ -14,6 +14,70 @@ export function extractLandingHtml(input: {
   return published || fromEditor || aiSource
 }
 
+const STYLESHEET_HREF_RE =
+  /<link\b[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>|<link\b[^>]*href=["']([^"']+)["'][^>]*rel=["']stylesheet["'][^>]*>/gi
+
+const MAX_STYLESHEETS = 8
+const MAX_STYLESHEET_BYTES = 500_000
+
+export async function collectLinkedStylesheets(
+  html: string,
+  publicOrigin: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
+  const origin = normalizeOrigin(publicOrigin)
+  const hrefs: string[] = []
+  STYLESHEET_HREF_RE.lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = STYLESHEET_HREF_RE.exec(html)) !== null) {
+    const href = (match[1] || match[2] || '').trim()
+    if (href) hrefs.push(href)
+  }
+  if (hrefs.length === 0) return ''
+
+  const chunks: string[] = []
+  for (const href of hrefs.slice(0, MAX_STYLESHEETS)) {
+    if (!isAllowedStylesheetUrl(href, origin)) continue
+    try {
+      const res = await fetchImpl(href, { signal: AbortSignal.timeout(15_000) })
+      if (!res.ok) continue
+      const css = await res.text()
+      if (!css.trim() || css.length > MAX_STYLESHEET_BYTES) continue
+      chunks.push(`/* ${href} */\n${rewriteCssAssetUrls(css, href)}`)
+    } catch {
+      /* skip unreachable stylesheets — layout may degrade */
+    }
+  }
+  return chunks.join('\n\n')
+}
+
+function isAllowedStylesheetUrl(href: string, publicOrigin: string | null): boolean {
+  try {
+    const url = new URL(href)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
+    const host = url.hostname.toLowerCase()
+    if (publicOrigin && host === new URL(publicOrigin).hostname) return true
+    return host === 'cdn.jsdelivr.net' || host.endsWith('.jsdelivr.net')
+  } catch {
+    return false
+  }
+}
+
+function rewriteCssAssetUrls(css: string, cssFileUrl: string): string {
+  return css.replace(
+    /url\(\s*(['"]?)([^)"']+)\1\s*\)/gi,
+    (full, quote: string, raw: string) => {
+      const src = raw.trim()
+      if (!src || ABSOLUTE_OR_SPECIAL.test(src)) return full
+      try {
+        return `url(${quote}${new URL(src, cssFileUrl).href}${quote})`
+      } catch {
+        return full
+      }
+    },
+  )
+}
+
 export function rewriteImportedLandingHtml(html: string, publicOrigin: string): string {
   const origin = normalizeOrigin(publicOrigin)
   if (!origin || !html.trim()) return html

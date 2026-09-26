@@ -141,6 +141,7 @@ describe('LandingPageService', () => {
       workspaceKey: 'ws_7',
       title: 'Stored',
       html: '<html><body><h1>Stored</h1></body></html>',
+      linkedCss: '',
       replaceIfEmpty: true,
       assetOrigin: 'http://localhost:3000',
     })

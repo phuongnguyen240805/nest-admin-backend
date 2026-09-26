@@ -1,4 +1,8 @@
-import { extractLandingHtml, rewriteImportedLandingHtml } from './imported-html'
+import {
+  collectLinkedStylesheets,
+  extractLandingHtml,
+  rewriteImportedLandingHtml,
+} from './imported-html'
 
 describe('imported-html', () => {
   it('prefers published_html over ai_source_html', () => {
@@ -40,6 +44,17 @@ describe('imported-html', () => {
     expect(out).toContain(
       'url(https://ladipage.example/templates/bedimcode/responsive-website-restaurant/assets/img/home.png)',
     )
+  })
+
+  it('fetches same-origin linked stylesheets', async () => {
+    const html =
+      '<link rel="stylesheet" href="https://ladipage.example/templates/x/assets/css/styles.css">'
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      expect(String(input)).toBe('https://ladipage.example/templates/x/assets/css/styles.css')
+      return new Response('.bd-grid{display:grid}', { status: 200 })
+    }) as typeof fetch
+    const css = await collectLinkedStylesheets(html, 'https://ladipage.example', fetchImpl)
+    expect(css).toContain('.bd-grid{display:grid}')
   })
 
   it('prefixes /templates root-relative URLs', () => {

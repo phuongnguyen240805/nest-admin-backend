@@ -17,7 +17,7 @@ import { InstaticArtifactService } from '../instatic/instatic-artifact.service'
 import { verifyBridgeSignature } from '../instatic/instatic-hmac'
 import { InstaticImportService } from '../instatic/instatic-import.service'
 import { InstaticSsoService } from '../instatic/instatic-sso.service'
-import { rewriteImportedLandingHtml } from '../instatic/imported-html'
+import { collectLinkedStylesheets, rewriteImportedLandingHtml } from '../instatic/imported-html'
 import { canonicalInstaticPageId, ladipagePageIdFromInstatic } from '../instatic/instatic-ids'
 import { InstaticClient } from '../instatic/instatic.client'
 import type {
@@ -79,11 +79,13 @@ export class LandingPageService implements LandingPagePort {
 
     if (source?.html) {
       const html = rewriteImportedLandingHtml(source.html, this.config.publicPagesOrigin)
+      const linkedCss = await collectLinkedStylesheets(html, this.config.publicPagesOrigin)
       const mapped = await this.importService.materialize({
         pageId,
         workspaceKey: siteKey,
         title: recordName,
         html,
+        linkedCss,
         replaceIfEmpty: true,
         assetOrigin: this.config.publicPagesOrigin,
       })

@@ -109,6 +109,7 @@ export class InstaticClient {
     pageId: string
     html: string
     title?: string
+    linkedCss?: string
     replaceIfEmpty?: boolean
     assetOrigin?: string
   }): Promise<InstaticCreatePageResult> {

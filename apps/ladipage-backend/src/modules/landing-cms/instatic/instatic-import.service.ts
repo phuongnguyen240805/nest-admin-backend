@@ -12,6 +12,7 @@ export class InstaticImportService {
     workspaceKey: string
     title: string
     html: string
+    linkedCss?: string
     replaceIfEmpty?: boolean
     assetOrigin?: string
   }): Promise<{ siteId: string; pageId: string }> {
@@ -27,6 +28,7 @@ export class InstaticImportService {
       pageId: ensured.pageId,
       html: input.html,
       title: input.title,
+      linkedCss: input.linkedCss,
       replaceIfEmpty: input.replaceIfEmpty,
       assetOrigin: input.assetOrigin,
     })
