@@ -23,6 +23,7 @@ import type { UnlighthouseJobPayload } from '../types/unlighthouse-job.payload'
 import {
   assertScanableUrl,
   phaseForTrigger,
+  shouldPreferLabPreviewUrl,
 } from '../utils/unlighthouse-url-policy'
 import type { NormalizedLabResult } from '../utils/unlighthouse.normalizer'
 import { extractHostname } from '../utils/domain.util'
@@ -887,18 +888,20 @@ export class LabScanService extends TenantScopedService {
       return targetUrl
     }
 
-    const isLocal =
-      host === 'localhost' ||
-      host === '127.0.0.1' ||
-      host === '0.0.0.0' ||
-      host === 'host.docker.internal' ||
-      host.endsWith('.local')
-    if (!isLocal) return targetUrl
-    // Without page id + auth we cannot build a signed preview; keep original
-    // (a published /p/{slug} on localhost may still resolve).
-    if (!websitePageId || !authToken) return targetUrl
+    if (/\/lab-preview(?:\?|$)/i.test(targetUrl)) return targetUrl
 
-    const preview = await this.fetchLabPreviewUrl(websitePageId, authToken)
+    if (
+      !shouldPreferLabPreviewUrl({
+        trigger,
+        host,
+        hasPageId: Boolean(websitePageId),
+        hasAuthToken: Boolean(authToken),
+      })
+    ) {
+      return targetUrl
+    }
+
+    const preview = await this.fetchLabPreviewUrl(websitePageId!, authToken!)
     if (preview) {
       this.logger.log(
         `Resolved lab-preview URL for page=${websitePageId} trigger=${trigger} (draft/published safe)`,

@@ -1,4 +1,9 @@
-import { assertScanableUrl, isLocalHostname, phaseForTrigger } from './unlighthouse-url-policy'
+import {
+  assertScanableUrl,
+  isLocalHostname,
+  phaseForTrigger,
+  shouldPreferLabPreviewUrl,
+} from './unlighthouse-url-policy'
 
 describe('unlighthouse-url-policy', () => {
   it('accepts public https URLs', () => {
@@ -64,5 +69,24 @@ describe('unlighthouse-url-policy', () => {
     expect(phaseForTrigger('editor', 'local')).toBe('pre_publish')
     expect(phaseForTrigger('publish', 'public')).toBe('post_publish')
     expect(phaseForTrigger('ai_seo', 'public')).toBe('post_publish')
+  })
+
+  it('uses lab-preview for list/editor scans even on a public host', () => {
+    expect(
+      shouldPreferLabPreviewUrl({
+        trigger: 'list',
+        host: 'ladipage.gofiber-phuongnguyen.workers.dev',
+        hasPageId: true,
+        hasAuthToken: true,
+      }),
+    ).toBe(true)
+    expect(
+      shouldPreferLabPreviewUrl({
+        trigger: 'publish',
+        host: 'ladipage.gofiber-phuongnguyen.workers.dev',
+        hasPageId: true,
+        hasAuthToken: true,
+      }),
+    ).toBe(false)
   })
 })

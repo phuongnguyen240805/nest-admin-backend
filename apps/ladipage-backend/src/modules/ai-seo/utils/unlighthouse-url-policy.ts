@@ -55,6 +55,17 @@ function isBlockedIp(address: string): boolean {
   return true
 }
 
+export function shouldPreferLabPreviewUrl(input: {
+  trigger: string
+  host: string
+  hasPageId: boolean
+  hasAuthToken: boolean
+}): boolean {
+  if (!input.hasPageId || !input.hasAuthToken) return false
+  if (input.trigger === 'editor' || input.trigger === 'list') return true
+  return isLocalHostname(input.host)
+}
+
 export function isLocalHostname(host: string): boolean {
   const h = host.toLowerCase().replace(/^\[|\]$/g, '')
   if (LOCAL_HOSTS.has(h)) return true
