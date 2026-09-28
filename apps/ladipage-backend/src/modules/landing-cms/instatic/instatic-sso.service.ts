@@ -50,6 +50,7 @@ export class InstaticSsoService {
       workspaceId: input.workspaceId ?? null,
       slug: input.slug ?? null,
       publicUrl,
+      host: 'ladipage',
       exp,
       jti,
       purpose: SSO_PURPOSE,
