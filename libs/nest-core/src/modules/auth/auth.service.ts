@@ -248,6 +248,7 @@ export class AuthService {
   }
 
   private async issueLoginToken(user: UserEntity, ip: string, ua: string): Promise<LoginToken> {
+    await this.userService.ensureDefaultAvatar(user)
     const roleIds = await this.roleService.getRoleIdsByUser(user.id)
     const roles = await this.roleService.getRoleValues(roleIds)
 

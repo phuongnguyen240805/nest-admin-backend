@@ -29,6 +29,7 @@ import { PasswordUpdateDto } from './dto/password.dto'
 import { UserDto, UserQueryDto, UserUpdateDto } from './dto/user.dto'
 import { OrganizationProvisioningService } from '../tenant/organization-provisioning.service'
 
+import { nextDefaultAvatar, resolveAvatarForNewUser } from './preset-avatar'
 import { UserEntity } from './user.entity'
 import { AccountInfo } from './user.model'
 import { PasswordHasherService } from './services/password-hasher.service'
@@ -85,6 +86,16 @@ export class UserService {
 
   async linkSupabaseUser(userId: number, supabaseUserId: string): Promise<void> {
     await this.userRepository.update({ id: userId }, { supabaseUserId })
+  }
+
+  /** Assigns an illustrated avatar once. Existing preset or photo URLs stay put. */
+  async ensureDefaultAvatar(user: UserEntity): Promise<void> {
+    const avatar = nextDefaultAvatar(user.avatar)
+    if (!avatar)
+      return
+
+    await this.userRepository.update({ id: user.id }, { avatar })
+    user.avatar = avatar
   }
 
   /** Authentication-only lookup. Password is select:false everywhere else. */
@@ -233,6 +244,7 @@ export class UserService {
         username,
         password: passwordHash,
         ...data,
+        avatar: resolveAvatarForNewUser(data.avatar),
         psalt: salt,
         roles: await this.roleRepository.findBy({ id: In(roleIds) }),
         dept: await DeptEntity.findOneBy({ id: deptId }),
@@ -457,6 +469,7 @@ export class UserService {
         supabaseUserId: supabaseUserId || null,
         status: 1,
         psalt: salt,
+        avatar: resolveAvatarForNewUser(),
       })
 
       return manager.save(u)
