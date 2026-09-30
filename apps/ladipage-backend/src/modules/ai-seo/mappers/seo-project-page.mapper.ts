@@ -63,6 +63,27 @@ function mapLighthouse(pageScores: Record<string, unknown>) {
   }
 }
 
+/**
+ * Name shown for a page linked from publish.
+ * Builder row wins. Otherwise the SEO project title, when it is the landing
+ * page name and not just the hostname.
+ */
+export function linkedPageDisplayName(input: {
+  builderName?: string | null
+  projectName?: string | null
+  projectHostname?: string | null
+  websitePageId?: string | null
+  landingPageId?: string | null
+}): string | null {
+  const builder = input.builderName?.trim()
+  if (builder) return builder
+  if (!input.websitePageId || input.websitePageId !== input.landingPageId) return null
+  const projectName = input.projectName?.trim()
+  if (!projectName) return null
+  if (projectName.toLowerCase() === (input.projectHostname ?? '').trim().toLowerCase()) return null
+  return projectName
+}
+
 function fallbackPageName(page: SeoProjectPageEntity): string {
   const url = page.pageUrl?.trim()
   if (url) {

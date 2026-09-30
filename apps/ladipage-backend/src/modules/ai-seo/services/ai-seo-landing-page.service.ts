@@ -9,6 +9,7 @@ import { LinkLandingPageDto } from '../dto/link-landing-page.dto'
 import { ScanProjectDto } from '../dto/scan-project.dto'
 import { SeoProjectEntity, SeoProjectPageEntity } from '../entities'
 import {
+  linkedPageDisplayName,
   mapLandingPageScores,
   mapLandingPageTask,
   mapSeoProjectPageToDto,
@@ -54,7 +55,13 @@ export class AiSeoLandingPageService extends TenantScopedService {
         page,
         project,
         String(project.tenantId),
-        page.websitePageId ? nameByWebsitePageId.get(page.websitePageId) : null,
+        linkedPageDisplayName({
+          builderName: page.websitePageId ? nameByWebsitePageId.get(page.websitePageId) : null,
+          projectName: project.name,
+          projectHostname: project.hostname,
+          websitePageId: page.websitePageId,
+          landingPageId: project.landingPageId,
+        }),
       ),
     )
   }
@@ -116,7 +123,12 @@ export class AiSeoLandingPageService extends TenantScopedService {
         },
       })
       if (existing) {
-        return mapSeoProjectPageToDto(existing, project, String(tenantId))
+        return mapSeoProjectPageToDto(
+          existing,
+          project,
+          String(tenantId),
+          await this.pageDisplayName(project, existing),
+        )
       }
     }
 
@@ -137,7 +149,12 @@ export class AiSeoLandingPageService extends TenantScopedService {
       await this.projectRepository.save(project)
     }
 
-    return mapSeoProjectPageToDto(page, project, String(tenantId))
+    return mapSeoProjectPageToDto(
+      page,
+      project,
+      String(tenantId),
+      await this.pageDisplayName(project, page),
+    )
   }
 
   async unlink(projectId: string, pageId: string): Promise<void> {
@@ -155,7 +172,12 @@ export class AiSeoLandingPageService extends TenantScopedService {
   async detail(projectId: string, pageId: string) {
     const project = await this.projectService.findProjectOrFail(projectId)
     const page = await this.findPageOrFail(projectId, pageId)
-    return mapSeoProjectPageToDto(page, project, String(project.tenantId))
+    return mapSeoProjectPageToDto(
+      page,
+      project,
+      String(project.tenantId),
+      await this.pageDisplayName(project, page),
+    )
   }
 
   async scan(
@@ -249,6 +271,22 @@ export class AiSeoLandingPageService extends TenantScopedService {
     })
     if (!page) throw new NotFoundException('Landing page not found')
     return page
+  }
+
+  private async pageDisplayName(
+    project: SeoProjectEntity,
+    page: SeoProjectPageEntity,
+  ): Promise<string | null> {
+    const names = page.websitePageId
+      ? await this.resolveBuilderPageNames(project.tenantId, [page])
+      : new Map<string, string>()
+    return linkedPageDisplayName({
+      builderName: page.websitePageId ? names.get(page.websitePageId) : null,
+      projectName: project.name,
+      projectHostname: project.hostname,
+      websitePageId: page.websitePageId,
+      landingPageId: project.landingPageId,
+    })
   }
 
   /** Tenant-scoped builder name for the legacy single-page link. */

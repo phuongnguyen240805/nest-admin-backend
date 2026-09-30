@@ -596,6 +596,7 @@ export class AiSeoProjectService extends TenantScopedService {
         options.publicUrl,
         existing.hostname,
       ])
+      let dirty = false
       if (
         betterHost &&
         betterHost !== existing.hostname &&
@@ -608,9 +609,14 @@ export class AiSeoProjectService extends TenantScopedService {
         if (localish || betterHost.includes('.')) {
           existing.hostname = betterHost
           existing.slug = this.slugify(betterHost)
-          await this.projectRepository.save(existing)
+          dirty = true
         }
       }
+      // Landing page rename must follow the title sent at publish.
+      if (await this.applyPublishedLandingName(existing, options, landingPageId)) {
+        dirty = true
+      }
+      if (dirty) await this.projectRepository.save(existing)
       if (!existing.umamiWebsiteId) {
         await this.trafficService.provisionForProject(existing.id).catch(() => undefined)
         const refreshed = await this.projectRepository.findOne({ where: { id: existing.id, tenantId } })
@@ -633,16 +639,26 @@ export class AiSeoProjectService extends TenantScopedService {
         landingPageId,
       ]) || this.normalizeHostname(landingPageId)
 
-    // Reuse manual project with same hostname in tenant (parallel manual + auto flows)
+    // Reuse a manual project on this host only when it is not already a
+    // different published landing page. Otherwise each page keeps its own row
+    // and the name shown in Kedi SEO stays the landing page title.
     const byHostname = await this.projectRepository.findOne({
       where: { tenantId, hostname },
       order: { updatedAt: 'DESC' },
     })
-    if (byHostname) {
+    if (
+      byHostname &&
+      (!byHostname.landingPageId || byHostname.landingPageId === landingPageId)
+    ) {
+      let dirty = false
       if (!byHostname.landingPageId) {
         byHostname.landingPageId = landingPageId
-        await this.projectRepository.save(byHostname)
+        dirty = true
       }
+      if (await this.applyPublishedLandingName(byHostname, options, landingPageId, page)) {
+        dirty = true
+      }
+      if (dirty) await this.projectRepository.save(byHostname)
       if (!byHostname.umamiWebsiteId) {
         await this.trafficService.provisionForProject(byHostname.id).catch(() => undefined)
       }
@@ -709,6 +725,27 @@ export class AiSeoProjectService extends TenantScopedService {
       this.logger.warn(`ensureOpenSeoLinked failed project=${project.id}: ${message}`)
       return project
     }
+  }
+
+  /**
+   * Copy the landing page title onto the SEO project.
+   * `options.name` is the Supabase title from publish; Nest `lp_page` is fallback.
+   */
+  private async applyPublishedLandingName(
+    project: SeoProjectEntity,
+    options: EnsureLandingPageOptions,
+    landingPageId: string,
+    page?: PageEntity | null,
+  ): Promise<boolean> {
+    const builder = page !== undefined
+      ? page
+      : options.name?.trim()
+        ? null
+        : await this.findPage(landingPageId)
+    const nextName = (options.name?.trim() || builder?.name?.trim() || '').slice(0, 255)
+    if (!nextName || nextName === project.name) return false
+    project.name = nextName
+    return true
   }
 
   private async findPage(pageId: string): Promise<PageEntity | null> {

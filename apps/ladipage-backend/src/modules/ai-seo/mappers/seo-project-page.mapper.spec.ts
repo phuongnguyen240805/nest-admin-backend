@@ -1,5 +1,5 @@
 import { SeoProjectEntity, SeoProjectPageEntity } from '../entities'
-import { mapSeoProjectPageToDto } from './seo-project-page.mapper'
+import { linkedPageDisplayName, mapSeoProjectPageToDto } from './seo-project-page.mapper'
 
 describe('mapSeoProjectPageToDto', () => {
   it('maps linked landing page to FE AiSeoProjectPage shape', () => {
@@ -43,11 +43,29 @@ describe('mapSeoProjectPageToDto', () => {
       pageType: 'landing_page',
       source: 'internal',
       scanStatus: 'pending',
-      technicalScore: 80,
-      uxScore: 70,
-      authorityScore: 60,
-      contentScore: 90,
-      graderScore: 75,
+      technicalScore: 0,
+      uxScore: 0,
+      authorityScore: 0,
+      contentScore: 0,
+      graderScore: 0,
     })
+  })
+
+  it('uses the landing page title when the builder row is missing', () => {
+    expect(linkedPageDisplayName({
+      builderName: null,
+      projectName: 'Khuyến mãi Tết',
+      projectHostname: 'tet.example.com',
+      websitePageId: 'lp-1',
+      landingPageId: 'lp-1',
+    })).toBe('Khuyến mãi Tết')
+
+    expect(linkedPageDisplayName({
+      builderName: 'Tên builder',
+      projectName: 'Khuyến mãi Tết',
+      projectHostname: 'tet.example.com',
+      websitePageId: 'lp-1',
+      landingPageId: 'lp-1',
+    })).toBe('Tên builder')
   })
 })
